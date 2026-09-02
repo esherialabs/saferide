@@ -199,7 +199,7 @@ tqdm==4.70.0
     #   huggingface-hub
     #   peft
     #   transformers
-transformers==5.5.4
+transformers==5.10.1
     # via
     #   -r requirements-ai-smoke.txt
     #   peft

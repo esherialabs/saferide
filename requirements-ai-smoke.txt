@@ -6,4 +6,4 @@ protobuf==6.33.6
 safetensors==0.5.0
 torch==2.7.0
 torchao==0.16.0
-transformers==5.5.4
+transformers==5.10.1
