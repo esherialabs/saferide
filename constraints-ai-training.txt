@@ -186,7 +186,7 @@ sympy==1.14.0
     # via torch
 tokenizers==0.22.2
     # via transformers
-torch==2.7.0
+torch==2.13.0
     # via
     #   -r requirements-ai-smoke.txt
     #   accelerate
