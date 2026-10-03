@@ -100,6 +100,7 @@
     "unicef:go-no-go:test": "node --test scripts/__tests__/saferide-unicef-go-no-go.test.mjs",
     "coverage:check": "npm run test:coverage && npm run test:coverage:critical && npm run test:coverage:critical:node",
     "coverage:check:public": "npm run test:coverage && npm run test:coverage:critical",
+    "coverage:summary": "node scripts/saferide-coverage-summary.mjs",
     "test:coverage": "vitest run --config vitest.coverage.config.mjs --coverage",
     "test:coverage:critical": "vitest run --config vitest.critical-coverage.config.mjs --coverage",
     "test:coverage:critical:node": "node --experimental-test-coverage --test-coverage-include=scripts/lib/saferide-structured-evidence.mjs --test-coverage-include=scripts/lib/saferide-tuned-artifact.mjs --test-coverage-include=scripts/lib/saferide-unicef-go-no-go.mjs --test-coverage-branches=80 --test-coverage-functions=80 --test-coverage-lines=80 --test scripts/__tests__/saferide-structured-evidence.test.mjs scripts/__tests__/saferide-tuned-artifact.test.mjs scripts/__tests__/saferide-unicef-go-no-go.test.mjs",
