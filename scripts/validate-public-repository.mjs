@@ -113,6 +113,7 @@ if (fs.existsSync(licensePath)) {
 const textExtensions = new Set(['.md', '.json', '.yml', '.yaml', '.ts', '.tsx', '.js', '.mjs', '.html']);
 const staleReferenceAllowlist = new Set([
   'scripts/validate-public-repository.mjs',
+  'scripts/__tests__/saferide-validate-public-repository.test.mjs',
   'web/scripts/validate-static-export.mjs',
   'web/tests/saferide-v2.spec.ts',
 ]);
