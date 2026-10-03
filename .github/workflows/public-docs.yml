@@ -10,20 +10,63 @@ on:
       - 'CONTRIBUTING.md'
       - 'GOVERNANCE.md'
       - '.github/workflows/public-docs.yml'
+      - 'scripts/saferide-public-docs-check.mjs'
+      - 'scripts/lib/saferide-public-docs.mjs'
+      - 'scripts/__tests__/saferide-public-docs-check.test.mjs'
+      - 'scripts/__tests__/fixtures/public-docs/**'
+  # Pull requests run the check only; the build and deploy jobs below are
+  # skipped for them, so nothing is published from a PR.
+  pull_request:
+    paths:
+      - 'docs/open-source/**'
+      - 'README.md'
+      - 'OPEN_SOURCE.md'
+      - 'CONTRIBUTING.md'
+      - 'GOVERNANCE.md'
+      - '.github/workflows/public-docs.yml'
+      - 'scripts/saferide-public-docs-check.mjs'
+      - 'scripts/lib/saferide-public-docs.mjs'
+      - 'scripts/__tests__/saferide-public-docs-check.test.mjs'
+      - 'scripts/__tests__/fixtures/public-docs/**'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  # A PR run must not cancel, or be cancelled by, a Pages deploy from main.
+  group: ${{ github.event_name == 'pull_request' && format('public-docs-pr-{0}', github.event.pull_request.number) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      # Runs before the site is assembled: a broken link or a missing landmark
+      # should stop the deploy rather than ship and be found later. Offline by
+      # construction -- every rule is decided from files in the checkout.
+      - name: Check public documentation links and accessibility
+        run: node scripts/saferide-public-docs-check.mjs
+
+      - name: Test the documentation checker
+        run: node --test scripts/__tests__/saferide-public-docs-check.test.mjs
+
+  build:
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,6 +87,10 @@ jobs:
           path: _site
 
   deploy:
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
