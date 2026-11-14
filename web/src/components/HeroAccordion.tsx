@@ -51,15 +51,14 @@ function VisualMotif({ motif, active }: { motif: string; active: boolean }) {
           ))}
         </div>
       )}
-      {motif === 'route map' && (
-        <div className="absolute inset-6">
-          <div className="absolute left-[8%] top-[20%] h-5 w-5 rounded-full border-3 border-white bg-black" />
-          <div className="absolute right-[16%] top-[16%] h-5 w-5 rounded-full border-3 border-white bg-black" />
-          <div className="absolute bottom-[22%] left-[34%] h-5 w-5 rounded-full border-3 border-white bg-black" />
-          <svg className="h-full w-full" viewBox="0 0 360 320" fill="none">
-            <path d="M38 76 C120 34 170 190 250 70 C296 6 306 220 154 250" stroke="white" strokeWidth="10" strokeLinecap="round" strokeDasharray="2 20" />
-          </svg>
-        </div>
+      {motif === 'pilot tags' && (
+        <ul className="absolute left-4 top-4 flex flex-col items-start gap-2 text-xs font-semibold uppercase tracking-normal text-green-950 md:text-sm">
+          {['Community day', 'Mombasa', 'With HURIA'].map(tag => (
+            <li key={tag} className="border-3 border-black bg-white px-3 py-1.5 shadow-[3px_3px_0_#0D1B12]">
+              {tag}
+            </li>
+          ))}
+        </ul>
       )}
       {motif === 'open code' && (
         <div className="absolute inset-8 grid content-center gap-4 font-mono text-3xl font-semibold text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] md:text-5xl">

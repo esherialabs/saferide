@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 
 const phrases = [
-  'Safer rides for every woman.',
+  'A supervised pilot ran in Mombasa.',
   'Your evidence. Your control.',
+  'Built with HURIA in Mombasa.',
   'Report. Refer. Stay safe.',
-  'Justice starts with one tap.',
 ];
 
 export default function KineticStrip() {
@@ -40,7 +40,9 @@ export default function KineticStrip() {
             );
           })}
         </div>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-black/75">An open-source safety app for women using Nairobi&apos;s public transport.</p>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-black/75">
+          An open-source safety app for women on Kenyan public transport, which ran a supervised pilot with HURIA in Mombasa in October 2026.
+        </p>
       </div>
     </section>
   );

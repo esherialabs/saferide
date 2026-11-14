@@ -11,6 +11,8 @@ const requiredFiles = [
   'site.webmanifest',
   'what-we-do/index.html',
   'privacy-safety-trust/index.html',
+  'privacy/index.html',
+  'terms/index.html',
   'blog/private-reporting-control/index.html',
 ];
 
@@ -78,8 +80,8 @@ if (locs.length === 0) {
   errors.push('sitemap.xml contains no <loc> entries.');
 }
 
-if (locs.length !== 16) {
-  errors.push(`sitemap.xml must contain the 16 reviewed canonical routes, found ${locs.length}.`);
+if (locs.length !== 19) {
+  errors.push(`sitemap.xml must contain the 19 reviewed canonical routes, found ${locs.length}.`);
 }
 
 const sitemapByPath = new Map();
@@ -103,12 +105,15 @@ for (const loc of locs) {
     continue;
   }
 
+  // Next 16.3 emitted `<route>__PAGE__.txt`; 16.4 emits `index.txt` for the
+  // same route payload. Accept both so the validator follows the pinned
+  // Next version instead of treating a framework rename as a missing page.
   const routePayloads = fs
     .readdirSync(path.dirname(htmlFile))
-    .filter((name) => name.endsWith('__PAGE__.txt'));
+    .filter((name) => name.endsWith('__PAGE__.txt') || name === 'index.txt');
 
   if (routePayloads.length === 0) {
-    errors.push(`${relPath || '/'}: exported route is missing its __PAGE__.txt payload.`);
+    errors.push(`${relPath || '/'}: exported route is missing its route payload.`);
   }
 
   sitemapByPath.set(htmlFile, loc);

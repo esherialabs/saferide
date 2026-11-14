@@ -3,13 +3,13 @@ import Footer from '@/components/Footer';
 import Nav from '@/components/Nav';
 import { JsonLd, breadcrumbSchema, contactPageSchema, graph } from '@/lib/json-ld';
 import { pageMetadata } from '@/lib/metadata';
-import { SITE } from '@/lib/site';
+import { PILOT, SITE } from '@/lib/site';
 
 export const metadata = pageMetadata({
   title: 'Contact SafeRide',
   absoluteTitle: true,
   description:
-    "Contact SafeRide about partnerships, safeguarding review, security reports, or the Nairobi pilot. We don't collect sensitive details by email.",
+    `Contact SafeRide about partnerships, safeguarding review, security reports, or the ${PILOT.summary}. We don't collect sensitive details by email.`,
   path: '/contact',
 });
 
@@ -17,19 +17,19 @@ const contactRoutes = [
   {
     label: 'Pilot partnerships',
     title: 'Talk to SafeRide about a pilot.',
-    body: 'For SACCOs, support organizations, county teams, funders, and reviewers who want to discuss a careful field deployment.',
+    body: 'For SACCOs, support organizations, county teams, funders, and reviewers who want to discuss the Mombasa pilot or a careful next deployment.',
     subject: 'SafeRide pilot partnership inquiry',
   },
   {
     label: 'Safeguarding review',
     title: 'Review privacy, referral, or survivor-facing language.',
-    body: 'For GBV, legal, medical, psychosocial, privacy, and child-safeguarding reviewers checking the public launch posture.',
+    body: 'For GBV, legal, medical, psychosocial, privacy, and child-safeguarding reviewers checking the pilot posture.',
     subject: 'SafeRide safeguarding review inquiry',
   },
   {
     label: 'Open-source review',
     title: 'Inspect the stack or contribute to hardening.',
-    body: 'For engineers and civic-tech reviewers looking at the Android app, content packs, model roadmap, or first-party API plan.',
+    body: 'For engineers and civic-tech reviewers looking at the Android app, content packs, model roadmap, or first-party pilot API.',
     subject: 'SafeRide source and model review inquiry',
   },
 ] as const;
@@ -51,7 +51,7 @@ export default function Page() {
             Talk to the SafeRide team.
           </h1>
           <p className="mt-8 max-w-3xl text-xl leading-8 text-green-950/80 md:text-2xl md:leading-9">
-            SafeRide is privacy-first, so this launch site does not collect contact messages in a web form. Use the general pilot inbox for partnership, review, and implementation conversations.
+            SafeRide is privacy-first, so this site does not collect contact messages in a web form. Use the general pilot inbox for partnership, review, and implementation conversations.
           </p>
         </section>
 
@@ -92,7 +92,7 @@ export default function Page() {
           </div>
           <div className="border-3 border-black bg-white p-6">
             <h2 className="font-display text-3xl font-semibold leading-none tracking-normal">Open source</h2>
-            <p className="mt-5 text-lg leading-7 text-green-950/75">Review public code, launch notes, and model roadmap materials through the SafeRide repository.</p>
+            <p className="mt-5 text-lg leading-7 text-green-950/75">Review public code, pilot notes, and model roadmap materials through the SafeRide repository.</p>
             <Link href={SITE.github} target="_blank" rel="noreferrer" className="mt-5 inline-flex border-b-3 border-black pb-1 font-bold text-green-950">
               View GitHub
             </Link>

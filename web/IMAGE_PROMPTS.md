@@ -47,7 +47,7 @@ The current site can render hero images on `/how-it-works`, `/for-survivors`, an
 
 ### 2. `route-safety-bus.webp`
 
-- **Use:** route-safety hero and operator/community card.
+- **Use:** story page hero (it was the route-safety hero before the route safety index page was replaced by the partner dashboard).
 - **Size:** 1600 × 1100.
 - **Prompt:**
   > Nairobi matatu stage in bright afternoon light, adult commuters and a transport operator discussing a simple route-safety board, colorful matatu partially visible with licence plate blurred, abstract route lines and SafeRide color accents integrated as editorial graphic overlays, atmosphere of practical public transport accountability, civic-tech field pilot photography, no incident scene, no police confrontation, strong black geometric framing, room on the right for text.

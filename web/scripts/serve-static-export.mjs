@@ -30,9 +30,12 @@ const MIME = {
 
 const SECURITY_HEADERS = {
   'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
-  // Must match the CloudFront response headers policy in infra/web/aws/bootstrap.sh.
+  // Must match infra/selfhost/web/security-headers.conf, which nginx serves in
+  // production, and the CSP in next.config.mjs used by `next start`.
   'content-security-policy':
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-src https://www.facebook.com; frame-ancestors 'none'; upgrade-insecure-requests",
+  'permissions-policy':
+    'accelerometer=(), autoplay=(self "https://www.facebook.com"), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self "https://www.facebook.com"), geolocation=(), gyroscope=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), usb=(), xr-spatial-tracking=()',
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'strict-origin-when-cross-origin',

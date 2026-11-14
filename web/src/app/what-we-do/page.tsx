@@ -4,9 +4,9 @@ import { pageMetadata } from '@/lib/metadata';
 import { INTERIOR_PAGES } from '@/lib/pages';
 
 export const metadata = pageMetadata({
-  title: 'What We Do: Harassment Reporting & Route Safety',
+  title: 'What We Do: Private Reporting & Mombasa Pilot',
   description:
-    'How SafeRide helps women document harassment on Kenyan public transport, find support, and turn anonymous reports into safer routes.',
+    'How SafeRide helps women document harassment on Kenyan public transport, find support, and keep control of what leaves the phone during the HURIA pilot in Mombasa.',
   path: '/what-we-do',
   image: INTERIOR_PAGES['what-we-do'].ogImage,
   imageAlt: INTERIOR_PAGES['what-we-do'].imageAlt,

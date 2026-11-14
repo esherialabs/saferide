@@ -1,5 +1,7 @@
 # SafeRide First-Party API Roadmap
 
+> **Status (1 Nov 2026):** historical note. The first-party SafeRide API is live and the HURIA pilot runs on it; text below describing a Supabase prototype or a planned API is out of date.
+
 This is a documentation-only planning note. The current branch does not change the mobile app, Supabase client, migrations, Edge Functions, or runtime behaviour.
 
 ## Current State

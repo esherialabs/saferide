@@ -1,0 +1,49 @@
+{
+  "schema": "schemas/public-android-release.schema.json",
+  "schemaVersion": 2,
+  "releaseId": "saferide-1.0.3-android-preview-21-2026-10-18",
+  "releaseName": "SafeRide 1.0.3 Android Preview (build 21)",
+  "status": "public-testing-preview",
+  "publishedAt": "2026-10-18",
+  "packageId": "com.esheria.saferide.app",
+  "appVersion": "1.0.3",
+  "versionCode": 21,
+  "platform": "android",
+  "minimumApi": 26,
+  "abis": ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"],
+  "artifact": {
+    "fileName": "SafeRide-1.0.3-21-Android-Preview.apk",
+    "sourceFileName": "saferide-1.0.3-code21-39d2f0b2.apk",
+    "downloadUrl": "https://saferide.esheria.org/downloads/SafeRide-1.0.3-21-Android-Preview.apk",
+    "publicMirrorUrl": "https://github.com/esherialabs/saferide/releases/download/v1.0.3-android-preview.21/SafeRide-1.0.3-21-Android-Preview.apk",
+    "checksumUrl": "https://saferide.esheria.org/downloads/SafeRide-1.0.3-21-Android-Preview.apk.sha256",
+    "sha256": "d8f094f56754e748c5c8e2cba50410f5a9ea1c375bf18d6aec95f02a888a62a5",
+    "sizeBytes": 153451027,
+    "sourceCommit": "39d2f0b248ca297672be68bacb366c41226ec23e",
+    "buildProfile": "android-release-apk",
+    "easBuildId": "41e685b8-f21b-454e-84ca-ac7f90b8da3a",
+    "certificateSha256": "e706995f643a480d6fc3b8332670aee149ad5b9df164704099bce5720e57d09d",
+    "signatureScheme": "APK signature"
+  },
+  "model": {
+    "modelId": "esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm",
+    "huggingFaceUrl": "https://huggingface.co/esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm",
+    "immutableRevision": "e91ea27c3134fe21fc5bc995141675756e2c4a21",
+    "sha256": "8b73fd844464f220955eeedc474c30f39e621458c7a6b092de5afa2c3d027fcd",
+    "sizeBytes": 5071837136,
+    "freeStorageBytes": 5608708048,
+    "runtime": "LiteRT-LM 0.16.0",
+    "lifecycleStatus": "artifact-produced",
+    "initialDownloadRequired": true
+  },
+  "testedDevice": null,
+  "supersedes": "saferide-v0.5.8-android-preview-2026-08-18",
+  "limitations": [
+    "This is a public testing preview, not a production, emergency-service, survivor-facing, UNICEF-approved, or Google Play release.",
+    "Build 21 has not yet been installed on a physical phone. It has passed automated build and signature checks only; on-device testing, TalkBack and the 2-3 GB, 4 GB and 6-8 GB device matrix are pending.",
+    "Account sign-in, report submission and sync do not work yet because SafeRide's servers are not online, and new account sign-up is turned off. Reports are saved as encrypted drafts on the phone.",
+    "It is signed with a different key from the August v0.5.8 preview, so it cannot install over v0.5.8. Uninstalling v0.5.8 deletes that app's local drafts.",
+    "The optional on-device assistant downloads 5,071,837,136 bytes (4.72 GiB), needs about 5.22 GiB free storage (8-10 GB free recommended) and an arm64 device.",
+    "Use synthetic test reports only; do not enter real survivor reports, evidence, credentials, or exact locations during unsupervised testing."
+  ]
+}
