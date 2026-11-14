@@ -11,8 +11,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import Button from './Button';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTheme } from '../../theme/SimpleThemeProvider';
-import { borders, radii, spacing, typography } from '../../theme/tokens';
+import { borders, radii, spacing, touchTargets, typography } from '../../theme/tokens';
 
 export interface InfoModalProps {
   visible: boolean;
@@ -41,6 +42,7 @@ export function InfoModal({
   closeLabel = 'Cancel',
 }: InfoModalProps) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
 
   const styles = StyleSheet.create({
     overlay: {
@@ -48,35 +50,37 @@ export function InfoModal({
       backgroundColor: colors.scrim,
       flex: 1,
       justifyContent: 'center',
-      padding: spacing.lg,
+      padding: spacing.md,
     },
     panel: {
       backgroundColor: colors.surface,
       borderRadius: radii.sheet,
-      maxHeight: '86%',
+      maxHeight: '88%',
       maxWidth: 440,
       overflow: 'hidden',
       width: '100%',
+    },
+    closeRow: {
+      alignItems: 'flex-end',
+      flexShrink: 0,
+      paddingHorizontal: spacing.xs,
+      paddingTop: spacing.xs,
     },
     closeIcon: {
       alignItems: 'center',
       backgroundColor: colors.surfaceAlt,
       borderRadius: radii.round,
-      height: 36,
+      height: touchTargets.minimum,
       justifyContent: 'center',
-      position: 'absolute',
-      right: spacing.sm,
-      top: spacing.sm,
-      width: 36,
-      zIndex: 2,
+      width: touchTargets.minimum,
     },
     header: {
       borderBottomColor: colors.divider,
       borderBottomWidth: borders.hairline,
-      paddingBottom: spacing.md,
-      paddingHorizontal: spacing.lg,
-      paddingRight: spacing.xxxl,
-      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+      paddingLeft: spacing.md,
+      paddingRight: spacing.md,
+      paddingTop: spacing.md,
     },
     title: {
       ...typography.titleM,
@@ -88,41 +92,47 @@ export function InfoModal({
       marginTop: spacing.xs,
     },
     body: {
-      gap: spacing.md,
-      padding: spacing.lg,
+      gap: spacing.sm,
+      padding: spacing.md,
+    },
+    scroll: {
+      flexShrink: 1,
+      minHeight: 0,
     },
     footer: {
       borderTopColor: colors.divider,
       borderTopWidth: borders.hairline,
-      padding: spacing.lg,
-      paddingTop: spacing.md,
+      padding: spacing.md,
+      paddingTop: spacing.sm,
     },
   });
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.panel}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-                onPress={onClose}
-                style={styles.closeIcon}
-              >
-                <Ionicons name="close" size={18} color={colors.foreground} />
-              </TouchableOpacity>
-              <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                {description ? <Text style={styles.description}>{description}</Text> : null}
+            <View accessibilityViewIsModal style={styles.panel}>
+              <View style={styles.closeRow}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                  onPress={onClose}
+                  style={styles.closeIcon}
+                >
+                  <Ionicons accessible={false} name="close" size={18} color={colors.foreground} />
+                </TouchableOpacity>
               </View>
-              <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-                {children}
+              <ScrollView style={styles.scroll} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
+                <View style={styles.header}>
+                  <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+                  {description ? <Text style={styles.description}>{description}</Text> : null}
+                </View>
+                <View style={styles.body}>{children}</View>
+                <View style={styles.footer}>
+                  <Button title={closeLabel} variant="outline" onPress={onClose} fullWidth />
+                </View>
               </ScrollView>
-              <View style={styles.footer}>
-                <Button title={closeLabel} variant="outline" onPress={onClose} fullWidth />
-              </View>
             </View>
           </TouchableWithoutFeedback>
         </View>

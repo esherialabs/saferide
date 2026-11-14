@@ -51,5 +51,12 @@ __pycache__/
 infra/local/.env
 apps/api/.env
 
+# local CI logs and coverage reports (npm run ci)
+.local-ci/
+coverage/
+
 # typescript
 *.tsbuildinfo
+
+# Signed local Android build output (scripts/build-signed-android-local.sh)
+/outputs/signed-android/

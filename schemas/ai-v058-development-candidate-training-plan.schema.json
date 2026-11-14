@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v058-development-candidate-training-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schemaVersion", "planId", "supersedesPendingPlanSha256", "issue", "status",
+    "executionReadiness", "targetVersion", "leadershipAuthorization", "developmentGateBinding",
+    "authorization", "candidates", "authoritativeBaseCorpusLineage", "mitigationLineageSources",
+    "requiredV058CombinedInputFreeze", "governedCandidateRecipeBoundary", "remediationPilotLineage",
+    "excludedEvaluationInputs", "globalUsefulnessAndSafetyThresholds", "remediationTargets", "executionBoundary"
+  ],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v058-development-candidate-training-plan"},
+    "schemaVersion": {"const": 3},
+    "planId": {"const": "saferide-v058-two-full-development-candidates-20260809-03"},
+    "supersedesPendingPlanSha256": {"const": "591efdd8f0092592756aa676e03b6ff4e9c9f6e930ec41306a2c3ca4030cedcb"},
+    "issue": {"const": "ESH-4198"},
+    "status": {"const": "authorized-runnable-a11-candidates"},
+    "executionReadiness": {"const": "runnable-a11-two-sequential-candidates"},
+    "targetVersion": {"const": "v0.5.8-development-candidate"},
+    "leadershipAuthorization": {"type": "object"},
+    "developmentGateBinding": {"type": "object"},
+    "authorization": {"const": {
+      "fullCandidateTrainingAuthorized": true, "authorizedCandidateCount": 2,
+      "candidateRunsPerformed": 0, "candidateRunsRemaining": 2,
+      "fullCandidateTrainingStarted": false, "automaticRetryAuthorized": false,
+      "holdoutAuthorized": false, "selectionAuthorized": false, "promotionAuthorized": false,
+      "exportAuthorized": false, "deploymentAuthorized": false, "publicationAuthorized": false,
+      "releaseAuthorized": false
+    }},
+    "candidates": {"const": [
+      {"ordinal": 1, "candidateId": "saferide-v058-development-candidate-s419805", "seed": 419805, "status": "authorized-runnable", "attemptsPerformed": 0, "retryAuthorized": false, "pairedRunBindingRequired": false},
+      {"ordinal": 2, "candidateId": "saferide-v058-development-candidate-s419806", "seed": 419806, "status": "authorized-runnable-paired-predecessor-required", "attemptsPerformed": 0, "retryAuthorized": false, "pairedRunBindingRequired": true}
+    ]},
+    "authoritativeBaseCorpusLineage": {"type": "object"},
+    "mitigationLineageSources": {
+      "type": "array", "minItems": 7, "maxItems": 7,
+      "items": {"$ref": "#/$defs/mitigationLineage"}
+    },
+    "requiredV058CombinedInputFreeze": {"$ref": "#/$defs/freeze"},
+    "governedCandidateRecipeBoundary": {"$ref": "#/$defs/recipe"},
+    "remediationPilotLineage": {"type": "object"},
+    "excludedEvaluationInputs": {"type": "object"},
+    "globalUsefulnessAndSafetyThresholds": {"type": "object"},
+    "remediationTargets": {"type": "array", "minItems": 1, "maxItems": 1},
+    "executionBoundary": {"const": {
+      "combinedInputFrozen": true, "trainingInputStaged": true, "modelDownloaded": false,
+      "candidateTrainingStarted": false, "candidateTrainingCompleted": false,
+      "holdoutAccessed": false, "selectionPerformed": false, "promotionPerformed": false,
+      "exportPerformed": false, "deploymentPerformed": false, "publicationPerformed": false,
+      "releasePerformed": false, "awsOrSageMakerOperationPerformed": false,
+      "gpuOrA11OperationPerformed": true
+    }}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "mitigationLineage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "planPath", "planSha256", "frozenManifestSha256", "nonDevelopmentMitigationRows", "nonDevelopmentMitigationSha256", "v058SelectionStatus"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^v0\\.5\\.[1-7]$"},
+        "planPath": {"type": "string", "pattern": "^config/ai/datasets/saferide-gemma4-v05[1-7]-mitigation-plan\\.json$"},
+        "planSha256": {"$ref": "#/$defs/sha256"},
+        "frozenManifestSha256": {"$ref": "#/$defs/sha256"},
+        "nonDevelopmentMitigationRows": {"type": "integer", "minimum": 1},
+        "nonDevelopmentMitigationSha256": {"$ref": "#/$defs/sha256"},
+        "v058SelectionStatus": {"enum": ["selected-weight-1", "selected-weight-2", "selected-weight-3", "excluded-superseded-by-v0.5.6-from-v0.5.4"]}
+      }
+    },
+    "freeze": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "status", "composition", "selectionInventorySha256", "exclusionsSha256",
+        "deduplicationReportSha256", "weightingRecipeSha256", "sampleOrderContractSha256",
+        "combinedUniqueTrainRows", "combinedWeightedExamples", "combinedUniqueTrainSha256",
+        "combinedWeightedTrainSha256", "frozenManifestSha256", "registerSha256",
+        "datasetAuditSha256", "semanticReportSha256", "tokenizationReportSha256",
+        "leakageReportSha256", "trainingRecipeSha256", "a11InputManifestSha256",
+        "a11TrainingArchiveSha256", "a11TrainingArchiveSizeBytes", "blockers"
+      ],
+      "properties": {
+        "status": {"const": "frozen-runnable"},
+        "composition": {"type": "object"},
+        "selectionInventorySha256": {"$ref": "#/$defs/sha256"},
+        "exclusionsSha256": {"$ref": "#/$defs/sha256"},
+        "deduplicationReportSha256": {"$ref": "#/$defs/sha256"},
+        "weightingRecipeSha256": {"$ref": "#/$defs/sha256"},
+        "sampleOrderContractSha256": {"$ref": "#/$defs/sha256"},
+        "combinedUniqueTrainRows": {"const": 1904},
+        "combinedWeightedExamples": {"const": 1992},
+        "combinedUniqueTrainSha256": {"$ref": "#/$defs/sha256"},
+        "combinedWeightedTrainSha256": {"$ref": "#/$defs/sha256"},
+        "frozenManifestSha256": {"$ref": "#/$defs/sha256"},
+        "registerSha256": {"$ref": "#/$defs/sha256"},
+        "datasetAuditSha256": {"$ref": "#/$defs/sha256"},
+        "semanticReportSha256": {"$ref": "#/$defs/sha256"},
+        "tokenizationReportSha256": {"$ref": "#/$defs/sha256"},
+        "leakageReportSha256": {"$ref": "#/$defs/sha256"},
+        "trainingRecipeSha256": {"$ref": "#/$defs/sha256"},
+        "a11InputManifestSha256": {"$ref": "#/$defs/sha256"},
+        "a11TrainingArchiveSha256": {"$ref": "#/$defs/sha256"},
+        "a11TrainingArchiveSizeBytes": {"type": "integer", "minimum": 1},
+        "blockers": {"const": []}
+      }
+    },
+    "recipe": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "backend", "datasetBuilderPath", "datasetBuilderSha256", "trainingValidatorPath",
+        "trainingValidatorSha256", "fullFinetuneRunnerPath", "fullFinetuneRunnerSha256",
+        "candidateRunnerPath", "candidateRunnerSha256", "candidateLauncherPath",
+        "candidateLauncherSha256", "developmentPanelPath", "developmentPanelSha256",
+        "developmentLauncherPath", "developmentLauncherSha256", "runKind", "baseModel",
+        "seeds", "epochs", "learningRate", "maxSteps", "maximumSequenceLength",
+        "rejectTruncation", "trainBatchSize", "evaluationBatchSize",
+        "gradientAccumulationSteps", "effectiveBatchSize", "maxGradientNorm", "scheduler",
+        "warmupRatio", "loggingSteps", "evaluationSteps", "saveSteps",
+        "earlyStoppingPatience", "gradientCheckpointing", "assistantOnlyLoss", "lora",
+        "finalCombinedTrainRows", "finalWeightedExamples", "maximumOptimizerStepsPerCandidate",
+        "finalRecipeSha256", "saveAllCheckpoints", "runnable"
+      ],
+      "properties": {
+        "backend": {"const": "A11-only"},
+        "datasetBuilderPath": {"const": "scripts/saferide-gemma4-v058-dataset.py"},
+        "datasetBuilderSha256": {"$ref": "#/$defs/sha256"},
+        "trainingValidatorPath": {"const": "scripts/saferide-gemma4-v058-training.py"},
+        "trainingValidatorSha256": {"$ref": "#/$defs/sha256"},
+        "fullFinetuneRunnerPath": {"const": "scripts/saferide-gemma4-finetune-runner.py"},
+        "fullFinetuneRunnerSha256": {"$ref": "#/$defs/sha256"},
+        "candidateRunnerPath": {"const": "scripts/saferide-gemma4-v058-finetune-runner.py"},
+        "candidateRunnerSha256": {"$ref": "#/$defs/sha256"},
+        "candidateLauncherPath": {"const": "scripts/saferide-gemma4-v058-a11-shell-launcher.sh"},
+        "candidateLauncherSha256": {"$ref": "#/$defs/sha256"},
+        "developmentPanelPath": {"const": "scripts/saferide-gemma4-v058-development-panel.py"},
+        "developmentPanelSha256": {"$ref": "#/$defs/sha256"},
+        "developmentLauncherPath": {"const": "scripts/saferide-gemma4-v058-a11-shell-launcher.sh"},
+        "developmentLauncherSha256": {"$ref": "#/$defs/sha256"},
+        "runKind": {"const": "candidate"},
+        "baseModel": {"type": "object"},
+        "seeds": {"const": [419805, 419806]},
+        "epochs": {"const": 1}, "learningRate": {"const": 0.00002},
+        "maxSteps": {"type": "null"}, "maximumSequenceLength": {"const": 1024},
+        "rejectTruncation": {"const": true}, "trainBatchSize": {"const": 1},
+        "evaluationBatchSize": {"const": 1}, "gradientAccumulationSteps": {"const": 8},
+        "effectiveBatchSize": {"const": 8}, "maxGradientNorm": {"const": 1},
+        "scheduler": {"const": "cosine"}, "warmupRatio": {"const": 0.03},
+        "loggingSteps": {"const": 5}, "evaluationSteps": {"const": 25},
+        "saveSteps": {"const": 25}, "earlyStoppingPatience": {"const": 3},
+        "gradientCheckpointing": {"const": true}, "assistantOnlyLoss": {"const": true},
+        "lora": {"const": {"rank": 8, "alpha": 16, "dropout": 0.05}},
+        "finalCombinedTrainRows": {"const": 1904}, "finalWeightedExamples": {"const": 1992},
+        "maximumOptimizerStepsPerCandidate": {"const": 249},
+        "finalRecipeSha256": {"$ref": "#/$defs/sha256"},
+        "saveAllCheckpoints": {"const": true}, "runnable": {"const": true}
+      }
+    }
+  }
+}

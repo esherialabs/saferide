@@ -55,6 +55,15 @@ import {
   type ReferralContactChannel,
 } from '../utils/referralSupport';
 import { captureMeasurementEvent } from '../lib/measurement/localEventStore';
+import { PartnerSharingOptIn } from '../components/report/PartnerSharingOptIn';
+import { usePartnerSharingAvailability } from '../hooks/usePartnerSharingAvailability';
+import { PARTNER_SHARING_COPY } from '../i18n/partnerSharingCopy';
+import {
+  buildPartnerSharingChoice,
+  getPartnerSharingFormState,
+  HURIA_PARTNER_STABLE_ID,
+  type PartnerSharingFormState,
+} from '../utils/partnerSharing';
 
 type ReferralPickerNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ReferralPicker'>;
 type ReferralPickerRouteProp = RouteProp<RootStackParamList, 'ReferralPicker'>;
@@ -109,6 +118,9 @@ export default function ReferralPickerScreen() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [draftData, setDraftData] = useState<DraftData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const partnerAvailability = usePartnerSharingAvailability();
+  const [partnerForm, setPartnerForm] = useState<PartnerSharingFormState>(() => getPartnerSharingFormState(null));
+  const [partnerPhoneError, setPartnerPhoneError] = useState<string | null>(null);
 
   const routeDraftId = typeof route.params?.draftId === 'string' && route.params.draftId.trim()
     ? route.params.draftId
@@ -214,6 +226,7 @@ export default function ReferralPickerScreen() {
         if (draft.fallbackNumber) {
           setFallbackNumber(draft.fallbackNumber);
         }
+        setPartnerForm(getPartnerSharingFormState(draft.partnerSharing));
         const savedProviderId = draft.referralSelection?.providerId ?? draft.selectedProvider;
         if (savedProviderId && providers.length > 0) {
           const savedProvider = providers.find(provider => provider.id === savedProviderId) ?? null;
@@ -266,23 +279,12 @@ export default function ReferralPickerScreen() {
     searchContainer: {
       position: 'relative',
     },
-    searchInput: {
-      paddingLeft: 40,
-      paddingRight: 40,
-    },
-    searchIcon: {
-      position: 'absolute',
-      left: 12,
-      top: '50%',
-      transform: [{ translateY: -10 }],
+    searchField: {
+      marginBottom: 0,
     },
     clearIcon: {
-      position: 'absolute',
-      right: 12,
-      top: '50%',
-      transform: [{ translateY: -10 }],
-      minHeight: 32,
-      minWidth: 32,
+      minHeight: 48,
+      minWidth: 48,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -613,7 +615,6 @@ export default function ReferralPickerScreen() {
         key={provider.id}
         variant="outlined"
         selected={isSelected}
-        accentColor={colors.support}
         style={styles.providerItem}
       >
         <CardContent style={styles.providerCardContent}>
@@ -634,10 +635,10 @@ export default function ReferralPickerScreen() {
               />
             </View>
             <View style={styles.providerHeaderText}>
-              <Text style={styles.providerName} numberOfLines={2}>{provider.name}</Text>
-              <Text style={styles.providerDescription} numberOfLines={2}>{servicesLabel}</Text>
+              <Text style={styles.providerName}>{provider.name}</Text>
+              <Text style={styles.providerDescription}>{servicesLabel}</Text>
               {!isSelected && coverageLabel ? (
-                <Text style={styles.providerMeta} numberOfLines={1}>{coverageLabel}</Text>
+                <Text style={styles.providerMeta}>{coverageLabel}</Text>
               ) : null}
             </View>
             <View style={styles.providerSelectIcon}>
@@ -716,7 +717,7 @@ export default function ReferralPickerScreen() {
   };
 
   const renderFallbackContact = () => (
-    <Card variant="outlined" accentColor={colors.support} style={styles.sectionCard}>
+    <Card variant="outlined" style={styles.sectionCard}>
       <CardContent style={styles.emptyStateContent}>
         <Ionicons
           name={providers.length === 0 ? 'cloud-offline-outline' : 'search-outline'}
@@ -742,7 +743,7 @@ export default function ReferralPickerScreen() {
   );
 
   const renderLoadingProviders = () => (
-    <Card variant="outlined" accentColor={colors.support} style={styles.sectionCard}>
+    <Card variant="outlined" style={styles.sectionCard}>
       <CardContent style={styles.emptyStateContent}>
         <Ionicons
           name="sync-outline"
@@ -754,6 +755,13 @@ export default function ReferralPickerScreen() {
         <Text style={styles.emptyStateText}>Checking saved listings.</Text>
       </CardContent>
     </Card>
+  );
+
+  // A referral can be shared with HURIA when it names HURIA itself. Without a
+  // verified phone channel it goes to HURIA's secure dashboard after consent.
+  const showPartnerOptIn = Boolean(
+    partnerAvailability.routing &&
+    selectedProvider?.id === HURIA_PARTNER_STABLE_ID,
   );
 
   const handleContinue = async () => {
@@ -783,6 +791,29 @@ export default function ReferralPickerScreen() {
       return;
     }
 
+    const partnerChoice = showPartnerOptIn
+      ? buildPartnerSharingChoice(draftData?.partnerSharing, partnerForm, partnerAvailability)
+      : null;
+    if (partnerChoice && !partnerChoice.ok) {
+      setPartnerPhoneError(PARTNER_SHARING_COPY.callback.invalidNumber);
+      toast.show({ title: PARTNER_SHARING_COPY.callback.invalidNumber, variant: 'error' });
+      return;
+    }
+
+    // Without a verified channel the only way a referral can be sent is to
+    // HURIA's dashboard with sharing on; anything else would queue a send that
+    // can never succeed.
+    if (!selectedChannel && !(partnerChoice?.ok && partnerChoice.sharing.requested)) {
+      toast.show({
+        title: 'Turn on sharing with HURIA',
+        message: selectedProvider.id === HURIA_PARTNER_STABLE_ID
+          ? 'To send this report, turn on sharing with HURIA below.'
+          : 'In this pilot, reports can be sent only to HURIA. Choose HURIA and turn on sharing.',
+        variant: 'error',
+      });
+      return;
+    }
+
     try {
       setIsSaving(true);
       const update = buildReferralDraftUpdate({
@@ -796,6 +827,12 @@ export default function ReferralPickerScreen() {
       const trimmedFallback = fallbackNumber.trim();
       if (trimmedFallback) {
         update.fallbackNumber = trimmedFallback;
+      }
+      if (partnerChoice?.ok) {
+        update.partnerSharing = partnerChoice.sharing;
+      } else if (selectedProvider.id !== HURIA_PARTNER_STABLE_ID && draftData?.partnerSharing) {
+        // The HURIA choice belongs to a referral to HURIA; another provider never receives it.
+        update.partnerSharing = undefined;
       }
       await draftStorage.saveDraft(update);
       setDraftData(await draftStorage.getDraft(draftId));
@@ -1063,12 +1100,10 @@ export default function ReferralPickerScreen() {
             variant="warning"
             dismissible
             onDismiss={() => setDismissedOfflineNotice(true)}
+            icon={<Ionicons name="cloud-offline-outline" size={20} color={colors.warning} />}
             style={{ marginBottom: 16 }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="cloud-offline" size={16} color={colors.warning} />
-              <Text style={{ flex: 1, color: colors.foreground }}>{displayedCatalogStatus}</Text>
-            </View>
+            <Text style={{ color: colors.foreground }}>{displayedCatalogStatus}</Text>
           </AlertComponent>
         ) : null}
 
@@ -1083,7 +1118,7 @@ export default function ReferralPickerScreen() {
           </AlertComponent>
         ) : null}
 
-        <Card variant="outlined" accentColor={colors.support} style={styles.sectionCard}>
+        <Card variant="outlined" style={styles.sectionCard}>
           <CardHeader>
             <CardTitle>Find a provider</CardTitle>
           </CardHeader>
@@ -1107,24 +1142,19 @@ export default function ReferralPickerScreen() {
                 placeholder="Search provider, service, county, or language"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                style={styles.searchInput}
+                containerStyle={styles.searchField}
+                startAdornment={<Ionicons accessible={false} name="search" size={18} color={colors.mutedForeground} />}
+                endAdornment={searchQuery ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear provider search"
+                    onPress={() => setSearchQuery('')}
+                    style={styles.clearIcon}
+                  >
+                    <Ionicons name="close" size={20} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                ) : undefined}
               />
-              <Ionicons
-                name="search"
-                size={20}
-                color={colors.mutedForeground}
-                style={styles.searchIcon}
-              />
-              {searchQuery ? (
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear provider search"
-                  onPress={() => setSearchQuery('')}
-                  style={styles.clearIcon}
-                >
-                  <Ionicons name="close" size={20} color={colors.mutedForeground} />
-                </TouchableOpacity>
-              ) : null}
             </View>
 
             <View style={styles.refreshRow}>
@@ -1158,6 +1188,20 @@ export default function ReferralPickerScreen() {
         ) : (
           <View style={styles.providerList}>{filteredProviders.map(renderProviderCard)}</View>
         )}
+
+        {showPartnerOptIn ? (
+          <PartnerSharingOptIn
+            pathway="referral"
+            value={partnerForm}
+            onChange={next => {
+              setPartnerForm(next);
+              setPartnerPhoneError(null);
+            }}
+            callbackAvailable={partnerAvailability.callback}
+            phoneError={partnerPhoneError}
+            style={styles.sectionCard}
+          />
+        ) : null}
 
         <Card variant="filled" hideAccent style={styles.sectionCard}>
           <CardContent style={styles.noticeContent}>

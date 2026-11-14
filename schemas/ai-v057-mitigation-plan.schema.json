@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-mitigation-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "status", "datasetId", "sourceDatasetId", "authoringSeed", "pilotSeed", "rowCounts", "minimumRowRationale", "distribution", "weighting", "trainingHypothesis", "targetContract", "generation", "rubric", "gates", "privacy", "authorization"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-mitigation-plan"}, "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"}, "status": {"const": "authorized-bounded-targeted-remediation"},
+    "datasetId": {"const": "saferide-synthetic-guidance-v0.5.7"}, "sourceDatasetId": {"const": "saferide-synthetic-guidance-v0.5.6"},
+    "authoringSeed": {"const": 419857}, "pilotSeed": {"const": 419805},
+    "rowCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["newTrainingRows", "newBilingualFamilies", "continuationUniqueTrainingRows", "weightedTrainingExamples", "expectedOptimizerSteps", "originalDevelopmentRows", "mitigationDevelopmentRows"],
+      "properties": {
+        "newTrainingRows": {"const": 16}, "newBilingualFamilies": {"const": 8}, "continuationUniqueTrainingRows": {"const": 72},
+        "weightedTrainingExamples": {"const": 104}, "expectedOptimizerSteps": {"const": 13},
+        "originalDevelopmentRows": {"const": 300}, "mitigationDevelopmentRows": {"const": 20}
+      }
+    },
+    "minimumRowRationale": {"type": "string", "minLength": 120},
+    "distribution": {"type": "object", "additionalProperties": true, "required": ["languages", "tracks", "variants"]},
+    "weighting": {"type": "object", "additionalProperties": true, "required": ["sourceV054MitigationMultiplier", "sourceV056MitigationMultiplier", "newV057Multiplier", "weightedComposition"]},
+    "trainingHypothesis": {
+      "type": "object", "additionalProperties": true,
+      "required": ["count", "initialization", "initialAdapterTensorSha256", "learningRate", "epochs", "optimizerSteps", "assistantOnlyLoss", "singlePilotOnly", "retryAllowed", "rationale"],
+      "properties": {
+        "count": {"const": 1}, "initialization": {"const": "immutable-v0.5.6-adapter"},
+        "initialAdapterTensorSha256": {"const": "6894f08954364b6a883bf39642d113de0fa7c17670811d41ab35bc22e5cb61c4"},
+        "learningRate": {"const": 0.000005}, "epochs": {"const": 1}, "optimizerSteps": {"const": 13},
+        "assistantOnlyLoss": {"const": true}, "singlePilotOnly": {"const": true}, "retryAllowed": {"const": false},
+        "rationale": {"type": "string", "minLength": 100}
+      }
+    },
+    "targetContract": {"type": "object", "additionalProperties": true},
+    "generation": {"type": "object", "additionalProperties": true, "required": ["maxNewTokens", "zeroTruncationRequired", "expectedTerminatorIds"]},
+    "rubric": {"type": "object", "additionalProperties": true, "required": ["policyId", "thresholdsChanged", "scorerChanged", "genuineDisclosureBlocking"]},
+    "gates": {"type": "object", "additionalProperties": {"type": ["boolean", "number"]}},
+    "privacy": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "authorization": {"type": "object", "additionalProperties": {"type": "boolean"}}
+  }
+}

@@ -34,7 +34,7 @@ export default function CommunitySpotlight({ items }: { items: readonly Spotligh
           <div>
             <p className="font-display text-sm font-semibold uppercase tracking-normal text-green-950">Community Spotlight</p>
             <h2 id="community-heading" className="mt-3 font-display text-[clamp(2.5rem,6vw,5.25rem)] font-semibold leading-[0.9] tracking-normal text-green-950">
-              Signals reviewers can inspect.
+              What the pilot included.
             </h2>
           </div>
           <div className="flex items-center gap-4 md:justify-self-end">

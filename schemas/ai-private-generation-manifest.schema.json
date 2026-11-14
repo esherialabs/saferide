@@ -52,7 +52,7 @@
       "additionalProperties": false,
       "required": ["engine", "pythonVersion", "packages", "accelerator"],
       "properties": {
-        "engine": { "const": "transformers-peft" },
+        "engine": { "enum": ["transformers-peft", "litert-lm"] },
         "pythonVersion": { "$ref": "#/$defs/nonEmpty" },
         "packages": {
           "type": "object",

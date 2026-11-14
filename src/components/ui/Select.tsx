@@ -80,21 +80,21 @@ export function Select({
     switch (size) {
       case 'sm':
         return {
-          height: 48,
+          minHeight: 48,
           paddingHorizontal: spacing.lg,
           fontSize: typography.bodyS.fontSize,
           borderRadius: radii.input,
         };
       case 'lg':
         return {
-          height: 60,
+          minHeight: 60,
           paddingHorizontal: spacing.xl,
           fontSize: typography.bodyM.fontSize,
           borderRadius: radii.input,
         };
       default:
         return {
-          height: 56,
+          minHeight: 56,
           paddingHorizontal: spacing.xl,
           fontSize: typography.bodyM.fontSize,
           borderRadius: radii.input,
@@ -105,7 +105,7 @@ export function Select({
   const getVariantStyles = () => {
     const baseStyle = {
       borderWidth: 1,
-      borderColor: colors.divider,
+      borderColor: colors.input,
       backgroundColor: colors.surface,
     };
 
@@ -125,7 +125,7 @@ export function Select({
       default:
         return {
           ...baseStyle,
-          borderColor: colors.divider,
+          borderColor: colors.input,
         };
     }
   };
@@ -227,7 +227,7 @@ export function Select({
     // Modal styles
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
     },
     dropdown: {
       position: 'absolute',
@@ -246,7 +246,7 @@ export function Select({
       borderBottomColor: colors.divider,
     },
     searchInput: {
-      height: 44,
+      minHeight: 48,
       backgroundColor: colors.surfaceAlt,
       borderRadius: radii.input,
       paddingHorizontal: spacing.lg,
@@ -258,6 +258,7 @@ export function Select({
       maxHeight: maxHeight - (searchable ? 60 : 0),
     },
     option: {
+      minHeight: 48,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       borderBottomWidth: 1,
@@ -318,6 +319,9 @@ export function Select({
         ]}
         onPress={() => !item.disabled && handleSelect(item.value)}
         disabled={item.disabled}
+        accessibilityRole={multiple ? 'checkbox' : 'radio'}
+        accessibilityLabel={item.description ? `${item.label}. ${item.description}` : item.label}
+        accessibilityState={{ disabled: item.disabled, checked: isSelected }}
       >
         <View style={styles.optionContent}>
           <Text style={styles.optionLabel}>{item.label}</Text>
@@ -352,7 +356,7 @@ export function Select({
         accessibilityHint="Double tap to open options"
         accessibilityState={{ disabled, expanded: isOpen }}
       >
-        <Text style={styles.triggerText} numberOfLines={1}>
+        <Text style={styles.triggerText}>
           {getSelectedLabel()}
         </Text>
         <Ionicons

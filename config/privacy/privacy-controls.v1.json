@@ -1,7 +1,7 @@
 {
   "schema": "com.saferide.privacy-controls",
   "schemaVersion": 1,
-  "controlVersion": "privacy-controls.2026-07-30.2",
+  "controlVersion": "privacy-controls.2026-10-22.pilot.1",
   "policyDocuments": [
     {
       "documentType": "privacy-policy",
@@ -25,23 +25,72 @@
     }
   ],
   "consentPurposes": {
-    "pathway_submission": { "status": "disabled", "reason": "pending_legal_retention_and_deletion_approval" },
-    "anonymous_aggregate": { "status": "disabled", "reason": "pending_privacy_mentor_and_legal_approval" },
-    "policy_acceptance": { "status": "disabled", "reason": "pending_legal" },
-    "analytics": { "status": "disabled", "reason": "not_configured" },
-    "research": { "status": "disabled", "reason": "pending_ethics_review" },
-    "model_training": { "status": "disabled", "reason": "pending_data_governance" },
-    "partner_follow_up": { "status": "disabled", "reason": "pending_partner_agreement" }
+    "pathway_submission": {
+      "status": "enabled",
+      "version": "pathway-consent.v1"
+    },
+    "anonymous_aggregate": {
+      "status": "disabled",
+      "reason": "pending_privacy_mentor_and_legal_approval"
+    },
+    "policy_acceptance": {
+      "status": "disabled",
+      "reason": "pending_legal"
+    },
+    "analytics": {
+      "status": "disabled",
+      "reason": "not_configured"
+    },
+    "research": {
+      "status": "disabled",
+      "reason": "pending_ethics_review"
+    },
+    "model_training": {
+      "status": "disabled",
+      "reason": "pending_data_governance"
+    },
+    "partner_follow_up": {
+      "status": "enabled",
+      "version": "partner-follow-up.ke-coast-huria.v3"
+    },
+    "partner_callback": {
+      "status": "enabled",
+      "version": "partner-callback.ke-coast-huria.v1"
+    }
   },
   "capabilities": {
-    "minor_processing": { "status": "disabled", "reason": "pending_legal_and_safeguarding" },
-    "submitted_case_ingestion": { "status": "disabled", "reason": "pending_legal_retention_deletion_and_scanner_approval" },
-    "remote_chat_ingestion": { "status": "disabled", "reason": "pending_legal_retention_and_deletion_approval" },
-    "anonymous_signal_ingestion": { "status": "disabled", "reason": "pending_privacy_parameter_approval" },
-    "dsar_server_processing": { "status": "disabled", "reason": "pending_legal_process_approval" },
-    "server_retention_execution": { "status": "disabled", "reason": "pending_legal_retention_approval" },
-    "evidence_transform_processing": { "status": "disabled", "reason": "pending_device_and_security_proof" },
-    "malware_scan_test_exception": { "status": "disabled", "reason": "no_approved_exception" }
+    "minor_processing": {
+      "status": "disabled",
+      "reason": "pending_legal_and_safeguarding"
+    },
+    "submitted_case_ingestion": {
+      "status": "enabled",
+      "version": "owner-authorized-pilot.2026-10-22.1"
+    },
+    "remote_chat_ingestion": {
+      "status": "disabled",
+      "reason": "pending_legal_retention_and_deletion_approval"
+    },
+    "anonymous_signal_ingestion": {
+      "status": "disabled",
+      "reason": "pending_privacy_parameter_approval"
+    },
+    "dsar_server_processing": {
+      "status": "enabled",
+      "version": "owner-authorized-pilot.2026-10-22.1"
+    },
+    "server_retention_execution": {
+      "status": "enabled",
+      "version": "owner-authorized-pilot.2026-10-22.1"
+    },
+    "evidence_transform_processing": {
+      "status": "disabled",
+      "reason": "pending_device_and_security_proof"
+    },
+    "malware_scan_test_exception": {
+      "status": "disabled",
+      "reason": "no_approved_exception"
+    }
   },
   "retentionPolicies": [
     {
@@ -68,19 +117,33 @@
     {
       "policyId": "submitted-case-pending-legal-v1",
       "scope": "server",
-      "durationDays": null,
-      "approvalStatus": "pending_legal",
-      "executionEnabled": false
+      "durationDays": 90,
+      "approvalStatus": "approved_engineering",
+      "executionEnabled": true
+    },
+    {
+      "policyId": "partner-access-after-close-v1",
+      "scope": "server",
+      "durationDays": 90,
+      "approvalStatus": "approved_engineering",
+      "executionEnabled": true
+    },
+    {
+      "policyId": "partner-audit-v1",
+      "scope": "server",
+      "durationDays": 730,
+      "approvalStatus": "approved_engineering",
+      "executionEnabled": true
     }
   ],
   "malwareScanPolicy": {
-    "status": "disabled",
-    "approvalId": null,
-    "scanner": null,
-    "definitionVersion": null,
-    "validFrom": null,
-    "validUntil": null,
-    "reason": "pending_scanner_and_security_approval"
+    "status": "enabled",
+    "approvalId": "owner-authorized-security-pilot.2026-10-22.1",
+    "scanner": "clamav 1.5.4",
+    "definitionVersion": "freshclam:max-age=48h",
+    "validFrom": "2026-10-22T00:00:00.000Z",
+    "validUntil": "2026-12-12T00:00:00.000Z",
+    "reason": null
   },
   "evidenceDownloadGate": {
     "allowedAttachmentStatus": "uploaded",

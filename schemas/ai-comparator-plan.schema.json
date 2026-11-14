@@ -8,7 +8,7 @@
     "schema": { "const": "com.saferide.ai.comparator-plan" },
     "schemaVersion": { "const": 1 },
     "planId": { "$ref": "#/$defs/nonEmpty" },
-    "targetSlot": { "enum": ["v04", "v05"] },
+    "targetSlot": { "enum": ["v04", "v05", "tuned-mobile"] },
     "status": { "enum": ["blocked", "ready-for-private-generation", "generated"] },
     "promptSuite": { "$ref": "#/$defs/fileRef" },
     "rubric": { "$ref": "#/$defs/fileRef" },
@@ -27,15 +27,15 @@
     "maximumRegressionPoints": { "type": "number", "minimum": 0, "maximum": 3 },
     "artifacts": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 1,
       "maxItems": 5,
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["slot", "artifactClass", "artifactId", "immutableRevision", "baseModelId", "baseRevision", "fileManifestSha256", "fileInventory", "status", "blocker"],
         "properties": {
-          "slot": { "enum": ["base", "v03", "v04", "v05-seed-a", "v05-seed-b", "v05"] },
-          "artifactClass": { "enum": ["base-runtime", "adapter"] },
+          "slot": { "enum": ["base", "v03", "v04", "v05-seed-a", "v05-seed-b", "v05", "tuned-mobile"] },
+          "artifactClass": { "enum": ["base-runtime", "adapter", "tuned-mobile-artifact"] },
           "artifactId": { "type": ["string", "null"], "minLength": 1 },
           "immutableRevision": { "anyOf": [{ "$ref": "#/$defs/revision" }, { "type": "null" }] },
           "baseModelId": { "$ref": "#/$defs/nonEmpty" },

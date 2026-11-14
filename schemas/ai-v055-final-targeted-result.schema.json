@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v055-final-targeted-result.schema.json",
+  "title": "SafeRide v0.5.5 final targeted pilot and panel result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt",
+    "bindings", "preservedEvidence", "adjudication", "screens", "preflight", "pilot", "panel",
+    "gpu", "operations", "validation", "decision", "privacy", "untouched"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v055-final-targeted-result" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "branch": { "const": "codex/esh-4198-v051-mitigation" },
+    "pullRequest": { "const": 205 },
+    "status": { "const": "no-go-panel-gates-failed" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "bindings": {
+      "type": "object",
+      "required": [
+        "requiredStartingHead", "executionCommit", "datasetSourceCommit", "planSha256", "runnerSha256",
+        "remediationSha256", "diagnosisSha256", "sourceV054FrozenManifestSha256", "frozenManifestSha256",
+        "frozenInventorySha256", "combinedTrainingSha256", "trainingRecipeSha256", "sampleOrderSha256",
+        "originalDevelopmentSha256", "mitigationDevelopmentSha256", "sealedHoldoutSha256",
+        "panelInputManifestSha256", "rubricV4PolicySha256", "lossPolicySha256", "modelRevision",
+        "modelFileCount", "modelTotalBytes", "runtimeArchiveSha256", "runtimeManifestDigest", "runtimeConfigDigest"
+      ],
+      "properties": {
+        "requiredStartingHead": { "$ref": "#/$defs/commit" },
+        "executionCommit": { "$ref": "#/$defs/commit" },
+        "datasetSourceCommit": { "$ref": "#/$defs/commit" },
+        "modelRevision": { "$ref": "#/$defs/commit" },
+        "modelFileCount": { "const": 9 },
+        "modelTotalBytes": { "const": 10278846140 }
+      },
+      "additionalProperties": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "integer" }] }
+    },
+    "preservedEvidence": { "type": "object" },
+    "adjudication": { "type": "object" },
+    "screens": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{7,79}$" },
+      "minProperties": 6
+    },
+    "preflight": { "type": "object" },
+    "pilot": { "type": "object" },
+    "panel": { "type": "object" },
+    "gpu": { "type": "object" },
+    "operations": { "type": "object" },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "pythonTests", "nodeTests", "secretScanFiles", "datasetAndTrainingContractsPassed",
+        "semanticTokenizerLeakageLineageGatesPassed", "historicalValidatorsPassed", "evidenceSchemasPassed",
+        "secretScanPassed", "diffCheckPassed", "coercionFalsePositiveRegressionsPassed",
+        "genuineCoercionRetaliationBlameDisclosureRegressionsPassed", "terminatorRegressionsPassed"
+      ],
+      "properties": {
+        "status": { "enum": ["pending-final-local-validation", "passed"] },
+        "pythonTests": { "type": ["integer", "null"], "minimum": 1 },
+        "nodeTests": { "type": ["integer", "null"], "minimum": 1 },
+        "secretScanFiles": { "type": ["integer", "null"], "minimum": 1 },
+        "datasetAndTrainingContractsPassed": { "type": ["boolean", "null"] },
+        "semanticTokenizerLeakageLineageGatesPassed": { "type": ["boolean", "null"] },
+        "historicalValidatorsPassed": { "type": ["boolean", "null"] },
+        "evidenceSchemasPassed": { "type": ["boolean", "null"] },
+        "secretScanPassed": { "type": ["boolean", "null"] },
+        "diffCheckPassed": { "type": ["boolean", "null"] },
+        "coercionFalsePositiveRegressionsPassed": { "type": ["boolean", "null"] },
+        "genuineCoercionRetaliationBlameDisclosureRegressionsPassed": { "type": ["boolean", "null"] },
+        "terminatorRegressionsPassed": { "type": ["boolean", "null"] }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": [
+        "strictDecision", "readyForTwoFullCandidateTraining", "failedGates", "passedGates",
+        "panelFailureClassRepeatedFromV054", "medicalTruncationRepeated", "nextTechnicalCorrection",
+        "reauthorizationRequired"
+      ],
+      "properties": {
+        "strictDecision": { "const": "NO-GO" },
+        "readyForTwoFullCandidateTraining": { "const": false },
+        "failedGates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "passedGates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "panelFailureClassRepeatedFromV054": { "const": true },
+        "medicalTruncationRepeated": { "const": false },
+        "nextTechnicalCorrection": { "type": "string", "minLength": 1 },
+        "reauthorizationRequired": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sealedHoldoutRead", "rawPromptsOrResponsesIncluded", "protectedRowIdsIncluded", "privateHostPathsIncluded", "modelWeightsIncluded", "credentialsIncluded"],
+      "properties": {
+        "sealedHoldoutRead": { "const": false },
+        "rawPromptsOrResponsesIncluded": { "const": false },
+        "protectedRowIdsIncluded": { "const": false },
+        "privateHostPathsIncluded": { "const": false },
+        "modelWeightsIncluded": { "const": false },
+        "credentialsIncluded": { "const": false }
+      }
+    },
+    "untouched": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unrelatedA11Services", "fullCandidates", "sealedHoldout", "selectionOrPromotion", "deployment", "publication", "mainBranch", "githubActions", "sagemakerTraining"],
+      "properties": {
+        "unrelatedA11Services": { "const": true },
+        "fullCandidates": { "const": true },
+        "sealedHoldout": { "const": true },
+        "selectionOrPromotion": { "const": true },
+        "deployment": { "const": true },
+        "publication": { "const": true },
+        "mainBranch": { "const": true },
+        "githubActions": { "const": true },
+        "sagemakerTraining": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+  }
+}

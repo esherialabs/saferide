@@ -7,6 +7,6 @@ test('privacy lifecycle controls and fail-closed source gates validate', async (
   const result = await validatePrivacyLifecycle();
   assert.equal(result.controlVersion, 'privacy-controls.2026-07-30.2');
   assert.equal(result.documentCount, 2);
-  assert.equal(result.retentionPolicyCount, 4);
+  assert.equal(result.retentionPolicyCount, 6);
   assert.ok(result.checks >= 28);
 });

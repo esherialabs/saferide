@@ -89,11 +89,11 @@ test('rejects missing paths and unknown claim, evidence, and handoff references'
   assert.match(errors, /unknown handoff reference/);
 });
 
-test('rejects a blocked-external unit whose only handoff was superseded', () => {
-  const invalid = clone(coverage);
-  invalid.coverageUnits[0].handoffIds = ['HANDOFF-CI-BUDGET'];
-  const errors = validate({ coverageOverride: invalid }).errors;
-  assert.ok(errors.some(error => error.includes('every referenced handoff is resolved')));
+test('accepts a blocked-external unit whose hosted-CI handoff is unresolved', () => {
+  const candidate = clone(coverage);
+  candidate.coverageUnits[0].handoffIds = ['HANDOFF-CI-BUDGET'];
+  const errors = validate({ coverageOverride: candidate }).errors;
+  assert.ok(!errors.some(error => error.includes('every referenced handoff is resolved')));
 });
 
 test('rejects missing section 23 or section 24 criteria', () => {
@@ -157,7 +157,7 @@ test('emits only aggregate decision metadata and explicit prohibited claims', ()
   }
   assert.ok(result.decision.prohibitedClaims.includes('SafeRide is UNICEF-ready or production-ready.'));
   assert.ok(result.decision.blockingHandoffIds.includes('HANDOFF-UNICEF-CHECKPOINT'));
-  assert.ok(!result.decision.blockingHandoffIds.includes('HANDOFF-CI-BUDGET'));
+  assert.ok(result.decision.blockingHandoffIds.includes('HANDOFF-CI-BUDGET'));
   assert.ok(result.decision.blockingClaimIds.includes('UNICEF-CHECKPOINT-001'));
 });
 

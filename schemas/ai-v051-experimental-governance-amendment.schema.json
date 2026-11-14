@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-experimental-governance-amendment.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "amendmentId", "issue", "effectiveDate", "status", "scope", "bindings", "retiredIntermediateGates", "mandatoryAutomatedGates", "historicalForms", "finalReleasePilotReview", "controls"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-experimental-governance-amendment" },
+    "schemaVersion": { "const": 1 },
+    "amendmentId": { "const": "esh-4198-v051-experimental-training-governance-2026-08-04" },
+    "issue": { "const": "ESH-4198" },
+    "effectiveDate": { "const": "2026-08-04" },
+    "status": { "const": "active" },
+    "scope": {
+      "const": ["experimental-dataset-freeze", "immutable-s3-staging", "sagemaker-preflight", "sagemaker-pilots", "sagemaker-candidate-training", "development-evaluation", "technical-candidate-selection"]
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["historicalPlanSha256", "historicalCandidateManifestSha256", "systemPromptConfigSha256", "systemPromptTextSha256"],
+      "properties": {
+        "historicalPlanSha256": { "$ref": "#/$defs/sha" },
+        "historicalCandidateManifestSha256": { "const": "0f9ea98bd6a196d0b8a4f466b360eadccc3882963d94543e7f395ca18eb9d4ec" },
+        "systemPromptConfigSha256": { "$ref": "#/$defs/sha" },
+        "systemPromptTextSha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "retiredIntermediateGates": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "status"],
+        "properties": {
+          "gate": { "enum": ["english-language-per-row-review", "kiswahili-language-per-row-review", "product-safeguarding-per-row-review", "technical-ml-per-row-review", "independent-human-semantic-custodian-signoff"] },
+          "status": { "const": "not_required" }
+        }
+      }
+    },
+    "mandatoryAutomatedGates": {
+      "const": ["schema-count-language-and-mitigation-balance", "manifest-hash-and-lineage-integrity", "exact-and-normalized-duplicate-rejection", "family-and-split-separation", "visible-source-leakage-and-overlap", "deterministic-hash-bound-semantic-similarity", "exact-gemma-tokenizer-chat-template-and-no-truncation", "assistant-only-labels", "automated-safety-content-and-usefulness-screening", "secret-scan-and-protected-data-controls"]
+    },
+    "historicalForms": {
+      "const": { "status": "preserved", "eligibilityUse": "none", "approvalInferred": false }
+    },
+    "finalReleasePilotReview": {
+      "const": { "status": "required", "timing": "after-model-evaluation-before-public-release-or-survivor-facing-pilot" }
+    },
+    "controls": {
+      "const": { "automatedSemanticReportRequired": true, "semanticThreshold": 0.92, "technicalThresholdsMayBeWeakened": false, "mitigationHoldoutSelectionAccess": false, "promotionAllowed": false, "deploymentAllowed": false, "publicReleaseAllowed": false }
+    }
+  },
+  "$defs": { "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+}

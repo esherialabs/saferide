@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { Alert, View, Text, StyleSheet, ScrollView, Pressable, Share } from 'react-native';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,14 @@ import { getMeasurementModeDecision } from '../lib/measurement/measurementConfig
 import { buildCatalogFreshnessSummary, buildCatalogRefreshSummary } from '../utils/supportDiscovery';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { borders, elevation, radii, spacing, typography } from '../theme/tokens';
+import { AppearanceControl } from '../components/ui/AppearanceControl';
+import { getLocalAiPilotCopy } from '../i18n/localAiPilotCopy';
+import {
+  createAiPilotDiagnosticsExport,
+  deleteAiPilotDiagnostics,
+  isAiPilotDiagnosticsEnabled,
+} from '../lib/localAssistant/pilotDiagnostics';
+import { getLocalAssistantDescriptor } from '../services/localAssistantService';
 
 type SettingsNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,6 +45,32 @@ type SettingsSection = {
   rows: SettingRow[];
 };
 
+function confirmSettingsAction(
+  title: string,
+  message: string,
+  cancelLabel: string,
+  confirmLabel: string,
+  destructive = false,
+): Promise<boolean> {
+  return new Promise(resolve => {
+    let settled = false;
+    const settle = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: cancelLabel, style: 'cancel', onPress: () => settle(false) },
+        { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: () => settle(true) },
+      ],
+      { cancelable: true, onDismiss: () => settle(false) },
+    );
+  });
+}
+
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsNavigationProp>();
   const { colors } = useTheme();
@@ -46,6 +81,8 @@ export default function SettingsScreen() {
   const copy = getSettingsCopy(languageCode);
   const measurementCopy = getModeratedTestCopy(languageCode);
   const measurementDecision = useMemo(() => getMeasurementModeDecision(), []);
+  const pilotCopy = getLocalAiPilotCopy(languageCode);
+  const aiPilotDiagnosticsEnabled = useMemo(() => isAiPilotDiagnosticsEnabled(), []);
 
   const [updatingCatalogs, setUpdatingCatalogs] = useState(false);
   const [catalogStatusMessage, setCatalogStatusMessage] = useState<string>(copy.checkingCatalogStatus);
@@ -113,6 +150,49 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleExportAiPilotDiagnostics = async () => {
+    // Export needs explicit consent that names every included field; nothing is uploaded.
+    const accepted = await confirmSettingsAction(
+      pilotCopy.export.consentTitle,
+      pilotCopy.export.consentMessage,
+      pilotCopy.export.consentCancel,
+      pilotCopy.export.consentConfirm,
+    );
+    if (!accepted) return;
+    try {
+      const descriptor = getLocalAssistantDescriptor();
+      const summary = await createAiPilotDiagnosticsExport({
+        consentConfirmedAt: new Date(),
+        appVersion: Constants.expoConfig?.version ?? null,
+        manifestId: descriptor.manifestId ?? null,
+        artifactSha256: descriptor.artifactSha256 ?? null,
+      });
+      const result = await Share.share({ title: pilotCopy.export.shareTitle, message: summary });
+      if (result.action === Share.sharedAction) {
+        toast.show({ title: pilotCopy.export.shared, variant: 'success' });
+      }
+    } catch {
+      toast.show({ title: pilotCopy.export.failed, variant: 'error' });
+    }
+  };
+
+  const handleDeleteAiPilotDiagnostics = async () => {
+    const accepted = await confirmSettingsAction(
+      pilotCopy.export.deleteConfirmTitle,
+      pilotCopy.export.deleteConfirmMessage,
+      pilotCopy.export.consentCancel,
+      pilotCopy.export.deleteConfirm,
+      true,
+    );
+    if (!accepted) return;
+    try {
+      await deleteAiPilotDiagnostics();
+      toast.show({ title: pilotCopy.export.deleted, variant: 'success' });
+    } catch {
+      toast.show({ title: pilotCopy.export.failed, variant: 'error' });
+    }
+  };
+
   const displayName =
     user?.user_metadata?.full_name ||
     user?.email?.split('@')?.[0] ||
@@ -177,6 +257,22 @@ export default function SettingsScreen() {
           icon: 'clipboard-outline',
           onPress: () => navigation.navigate('TestMeasurementConsent'),
         } satisfies SettingRow] : []),
+        ...(aiPilotDiagnosticsEnabled ? [
+          {
+            key: 'ai-pilot-export',
+            title: pilotCopy.export.settingsTitle,
+            meta: pilotCopy.export.settingsMeta,
+            icon: 'analytics-outline',
+            onPress: () => { void handleExportAiPilotDiagnostics(); },
+          } satisfies SettingRow,
+          {
+            key: 'ai-pilot-delete',
+            title: pilotCopy.export.deleteTitle,
+            meta: pilotCopy.export.deleteMeta,
+            icon: 'trash-outline',
+            onPress: () => { void handleDeleteAiPilotDiagnostics(); },
+          } satisfies SettingRow,
+        ] : []),
       ],
     },
     {
@@ -201,8 +297,8 @@ export default function SettingsScreen() {
 
   const styles = StyleSheet.create({
     scrollContent: {
-      paddingTop: spacing.md,
-      paddingBottom: 34 + 24,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xl,
       paddingHorizontal: spacing.gutter,
       backgroundColor: colors.canvas,
       gap: spacing.md,
@@ -211,14 +307,13 @@ export default function SettingsScreen() {
       marginBottom: spacing.xs,
     },
     summaryCard: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.privacyMuted,
       borderColor: colors.divider,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
       gap: spacing.xs,
       overflow: 'hidden',
-      padding: spacing.sm,
-      paddingTop: spacing.sm + 2,
+      padding: spacing.md,
       position: 'relative',
       ...elevation.card,
     },
@@ -247,11 +342,11 @@ export default function SettingsScreen() {
       textTransform: 'uppercase',
     },
     summaryTitle: {
-      ...typography.titleMedium,
+      ...typography.titleLarge,
       color: colors.textPrimary,
     },
     summaryMeta: {
-      ...typography.caption,
+      ...typography.bodySmall,
       color: colors.textSecondary,
       marginTop: spacing.xxxs,
     },
@@ -272,7 +367,7 @@ export default function SettingsScreen() {
       lineHeight: 16,
     },
     section: {
-      marginTop: spacing.sm,
+      marginTop: spacing.xxs,
     },
     sectionLabel: {
       ...typography.labelSmall,
@@ -286,24 +381,17 @@ export default function SettingsScreen() {
       borderRadius: radii.card,
       borderWidth: borders.hairline,
       overflow: 'hidden',
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.xxs,
       position: 'relative',
       ...elevation.card,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      height: 56,
-      borderRadius: radii.card,
+      minHeight: 52,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.sm,
       paddingHorizontal: spacing.xs,
     },
     rowPressed: {
@@ -324,8 +412,8 @@ export default function SettingsScreen() {
     },
     rowMeta: {
       ...typography.caption,
-      color: colors.textTertiary,
-      marginTop: 4,
+      color: colors.textSecondary,
+      marginTop: 2,
     },
     chevron: {
       marginLeft: 12,
@@ -344,35 +432,37 @@ export default function SettingsScreen() {
       >
         <View style={styles.header}>
           <View style={styles.summaryCard}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
             <View style={styles.summaryTopRow}>
               <View style={styles.summaryIcon}>
                 <Ionicons name="person-circle-outline" size={22} color={colors.privacy} />
               </View>
               <View style={styles.summaryCopy}>
                 <Text style={styles.summaryEyebrow}>{copy.settingsEyebrow}</Text>
-                <Text style={styles.summaryTitle} numberOfLines={1}>{displayName}</Text>
-                <Text style={styles.summaryMeta} numberOfLines={1}>{email}</Text>
+                <Text style={styles.summaryTitle}>{displayName}</Text>
+                <Text style={styles.summaryMeta}>{email}</Text>
               </View>
             </View>
             <View style={styles.summaryStatusRow}>
               <Ionicons name={isOnline ? 'cloud-done-outline' : 'cloud-offline-outline'} size={15} color={colors.primary} />
-              <Text style={styles.catalogStatusText} numberOfLines={2}>{catalogStatusMessage}</Text>
+              <Text style={styles.catalogStatusText}>{catalogStatusMessage}</Text>
             </View>
           </View>
         </View>
 
+        <View style={styles.section}><AppearanceControl /></View>
         {settingSections.map((section) => (
           <View key={section.key} style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
             <View style={styles.card}>
-              <View pointerEvents="none" style={styles.cardAccentTop} />
               {section.rows.map((row, index) => (
                 <React.Fragment key={row.key}>
                   {index > 0 && <View style={styles.divider} />}
                   <Pressable
                     onPress={row.onPress}
                     disabled={!row.onPress || row.disabled}
+                    accessibilityRole={row.onPress ? 'button' : undefined}
+                    accessibilityLabel={row.meta ? `${row.title}. ${row.meta}` : row.title}
+                    accessibilityState={{ disabled: !row.onPress || Boolean(row.disabled), busy: row.key === 'update-catalogs' && updatingCatalogs }}
                     style={({ pressed }) => [
                       styles.row,
                       pressed && !(row.disabled || !row.onPress) && styles.rowPressed,
@@ -380,6 +470,7 @@ export default function SettingsScreen() {
                     ]}
                   >
                     <Ionicons
+                      accessible={false}
                       name={row.icon}
                       size={24}
                       color={colors.primary}
@@ -391,6 +482,7 @@ export default function SettingsScreen() {
                     </View>
                     {!row.hideChevron && (
                       <Ionicons
+                        accessible={false}
                         name="chevron-forward"
                         size={18}
                         color={colors.textTertiary}

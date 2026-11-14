@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { HeaderShownContext } from '@react-navigation/elements';
 import { useTheme } from '../../theme/SimpleThemeProvider';
+import { BrandBar } from '../BrandWordmark';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface ScreenProps {
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   statusBarStyle?: 'auto' | 'inverted';
   className?: string;
+  brandHeader?: boolean;
 }
 
 export default function Screen({ 
@@ -16,9 +19,14 @@ export default function Screen({
   scrollable = false, 
   edges = ['top', 'bottom', 'left', 'right'],
   statusBarStyle = 'auto',
-  className 
+  className,
+  brandHeader = false,
 }: ScreenProps) {
   const { colors, colorScheme } = useTheme();
+  const headerShown = React.useContext(HeaderShownContext);
+  // Navigator headers already include the top inset, including a parent tab
+  // header above the report stack. Headerless screens retain their own inset.
+  const safeAreaEdges = headerShown ? edges.filter(edge => edge !== 'top') : edges;
 
   const containerStyle = {
     flex: 1,
@@ -31,7 +39,7 @@ export default function Screen({
   };
 
   return (
-    <SafeAreaView style={containerStyle} edges={edges}>
+    <SafeAreaView style={containerStyle} edges={safeAreaEdges}>
       <StatusBar 
         barStyle={
           statusBarStyle === 'auto' 
@@ -40,6 +48,7 @@ export default function Screen({
         }
         backgroundColor={colors.canvas}
       />
+      {brandHeader && !headerShown ? <BrandBar /> : null}
       {scrollable ? (
         <ScrollView
           style={containerStyle}

@@ -27,6 +27,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoModal, InfoModalBullet, InfoModalSection } from '../components/ui';
+import { SafetyIllustration } from '../components/ui/SafetyIllustration';
+import { useTheme } from '../theme/SimpleThemeProvider';
 import { useToast } from '../components/ui/Toast';
 import { useLanguage } from '../context/LanguageProvider';
 import { useOnline } from '../context/OnlineProvider';
@@ -69,6 +71,19 @@ import {
   createLargeModelDownloadAuthorization,
   getModelDownloadNetworkType,
 } from '../lib/localAssistant';
+import {
+  checkLocalAiRamRequirement,
+  getCachedLocalAiDeviceFacts,
+  loadLocalAiDeviceFacts,
+} from '../lib/localAssistant/pilotDeviceProfile';
+import {
+  checkAiPilotInterruptions,
+  isAiPilotDiagnosticsEnabled,
+  recordAiPilotFeedback,
+  recordAiPilotRamCheck,
+} from '../lib/localAssistant/pilotDiagnostics';
+import { categorizeLocalAiFailure, classifyLocalAiFailure } from '../lib/localAssistant/pilotFailureReasons';
+import { getLocalAiPilotCopy } from '../i18n/localAiPilotCopy';
 import { devPrivacyError, getPrivacySafeErrorReason, getPrivacySafeHttpStatus } from '../utils/privacyLog';
 import {
   DEFAULT_LOCAL_CHAT_OWNER_ID,
@@ -100,7 +115,7 @@ import {
 import {
   elevation,
   radii,
-  themeColors,
+  type ThemeColors,
   typography,
 } from '../theme/tokens';
 
@@ -191,48 +206,54 @@ function isLocalChatSession(chatSession: ChatSession | null | undefined): boolea
   return isLocalChatSessionId(chatSession?.id);
 }
 
-const ui = {
-  colors: {
-    backgroundTop: themeColors.light.canvas,
-    backgroundBottom: '#F6E7DF',
-    canvas: themeColors.light.canvas,
-    divider: themeColors.light.divider,
-    textPrimary: themeColors.light.textPrimary,
-    textSecondary: themeColors.light.textSecondary,
-    composerTop: themeColors.light.surface,
-    composerBottom: themeColors.light.surfaceAlt,
-    composerBorder: themeColors.light.border,
-    userBubbleBg: themeColors.light.primary,
-    userBubbleText: themeColors.light.primaryForeground,
-    assistantBubbleBg: themeColors.light.surface,
-    badgeFill: themeColors.light.primaryMuted,
-    ctaAccent: themeColors.light.primary,
-    iconNeutral: themeColors.light.textSecondary,
-    supportMuted: themeColors.light.supportMuted,
-    success: themeColors.light.success,
-    warning: themeColors.light.warning,
-    offline: themeColors.light.offline,
-    error: themeColors.light.destructive,
-  },
-  radii: {
-    composer: 24,
-    bubble: radii.card,
-    bubbleTopLeft: 18,
-    chip: 18,
-    badge: radii.badge,
-  },
-  typography: {
-    hero: typography.displayMedium,
-    headerTitle: typography.titleMedium,
-    message: typography.bodyLarge,
-    systemNote: typography.bodyMedium,
-    modeLabel: typography.bodyMedium,
-    timeline: typography.labelLarge,
-    badge: typography.labelSmall,
-    meta: typography.bodySmall,
-    button: typography.button,
-  },
-};
+function createChatUI(colors: ThemeColors) {
+  return {
+    colors: {
+      backgroundTop: colors.canvas,
+      backgroundBottom: colors.canvas,
+      canvas: colors.canvas,
+      divider: colors.divider,
+      textPrimary: colors.textPrimary,
+      textSecondary: colors.textSecondary,
+      composerTop: colors.surface,
+      composerBottom: colors.surfaceAlt,
+      composerBorder: colors.border,
+      userBubbleBg: colors.primary,
+      userBubbleText: colors.primaryForeground,
+      assistantBubbleBg: colors.surface,
+      badgeFill: colors.primaryMuted,
+      ctaAccent: colors.primary,
+      disabledFill: colors.surfaceAlt,
+      disabledBorder: colors.border,
+      iconNeutral: colors.textSecondary,
+      supportMuted: colors.supportMuted,
+      success: colors.success,
+      successMuted: colors.successMuted,
+      warning: colors.warning,
+      warningMuted: colors.warningMuted,
+      offline: colors.offline,
+      error: colors.destructive,
+    },
+    radii: {
+      composer: radii.lg,
+      bubble: radii.card,
+      bubbleTopLeft: radii.card,
+      chip: radii.chip,
+      badge: radii.badge,
+    },
+    typography: {
+      hero: typography.displayMedium,
+      headerTitle: typography.titleMedium,
+      message: typography.bodyLarge,
+      systemNote: typography.bodyMedium,
+      modeLabel: typography.bodyMedium,
+      timeline: typography.labelLarge,
+      badge: typography.labelSmall,
+      meta: typography.bodySmall,
+      button: typography.button,
+    },
+  };
+}
 
 function getDateLocale(languageCode?: string | null): string | undefined {
   return languageCode === 'sw' ? 'sw-KE' : undefined;
@@ -622,10 +643,15 @@ function getAssistantSourceSummary(params: {
 }
 
 export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
+  const { colors, colorScheme } = useTheme();
+  const ui = useMemo(() => createChatUI(colors), [colors]);
+  const styles = useMemo(() => createStyles(ui), [ui]);
   const toast = useToast();
   const { isOnline } = useOnline();
   const { languageCode } = useLanguage();
   const copy = useMemo(() => getChatLegalAidCopy(languageCode), [languageCode]);
+  const pilotCopy = useMemo(() => getLocalAiPilotCopy(languageCode), [languageCode]);
+  const aiPilotDiagnosticsEnabled = useMemo(() => isAiPilotDiagnosticsEnabled(), []);
   const insets = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
   const isWideChatLayout = viewportWidth >= 820;
@@ -669,6 +695,9 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
   const [queuedMessageCount, setQueuedMessageCount] = useState(0);
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(isWideChatLayout);
   const measurementPreparationCapturedRef = useRef(false);
+  const [pilotFeedbackByMessageId, setPilotFeedbackByMessageId] = useState<
+    Record<string, 'helpful' | 'not-helpful'>
+  >({});
 
   const { user } = useAuth();
   const ownerId = user?.id ?? DEFAULT_LOCAL_CHAT_OWNER_ID;
@@ -774,6 +803,12 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
 
     return copy.defaultGreetingName;
   }, [copy, user]);
+
+  useEffect(() => {
+    // Content-free: RAM/storage ranges for failure reasons and pilot diagnostics.
+    void loadLocalAiDeviceFacts();
+    checkAiPilotInterruptions();
+  }, []);
 
   useEffect(() => {
     activeSessionRef.current = session;
@@ -1042,6 +1077,9 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
   ]);
   const localAssistantSetupActionDisabled = !localAssistantDescriptor.appReady
     || localAssistantSetupBusy;
+  const setupActionForeground = localAssistantSetupActionDisabled
+    ? ui.colors.textSecondary
+    : ui.colors.userBubbleText;
   const showLocalAssistantCancel = Boolean(
     !localAssistantState.modelDownloaded
     && (
@@ -1065,6 +1103,33 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
       if (localAssistantState.modelDownloaded || localAssistantState.state === 'downloaded') {
         await prepareLocalAssistant(handleLocalAssistantProgress);
       } else {
+        // Warn before a fresh download only; resuming keeps the earlier decision.
+        if (!localAssistantState.resumable && localAssistantProgress <= 0) {
+          const ramRequirement = await checkLocalAiRamRequirement();
+          if (ramRequirement.belowMinimum && ramRequirement.ramClassGb !== null) {
+            // Pilot builds may proceed below the RAM guidance so the limitation can be measured.
+            const proceed = await confirmAction(
+              pilotCopy.ramWarning.title,
+              pilotCopy.ramWarning.message(
+                ramRequirement.ramClassGb,
+                ramRequirement.minimumRamGb,
+                aiPilotDiagnosticsEnabled,
+              ),
+              pilotCopy.ramWarning.cancelAction,
+              pilotCopy.ramWarning.continueAction,
+            );
+            recordAiPilotRamCheck({
+              outcome: proceed ? 'warning-proceeded' : 'warning-declined',
+              ramBucket: ramRequirement.ramBucket,
+            });
+            if (!proceed) return;
+          } else {
+            recordAiPilotRamCheck({
+              outcome: ramRequirement.known ? 'meets-minimum' : 'unknown',
+              ramBucket: ramRequirement.ramBucket,
+            });
+          }
+        }
         const exactSize = exactModelSizeLabel ?? copy.setup.unknownExactSize;
         const requiredStorage = requiredStorageLabel ?? exactSize;
         const accepted = await confirmAction(
@@ -1113,25 +1178,41 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
         reason: getPrivacySafeErrorReason(error),
       });
       const latestStatus = getLocalAssistantStatus();
+      const failureCategory = categorizeLocalAiFailure(classifyLocalAiFailure(error), {
+        ramClassGb: getCachedLocalAiDeviceFacts()?.ramClassGb ?? null,
+      });
       toast.show({
         title: copy.toast.preparationFailedTitle,
-        message: latestStatus.modelDownloaded
-          ? copy.toast.savedModelStartFailed
-          : copy.toast.checkConnectionStorageBattery,
+        message: failureCategory !== 'unknown'
+          ? pilotCopy.failure.statusMessage(failureCategory, latestStatus.modelDownloaded === true)
+          : latestStatus.modelDownloaded
+            ? copy.toast.savedModelStartFailed
+            : copy.toast.checkConnectionStorageBattery,
         variant: 'warning',
       });
     }
   }, [
+    aiPilotDiagnosticsEnabled,
     copy,
     exactModelSizeLabel,
     handleLocalAssistantProgress,
     localAssistantDescriptor,
+    localAssistantProgress,
     localAssistantState.error,
     localAssistantState.modelDownloaded,
+    localAssistantState.resumable,
     localAssistantState.state,
+    pilotCopy,
     requiredStorageLabel,
     toast,
   ]);
+
+  const handlePilotFeedback = useCallback((messageId: string, value: 'helpful' | 'not-helpful') => {
+    if (pilotFeedbackByMessageId[messageId]) return;
+    setPilotFeedbackByMessageId(current => ({ ...current, [messageId]: value }));
+    // Only the tap value is kept; no message ID or content is recorded.
+    recordAiPilotFeedback(value);
+  }, [pilotFeedbackByMessageId]);
 
   const handleLocalAssistantSetupAction = useCallback(async () => {
     if (
@@ -2589,7 +2670,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
               style={StyleSheet.absoluteFill}
           />
           <SafeAreaView style={styles.loaderSafeArea} edges={['left', 'right']}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={ui.colors.iconNeutral} />
               <Text style={styles.loadingText}>{copy.loadingChat}</Text>
@@ -2606,7 +2687,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.select({ ios: 'padding', android: 'height', default: undefined })}
@@ -2665,7 +2746,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                   onPress={handleStartNewConversation}
                   style={styles.sideNavPrimary}
                 >
-                  <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+                  <Ionicons name="create-outline" size={18} color={ui.colors.userBubbleText} />
                   <Text style={styles.sideNavPrimaryText}>{copy.newConversationShort}</Text>
                 </TouchableOpacity>
 
@@ -2699,7 +2780,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                           <Ionicons
                             name={isActive ? 'chatbubble' : 'chatbubble-outline'}
                             size={16}
-                            color={isActive ? '#FFFFFF' : ui.colors.ctaAccent}
+                            color={isActive ? ui.colors.userBubbleText : ui.colors.ctaAccent}
                           />
                         </View>
                         <View style={styles.sideNavItemCopy}>
@@ -2778,6 +2859,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                   </View>
                 ) : (
                 <View style={styles.localAssistantSetupCard}>
+                  <SafetyIllustration kind="support" size={72} responsive />
                   <View style={styles.localAssistantSetupIcon}>
                     <Ionicons name="phone-portrait-outline" size={26} color={ui.colors.ctaAccent} />
                   </View>
@@ -2867,17 +2949,17 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                     ]}
                   >
                     {localAssistantSetupBusy ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={setupActionForeground} />
                     ) : localAssistantState.state === 'downloading' ? (
-                      <Ionicons name="pause" size={18} color="#FFFFFF" />
+                      <Ionicons name="pause" size={18} color={setupActionForeground} />
                     ) : (
                       <Ionicons
                         name={localAssistantState.modelDownloaded ? 'play' : 'download-outline'}
                         size={18}
-                        color="#FFFFFF"
+                        color={setupActionForeground}
                       />
                     )}
-                    <Text style={styles.localAssistantSetupPrimaryText}>
+                    <Text style={[styles.localAssistantSetupPrimaryText, { color: setupActionForeground }]}>
                       {localAssistantSetupActionLabel}
                     </Text>
                   </TouchableOpacity>
@@ -2929,7 +3011,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                                     <Ionicons
                                       name={getAttachmentIcon(attachment)}
                                       size={15}
-                                      color="rgba(255,255,255,0.92)"
+                                      color={ui.colors.userBubbleText}
                                     />
                                   </View>
                                   <View style={styles.attachmentCopy}>
@@ -2957,7 +3039,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                               accessibilityLabel={copy.copyPrompt}
                               activeOpacity={0.72}
                             >
-                              <Ionicons name="copy-outline" size={15} color="rgba(255,255,255,0.88)" />
+                              <Ionicons name="copy-outline" size={15} color={ui.colors.userBubbleText} />
                             </TouchableOpacity>
                             {canEditMessage ? (
                               <TouchableOpacity
@@ -2971,7 +3053,7 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                                 accessibilityLabel={copy.editLatestPrompt}
                                 activeOpacity={0.72}
                               >
-                                <Ionicons name="create-outline" size={15} color="rgba(255,255,255,0.88)" />
+                                <Ionicons name="create-outline" size={15} color={ui.colors.userBubbleText} />
                               </TouchableOpacity>
                             ) : null}
                           </View>
@@ -3044,6 +3126,36 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                               <Ionicons name="refresh-outline" size={15} color={ui.colors.ctaAccent} />
                             </TouchableOpacity>
                           ) : null}
+                          {aiPilotDiagnosticsEnabled
+                            && !message.isOffline
+                            && message.sources?.includes(localAssistantDescriptor.label) ? (
+                              (['helpful', 'not-helpful'] as const).map(value => {
+                                const selected = pilotFeedbackByMessageId[message.id] === value;
+                                const iconName: IoniconName = value === 'helpful'
+                                  ? selected ? 'thumbs-up' : 'thumbs-up-outline'
+                                  : selected ? 'thumbs-down' : 'thumbs-down-outline';
+                                return (
+                                  <TouchableOpacity
+                                    key={value}
+                                    style={styles.assistantMessageActionButton}
+                                    onPress={() => handlePilotFeedback(message.id, value)}
+                                    disabled={Boolean(pilotFeedbackByMessageId[message.id])}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={value === 'helpful'
+                                      ? pilotCopy.feedback.helpful
+                                      : pilotCopy.feedback.notHelpful}
+                                    accessibilityState={{ selected }}
+                                    activeOpacity={0.72}
+                                  >
+                                    <Ionicons
+                                      name={iconName}
+                                      size={15}
+                                      color={ui.colors.ctaAccent}
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              })
+                            ) : null}
                         </View>
                       </View>
                     );
@@ -3127,12 +3239,12 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
                     accessibilityLabel={assistantBusy ? copy.stopReply : copy.sendMessage}
                   >
                     {assistantBusy ? (
-                      <Ionicons name="square" size={17} color="#FFFFFF" />
+                      <Ionicons name="square" size={17} color={ui.colors.userBubbleText} />
                     ) : (
                       <Ionicons
                         name="arrow-up"
                         size={20}
-                        color={hasInput ? '#FFFFFF' : ui.colors.iconNeutral}
+                        color={hasInput ? ui.colors.userBubbleText : ui.colors.iconNeutral}
                       />
                     )}
                   </TouchableOpacity>
@@ -3241,7 +3353,8 @@ export default function ChatLegalAidScreen({navigation}: {navigation: any}) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(ui: ReturnType<typeof createChatUI>) {
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: ui.colors.canvas,
@@ -3283,12 +3396,12 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.divider,
     borderRadius: 18,
     borderWidth: 1,
-    height: 38,
+    height: 48,
     justifyContent: 'center',
     left: 12,
     position: 'absolute',
     top: 10,
-    width: 38,
+    width: 48,
     zIndex: 12,
   },
   sideNavBackdrop: {
@@ -3301,7 +3414,7 @@ const styles = StyleSheet.create({
     zIndex: 15,
   },
   sideNav: {
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: ui.colors.assistantBubbleBg,
     borderRightColor: ui.colors.divider,
     borderRightWidth: 1,
     gap: 10,
@@ -3332,9 +3445,9 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.divider,
     borderRadius: 18,
     borderWidth: 1,
-    height: 36,
+    height: 48,
     justifyContent: 'center',
-    width: 36,
+    width: 48,
   },
   sideNavBrand: {
     flex: 1,
@@ -3361,7 +3474,7 @@ const styles = StyleSheet.create({
   },
   sideNavPrimaryText: {
     ...ui.typography.badge,
-    color: '#FFFFFF',
+    color: ui.colors.userBubbleText,
     flexShrink: 1,
   },
   sideNavDivider: {
@@ -3457,7 +3570,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   threadToolbarWithCollapsedNav: {
-    paddingLeft: 62,
+    paddingLeft: 72,
   },
   threadToolbarCopy: {
     flex: 1,
@@ -3468,6 +3581,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     minWidth: 0,
+    flexWrap: 'wrap',
   },
   threadToolbarKicker: {
     ...ui.typography.badge,
@@ -3490,10 +3604,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   threadToolbarBadgeReady: {
-    backgroundColor: themeColors.light.successMuted,
+    backgroundColor: ui.colors.successMuted,
   },
   threadToolbarBadgePending: {
-    backgroundColor: themeColors.light.warningMuted,
+    backgroundColor: ui.colors.warningMuted,
   },
   threadToolbarBadgeText: {
     ...ui.typography.badge,
@@ -3561,7 +3675,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: ui.colors.userBubbleBg,
     borderRadius: ui.radii.bubble,
-    borderTopRightRadius: ui.radii.bubbleTopLeft,
+    borderTopRightRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     maxWidth: '88%',
@@ -3605,7 +3719,7 @@ const styles = StyleSheet.create({
   },
   attachmentMeta: {
     ...ui.typography.meta,
-    color: 'rgba(255,255,255,0.78)',
+    color: ui.colors.userBubbleText,
     marginTop: 2,
   },
   metaText: {
@@ -3615,7 +3729,7 @@ const styles = StyleSheet.create({
   },
   userMetaText: {
     ...ui.typography.meta,
-    color: 'rgba(255,255,255,0.82)',
+    color: ui.colors.userBubbleText,
     marginTop: 4,
   },
   userMessageActionRow: {
@@ -3636,8 +3750,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '100%',
     minWidth: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: ui.colors.assistantBubbleBg,
+    borderRadius: ui.radii.bubble,
+    borderTopLeftRadius: 8,
+    marginVertical: 8,
     width: '100%',
   },
   assistantMessageHeader: {
@@ -3726,10 +3844,10 @@ const styles = StyleSheet.create({
   composerWrapper: {
     position: 'relative',
     width: '100%',
-    borderRadius: 18,
-    minHeight: 118,
+    borderRadius: radii.sheet,
+    minHeight: 64,
     overflow: 'hidden',
-    ...elevation.floating,
+    ...elevation.raised,
   },
   composerBorder: {
     position: 'absolute',
@@ -3739,14 +3857,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderWidth: 1,
     borderColor: ui.colors.composerBorder,
-    borderRadius: 18,
+    borderRadius: radii.sheet,
   },
   composerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   uploadButton: {
     alignItems: 'center',
@@ -3754,10 +3872,10 @@ const styles = StyleSheet.create({
     borderColor: ui.colors.composerBorder,
     borderRadius: 20,
     borderWidth: 1,
-    height: 40,
+    height: 48,
     justifyContent: 'center',
-    marginRight: 10,
-    width: 40,
+    marginRight: 8,
+    width: 48,
   },
   uploadButtonDisabled: {
     opacity: 0.48,
@@ -3766,19 +3884,20 @@ const styles = StyleSheet.create({
     flex: 1,
     ...ui.typography.message,
     color: ui.colors.textPrimary,
-    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 12,
     margin: 0,
-    minHeight: 82,
-    maxHeight: 156,
+    minHeight: 48,
+    maxHeight: 148,
     textAlignVertical: 'top',
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 10,
+    marginLeft: 8,
   },
   sendButtonEnabled: {
     backgroundColor: ui.colors.ctaAccent,
@@ -3805,12 +3924,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: ui.colors.assistantBubbleBg,
     borderColor: ui.colors.divider,
-    borderRadius: 22,
+    borderRadius: radii.sheet,
     borderWidth: 1,
-    marginVertical: 20,
+    marginVertical: 12,
     maxWidth: 520,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     width: '100%',
     ...elevation.card,
   },
@@ -4002,11 +4121,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   localAssistantSetupPrimaryDisabled: {
-    opacity: 0.45,
+    // Matches Button's disabled primary: readable text, not a faded fill.
+    backgroundColor: ui.colors.disabledFill,
+    borderColor: ui.colors.disabledBorder,
+    borderWidth: 1,
   },
   localAssistantSetupPrimaryText: {
     ...ui.typography.button,
-    color: '#FFFFFF',
+    color: ui.colors.userBubbleText,
   },
   localAssistantSetupSecondary: {
     alignItems: 'center',
@@ -4107,16 +4229,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sessionSyncAction: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: ui.colors.badgeFill,
   },
   sessionDeleteAction: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4153,3 +4275,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+}

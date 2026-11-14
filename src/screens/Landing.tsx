@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
-  ImageBackground,
+  Image,
   Linking,
   Platform,
   ScrollView,
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +20,7 @@ import { Button, InfoModal, InfoModalBullet, InfoModalSection } from '../compone
 import { useAuth } from '../context/AuthProvider';
 import { RootStackParamList } from '../navigation/routes';
 import { useTheme } from '../theme/SimpleThemeProvider';
-import { borders, elevation, radii, spacing, typography } from '../theme/tokens';
+import { borders, radii, spacing, touchTargets, typography } from '../theme/tokens';
 import {
   getDialUrl,
   KENYA_POLICE_EMERGENCY_CONTACT,
@@ -28,6 +29,7 @@ import {
   type SupportContact,
 } from '../lib/supportResources';
 import { useToast } from '../components/ui/Toast';
+import { BrandBar } from '../components/BrandWordmark';
 
 type LandingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Landing'>;
 
@@ -36,8 +38,8 @@ type HelpCard = {
   title: string;
   meta: string;
   contact: SupportContact;
-  icon: keyof typeof Ionicons.glyphMap;
   tone: 'support' | 'critical' | 'safety';
+  icon: React.ComponentProps<typeof Ionicons>['name'];
 };
 
 const HELP_CARDS: HelpCard[] = [
@@ -46,30 +48,33 @@ const HELP_CARDS: HelpCard[] = [
     title: 'Emergency',
     meta: 'Police or urgent danger',
     contact: KENYA_POLICE_EMERGENCY_CONTACT,
-    icon: 'call-outline',
     tone: 'critical',
+    icon: 'warning-outline',
   },
   {
     id: 'gbv',
     title: 'GBV support',
     meta: 'Confidential help and referrals',
     contact: PRIMARY_KENYA_GBV_CONTACT,
-    icon: 'heart-outline',
     tone: 'support',
+    icon: 'heart-outline',
   },
   {
     id: 'child',
     title: 'Child protection',
     meta: 'For children or child safety',
     contact: KENYA_SUPPORT_RESOURCES.childHelpline,
-    icon: 'shield-checkmark-outline',
     tone: 'safety',
+    icon: 'happy-outline',
   },
 ];
 
 export default function LandingScreen() {
   const navigation = useNavigation<LandingNavigationProp>();
   const { colors } = useTheme();
+  const { width, fontScale } = useWindowDimensions();
+  // Narrow screens and large text put the call button under each contact.
+  const stackHelpRows = width < 350 || fontScale >= 1.3;
   const toast = useToast();
   const { signInAnonymously, isLoading } = useAuth();
   const [activeHelp, setActiveHelp] = useState<SupportContact | null>(null);
@@ -131,230 +136,186 @@ export default function LandingScreen() {
     },
     scrollContent: {
       flexGrow: 1,
-      paddingBottom: spacing.xxl,
+      paddingBottom: spacing.xl,
     },
-    hero: {
-      minHeight: 284,
-      justifyContent: 'flex-end',
-      overflow: 'hidden',
+    heroPhoto: {
+      aspectRatio: 1408 / 768,
+      backgroundColor: colors.surfaceAlt,
+      width: '100%',
     },
     heroImage: {
+      ...StyleSheet.absoluteFill,
       height: '100%',
       width: '100%',
     },
-    heroOverlay: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(48, 19, 35, 0.66)',
-      zIndex: 1,
+    sheet: {
+      backgroundColor: colors.canvas,
+      borderTopLeftRadius: radii.sheet,
+      borderTopRightRadius: radii.sheet,
+      gap: spacing.lg,
+      marginTop: -radii.sheet,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.lg,
     },
-    heroContent: {
-      gap: spacing.md,
-      paddingHorizontal: spacing.xl,
-      paddingBottom: spacing.lg,
-      paddingTop: spacing.xxl,
-      zIndex: 2,
+    welcome: {
+      gap: spacing.xs,
     },
     eyebrow: {
       ...typography.overline,
-      color: 'rgba(255,248,243,0.78)',
+      color: colors.primary,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
     },
-    brandLine: {
-      alignItems: 'baseline',
+    title: {
+      ...typography.headlineLarge,
+      color: colors.foreground,
+      letterSpacing: -0.4,
+    },
+    subtitle: {
+      ...typography.bodyMedium,
+      color: colors.textSecondary,
+    },
+    authActions: {
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    secondaryActions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: spacing.xs,
     },
-    title: {
-      ...typography.displaySmall,
-      color: colors.textInverse,
-      fontWeight: '900',
-      maxWidth: 340,
+    secondaryAction: {
+      flexBasis: 140,
+      flexGrow: 1,
     },
-    country: {
-      ...typography.titleMedium,
-      color: 'rgba(255,248,243,0.82)',
-      fontWeight: '800',
-    },
-    subtitle: {
-      ...typography.bodyMedium,
-      color: 'rgba(255,248,243,0.9)',
-      maxWidth: 330,
-    },
-    content: {
-      gap: spacing.lg,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
+    helpSection: {
+      gap: spacing.xs,
     },
     sectionTitle: {
-      ...typography.headlineSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
     },
     sectionSubtitle: {
-      ...typography.bodyMedium,
+      ...typography.bodySmall,
       color: colors.textSecondary,
     },
-    helpPanel: {
+    helpList: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
+      marginTop: spacing.xxs,
       overflow: 'hidden',
-      position: 'relative',
-      ...elevation.card,
-    },
-    helpPanelHeader: {
-      gap: spacing.xxs,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.sm,
-      paddingTop: spacing.lg,
-    },
-    helpRows: {
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
     },
     helpRow: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.sm,
-      minHeight: 68,
-      paddingHorizontal: spacing.md,
+      minHeight: 72,
+      paddingLeft: spacing.sm,
       paddingVertical: spacing.sm,
     },
-    cardAccentTop: {
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
+    helpRowStacked: {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+      paddingRight: spacing.sm,
+    },
+    helpDivider: {
+      borderTopColor: colors.divider,
+      borderTopWidth: borders.hairline,
+    },
+    helpHeading: {
+      alignItems: 'center',
+      flex: 1,
+      flexDirection: 'row',
+      gap: spacing.sm,
+      minWidth: 0,
     },
     helpIcon: {
       alignItems: 'center',
-      borderRadius: radii.card,
-      height: 42,
+      borderRadius: radii.round,
+      height: 40,
       justifyContent: 'center',
-      width: 42,
+      width: 40,
     },
     helpCopy: {
       flex: 1,
       minWidth: 0,
     },
     helpLabel: {
-      ...typography.labelLarge,
+      ...typography.titleSmall,
       color: colors.foreground,
     },
     helpMeta: {
-      ...typography.caption,
+      ...typography.bodySmall,
       color: colors.textSecondary,
-      marginTop: spacing.xxxs,
-    },
-    phonePill: {
-      ...typography.titleMedium,
-      color: colors.foreground,
-      marginTop: spacing.xxs,
+      marginTop: 2,
     },
     helpActions: {
       alignItems: 'center',
       flexDirection: 'row',
-      gap: spacing.xs,
-      marginLeft: 'auto',
-      marginTop: 0,
+      gap: spacing.xxs,
     },
     callButton: {
       alignItems: 'center',
-      borderRadius: radii.button,
+      borderRadius: radii.round,
       flexDirection: 'row',
-      gap: spacing.xs,
+      gap: spacing.xxs,
       justifyContent: 'center',
-      minHeight: 38,
-      minWidth: 76,
+      minHeight: touchTargets.minimum,
       paddingHorizontal: spacing.sm,
     },
+    callButtonStacked: {
+      flex: 1,
+      minHeight: touchTargets.minimum,
+    },
     callButtonText: {
-      ...typography.labelMedium,
+      ...typography.labelLarge,
       color: colors.textInverse,
     },
     iconButton: {
       alignItems: 'center',
-      borderRadius: radii.round,
-      height: 38,
+      height: 48,
       justifyContent: 'center',
-      width: 38,
-    },
-    authPanel: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      gap: spacing.sm,
-      overflow: 'hidden',
-      padding: spacing.md,
-      position: 'relative',
-      ...elevation.card,
-    },
-    authTitle: {
-      ...typography.titleMedium,
-      color: colors.foreground,
-    },
-    authText: {
-      ...typography.caption,
-      color: colors.textSecondary,
-    },
-    authActions: {
-      gap: spacing.sm,
-      marginTop: spacing.xs,
+      width: 48,
     },
   });
 
   const toneStyles = {
     support: {
-      backgroundColor: colors.supportMuted,
-      iconColor: colors.support,
       buttonBackground: colors.support,
+      muted: colors.supportMuted,
     },
     critical: {
-      backgroundColor: colors.criticalMuted,
-      iconColor: colors.critical,
       buttonBackground: colors.critical,
+      muted: colors.criticalMuted,
     },
     safety: {
-      backgroundColor: colors.safetyMuted,
-      iconColor: colors.safety,
       buttonBackground: colors.safety,
+      muted: colors.safetyMuted,
     },
   };
 
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={styles.safeArea}>
+      <BrandBar />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ImageBackground
-          source={require('../../assets/images/saferide-warm-transit-hero.webp')}
-          resizeMode="cover"
-          style={styles.hero}
-          imageStyle={styles.heroImage}
-          accessibilityIgnoresInvertColors
-        >
-          <View style={styles.heroOverlay} />
-          <View style={styles.heroContent}>
-            <View>
-              <Text style={styles.eyebrow}>Private help, your pace</Text>
-              <View style={styles.brandLine}>
-                <Text style={styles.title}>SafeRide</Text>
-                <Text style={styles.country}>Kenya</Text>
-              </View>
-              <Text style={styles.subtitle}>
-                Start without an account. Save details on this phone. Choose support only when you are ready.
-              </Text>
-            </View>
-          </View>
-        </ImageBackground>
+        <View style={styles.heroPhoto}>
+          <Image
+            source={require('../../assets/images/saferide-warm-transit-hero.webp')}
+            resizeMode="cover"
+            style={styles.heroImage}
+            accessible={false}
+            accessibilityIgnoresInvertColors
+          />
+        </View>
 
-        <View style={styles.content}>
-          <View style={styles.authPanel}>
-            <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.primary }]} />
-            <Text style={styles.authTitle}>Start in private</Text>
-            <Text style={styles.authText}>
-              Use SafeRide first without giving account details. Sync can wait until you choose it.
+        <View style={styles.sheet}>
+          <View style={styles.welcome}>
+            <Text style={styles.eyebrow}>Private help, your pace - Kenya</Text>
+            <Text accessibilityRole="header" style={styles.title}>Start in private</Text>
+            <Text style={styles.subtitle}>
+              Start without an account. Save details on this phone. Choose support only when you are ready.
             </Text>
             <View style={styles.authActions}>
               <Button
@@ -362,45 +323,58 @@ export default function LandingScreen() {
                 onPress={handleGuest}
                 loading={isGuestStarting}
                 disabled={isGuestStarting || isLoading}
+                size="lg"
                 fullWidth
               />
-              <Button
-                title="Sign in"
-                variant="secondary"
-                onPress={() => navigation.navigate('Auth', { action: 'sign-in' })}
-                fullWidth
-              />
-              <Button
-                title="Create account"
-                variant="outline"
-                onPress={() => navigation.navigate('Auth', { action: 'sign-up' })}
-                fullWidth
-              />
+              <View style={styles.secondaryActions}>
+                <Button
+                  title="Sign in"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('Auth', { action: 'sign-in' })}
+                  style={styles.secondaryAction}
+                />
+                <Button
+                  title="Create account"
+                  variant="outline"
+                  onPress={() => navigation.navigate('Auth', { action: 'sign-up' })}
+                  style={styles.secondaryAction}
+                />
+              </View>
             </View>
           </View>
 
-          <View style={styles.helpPanel}>
-            <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.support }]} />
-            <View style={styles.helpPanelHeader}>
-              <Text style={styles.sectionTitle}>Help numbers</Text>
-              <Text style={styles.sectionSubtitle}>
-                Tap a number only when it is safe. Calls may appear in phone records.
-              </Text>
-            </View>
-            <View style={styles.helpRows}>
-              {HELP_CARDS.map((item) => {
+          <View style={styles.helpSection}>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>Help numbers</Text>
+            <Text style={styles.sectionSubtitle}>
+              Tap a number only when it is safe. Calls may appear in phone records.
+            </Text>
+            <View style={styles.helpList}>
+              {HELP_CARDS.map((item, index) => {
                 const tone = toneStyles[item.tone];
                 return (
                   <View
                     key={item.id}
-                    style={styles.helpRow}
+                    style={[styles.helpRow, stackHelpRows && styles.helpRowStacked, index > 0 && styles.helpDivider]}
                   >
-                    <View style={[styles.helpIcon, { backgroundColor: tone.backgroundColor }]}>
-                      <Ionicons name={item.icon} size={22} color={tone.iconColor} />
-                    </View>
-                    <View style={styles.helpCopy}>
-                      <Text style={styles.helpLabel}>{item.title}</Text>
-                      <Text style={styles.helpMeta} numberOfLines={1}>{item.meta}</Text>
+                    <View style={styles.helpHeading}>
+                      <View style={[styles.helpIcon, { backgroundColor: tone.muted }]}>
+                        <Ionicons name={item.icon} size={20} color={tone.buttonBackground} />
+                      </View>
+                      <View style={styles.helpCopy}>
+                        <Text style={styles.helpLabel}>{item.title}</Text>
+                        <Text style={styles.helpMeta}>{item.meta}</Text>
+                      </View>
+                      {stackHelpRows ? (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={`Details for ${item.title}`}
+                          activeOpacity={0.86}
+                          onPress={() => setActiveHelp(item.contact)}
+                          style={styles.iconButton}
+                        >
+                          <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                     <View style={styles.helpActions}>
                       <TouchableOpacity
@@ -408,20 +382,26 @@ export default function LandingScreen() {
                         accessibilityLabel={`Call ${item.title} at ${item.contact.displayPhone}`}
                         activeOpacity={0.88}
                         onPress={() => confirmDial(item.contact)}
-                        style={[styles.callButton, { backgroundColor: tone.buttonBackground }]}
+                        style={[
+                          styles.callButton,
+                          stackHelpRows && styles.callButtonStacked,
+                          { backgroundColor: tone.buttonBackground },
+                        ]}
                       >
-                        <Ionicons name="call" size={17} color={colors.textInverse} />
-                        <Text style={styles.callButtonText} numberOfLines={1}>{item.contact.displayPhone}</Text>
+                        <Ionicons name="call" size={16} color={colors.textInverse} />
+                        <Text style={styles.callButtonText}>{item.contact.displayPhone}</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel={`Details for ${item.title}`}
-                        activeOpacity={0.86}
-                        onPress={() => setActiveHelp(item.contact)}
-                        style={[styles.iconButton, { backgroundColor: colors.primaryMuted }]}
-                      >
-                        <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
-                      </TouchableOpacity>
+                      {stackHelpRows ? null : (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel={`Details for ${item.title}`}
+                          activeOpacity={0.86}
+                          onPress={() => setActiveHelp(item.contact)}
+                          style={styles.iconButton}
+                        >
+                          <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 );

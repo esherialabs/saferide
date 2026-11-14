@@ -8,17 +8,20 @@ const publicRoutes = [
   '/how-it-works',
   '/for-survivors',
   '/open-source',
-  '/route-safety-index',
+  '/partner-dashboard',
   '/partners',
   '/contact',
   '/story',
   '/impact',
+  '/pilot',
   '/privacy-safety-trust',
   '/blog',
   '/blog/private-reporting-control',
   '/blog/kenya-support-pathways',
   '/blog/route-safety-without-exposure',
   '/download',
+  '/privacy',
+  '/terms',
 ];
 
 test.describe('SafeRide v2  Mozilla near-clone', () => {
@@ -129,7 +132,7 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
     await page.locator('[data-testid="impact-numbers"]').scrollIntoViewIfNeeded();
     await expect(page.locator('[data-testid="impact-numbers"]')).toBeVisible();
     await expect(page.getByTestId('impact-stat-value-1')).toHaveText('0');
-    await expect(page.getByTestId('impact-stat-value-2')).toHaveText('4');
+    await expect(page.getByTestId('impact-stat-value-2')).toHaveText('3');
     await expect(page.getByTestId('impact-stat-value-3')).toHaveText('3');
     await expect(page.locator('[data-testid="impact-numbers"]').getByText('forced uploads')).toBeVisible();
   });
@@ -147,12 +150,28 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
     const spotlight = page.locator('[data-testid="community-spotlight"]');
     await spotlight.scrollIntoViewIfNeeded();
     await expect(spotlight).toBeVisible();
-    // All four cards stay in the DOM for crawlers; exactly one is visible.
-    await expect(spotlight.locator('article')).toHaveCount(4);
+    // All five cards stay in the DOM for crawlers; exactly one is visible.
+    await expect(spotlight.locator('article')).toHaveCount(5);
     await expect(spotlight.locator('article:visible')).toHaveCount(1);
     await expect(spotlight.locator('article:visible img')).toBeVisible();
-    await expect(spotlight.getByText('1 / 4')).toBeVisible();
-    await expect(spotlight.getByRole('button', { name: /UNICEF Venture Fund Meet/ })).toBeVisible();
+    await expect(spotlight.getByText('1 / 5')).toBeVisible();
+    await expect(spotlight.getByRole('button', { name: /Mombasa pilot/ })).toBeVisible();
+    await expect(spotlight.getByRole('button', { name: /Pilot team/ })).toBeVisible();
+  });
+
+  test('homepage names the Mombasa pilot and its partner', async ({ page }) => {
+    await page.goto(BASE);
+    const pilot = page.getByTestId('mombasa-pilot');
+    await pilot.scrollIntoViewIfNeeded();
+    await expect(pilot).toBeVisible();
+    await expect(pilot).toContainText('The pilot has run.');
+    await expect(pilot).toContainText('SafeRide ran a supervised pilot with HURIA in Mombasa in October 2026.');
+    await expect(pilot).toContainText('October 2026');
+    await expect(pilot).not.toContainText('19 October 2026');
+    await expect(pilot).not.toContainText('21 October 2026');
+    await expect(pilot).not.toContainText('staff onboarding');
+    await expect(page.getByTestId('mombasa-pilot-image')).toBeVisible();
+    await expect(page.getByTestId('mombasa-region-map')).toBeVisible();
   });
 
   test('fund CTA is present', async ({ page }) => {
@@ -193,8 +212,8 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
       expect(rel).not.toMatch(/nofollow|ugc|sponsored|noreferrer/);
     }
 
-    await expect(page.locator('[data-testid="main-nav"]').getByRole('link', { name: /Esheria For Good initiative/ })).toBeVisible();
-    await expect(affiliation.getByRole('link', { name: 'Esheria For Good' })).toBeVisible();
+    await expect(page.locator('[data-testid="main-nav"]').getByRole('link', { name: /Esheria Foundation initiative/ })).toBeVisible();
+    await expect(affiliation.getByRole('link', { name: 'Esheria Foundation' })).toBeVisible();
   });
 
   test('all routes return 200', async ({ page }) => {
@@ -224,15 +243,15 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
     test.setTimeout(90000);
 
     const expected = [
-      ['/what-we-do', 'Private harassment reporting and safer matatu routes'],
+      ['/what-we-do', 'Private reporting, survivor control, and a Mombasa pilot'],
       ['/how-it-works', 'document and report harassment on a matatu'],
       ['/for-survivors', 'your options in Kenya, at your pace'],
-      ['/route-safety-index', 'Which Nairobi routes are safer?'],
-      ['/open-source', 'production-grade open-source repository'],
+      ['/partner-dashboard', 'Where a shared report reaches the partner'],
+      ['/open-source', 'auditable open-source snapshot'],
       ['/partners', 'GBV organizations, matatu operators, funders'],
       ['/contact', 'Talk to the SafeRide team'],
-      ['/story', 'Built in Nairobi, for the rides women take every day'],
-      ['/impact', 'Measuring real safety, not hype'],
+      ['/story', 'Built in Nairobi, piloted with HURIA in Mombasa'],
+      ['/impact', 'The pilot has run. We are measuring what comes next.'],
       ['/privacy-safety-trust', 'Your report stays private until you decide otherwise'],
       ['/blog', 'Guides to safer, more private reporting in Kenya'],
       ['/download', 'Download SafeRide for Android'],
@@ -244,6 +263,53 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
       expect(await page.getByText('Coming soon').count()).toBe(0);
     }
   });
+  test('pilot legal pages are versioned, labelled and flag open points', async ({ page }) => {
+    const pages = [
+      {
+        route: '/privacy',
+        heading: 'SafeRide privacy notice',
+        facts: [
+          'self-hosted server',
+          'not the photos, audio, video or documents themselves',
+          'map coordinates in your packet are always removed before HURIA sees it',
+          'adding a Kenyan mobile number',
+          'HURIA then loses access to that report straight away',
+          'proposed 90 days',
+          'proposed 730 days',
+          'approved malware scanner',
+          'saferide@esheria.org',
+        ],
+      },
+      {
+        route: '/terms',
+        heading: 'SafeRide terms of use',
+        facts: ['not an emergency service', 'call 999 or 112', 'HURIA (Human Rights Agenda) is an independent organisation'],
+      },
+    ];
+
+    for (const { route, heading, facts } of pages) {
+      const response = await page.goto(`${BASE}${route}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+      await expect(page.getByTestId('legal-pilot-label')).toHaveText('Pilot');
+      await expect(page.getByTestId('legal-version')).toHaveText('2026-10-22.pilot.1');
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://saferide.esheria.org${route}/`);
+      for (const fact of facts) {
+        await expect(page.getByTestId('legal-document')).toContainText(fact);
+      }
+      // Undecided legal facts stay visibly flagged, never silently filled in.
+      const placeholders = page.locator('mark[data-placeholder]');
+      expect(await placeholders.count()).toBeGreaterThan(0);
+      await expect(placeholders.first()).toContainText('To confirm');
+      await expect(page.locator('[data-placeholder="effective-date"]')).toBeVisible();
+    }
+
+    await page.goto(BASE);
+    const footer = page.locator('[data-testid="main-footer"]');
+    await expect(footer.getByRole('link', { name: 'Privacy Notice' })).toHaveAttribute('href', /^\/privacy\/?$/);
+    await expect(footer.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', /^\/terms\/?$/);
+  });
+
   test('sitemap.xml returns 200', async ({ page }) => {
     const response = await page.goto(`${BASE}/sitemap.xml`);
     expect(response?.status()).toBe(200);
@@ -251,6 +317,8 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
     expect(xml).toContain('https://saferide.esheria.org/what-we-do/');
     expect(xml).toContain('https://saferide.esheria.org/contact/');
     expect(xml).toContain('https://saferide.esheria.org/blog/private-reporting-control/');
+    expect(xml).toContain('https://saferide.esheria.org/privacy/');
+    expect(xml).toContain('https://saferide.esheria.org/terms/');
   });
 
   test('robots.txt allows crawling in production form', async ({ page }) => {
@@ -280,9 +348,12 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
       page.locator(selector).evaluate((node) => node.textContent ?? '');
 
     await page.goto(BASE);
-    expect(await jsonLdText('script[type="application/ld+json"]#site-structured-data')).toContain('Organization');
-    expect(await jsonLdText('script[type="application/ld+json"]#site-structured-data')).toContain('https://esheria.org/#organization');
-    expect(await jsonLdText('script[type="application/ld+json"]#site-structured-data')).toContain('"@type":"Brand"');
+    const siteStructuredData = await jsonLdText('script[type="application/ld+json"]#site-structured-data');
+    expect(siteStructuredData).toContain('Organization');
+    expect(siteStructuredData).toContain('https://esheria.org/#organization');
+    expect(siteStructuredData).toContain('"name":"Esheria Foundation"');
+    expect(siteStructuredData).not.toContain('Esheria Ventures Limited');
+    expect(siteStructuredData).toContain('"@type":"Brand"');
     expect(await jsonLdText('script[type="application/ld+json"]#home-structured-data')).toContain('BreadcrumbList');
 
     await page.goto(`${BASE}/download`);
@@ -298,7 +369,7 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
 
     await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article');
     await expect(page.locator('meta[property="article:published_time"]')).toHaveAttribute('content', '2026-05-24');
-    await expect(page.locator('meta[property="article:modified_time"]')).toHaveAttribute('content', '2026-07-28');
+    await expect(page.locator('meta[property="article:modified_time"]')).toHaveAttribute('content', '2026-10-19');
     await expect(page.getByText('SafeRide by Esheria editorial team').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sources and further reading' })).toBeVisible();
     await expect(page.getByRole('link', { name: /State Department for Gender/ })).toHaveAttribute('href', /gender\.go\.ke/);
@@ -334,14 +405,25 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
 
     await expect(page.getByRole('link', { name: 'Download Android APK' })).toHaveAttribute(
       'href',
-      'https://saferide.esheria.org/downloads/SafeRide-v0.5.8-Android-Preview-arm64.apk',
+      'https://saferide.esheria.org/downloads/SafeRide-1.0.4-26-Android-Preview.apk',
     );
     await expect(page.getByRole('link', { name: 'Download SHA-256' })).toHaveAttribute(
       'href',
-      'https://saferide.esheria.org/downloads/SafeRide-v0.5.8-Android-Preview-arm64.apk.sha256',
+      'https://saferide.esheria.org/downloads/SafeRide-1.0.4-26-Android-Preview.apk.sha256',
     );
-    await expect(page.getByText('56b61c7a7002a97aedc0c943a382d0e200ef152aec398ea82720effe235c65f5')).toBeVisible();
-    await expect(page.getByText('SafeRide v0.5.8 Android Preview').first()).toBeVisible();
+    await expect(page.getByText('68e28e93f38bfd46579a27d7f7a5551fd9bd3c887363846d6710483f25b20e9d')).toBeVisible();
+    await expect(page.getByText('SafeRide 1.0.4 Android Preview (build 26)').first()).toBeVisible();
+    await expect(page.getByText('1.0.4 (code 26)')).toBeVisible();
+    await expect(page.getByText('e706995f643a480d6fc3b8332670aee149ad5b9df164704099bce5720e57d09d')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View release metadata' })).toHaveAttribute('href', '/releases/saferide-1.0.4-code26-android.json');
+    await expect(page.getByText('do not uninstall or clear data', { exact: false })).toBeVisible();
+    await expect(page.getByText('Install it as an update and keep your app data', { exact: false })).toBeVisible();
+    expect(await page.content()).not.toContain('servers are not online');
+    await expect(page.getByText('Full handset acceptance is still pending', { exact: false })).toBeVisible();
+    const html = await page.content();
+    expect(html).not.toContain('56b61c7a7002a97aedc0c943a382d0e200ef152aec398ea82720effe235c65f5');
+    expect(html).not.toContain('clean-install');
+    expect(html).toContain('"softwareVersion":"1.0.4 (23)"');
   });
 
   test('footer contact link opens contact page', async ({ page }) => {
@@ -456,7 +538,7 @@ test.describe('SafeRide v2  Mozilla near-clone', () => {
   });
 
   test('index stat words fit inside their cards', async ({ page }) => {
-    for (const route of ['/impact', '/route-safety-index']) {
+    for (const route of ['/impact', '/partner-dashboard']) {
       await page.goto(`${BASE}${route}`);
       for (const value of await page.getByTestId('index-stat-value').all()) {
         const fits = await value.evaluate((element) => {

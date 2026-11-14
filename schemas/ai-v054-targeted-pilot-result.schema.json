@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v054-targeted-pilot-result.schema.json",
+  "title": "SafeRide v0.5.4 targeted-pilot governed result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt", "bindings", "screens", "vpsValidation", "staging", "preflight", "pilot", "panel", "gpu", "decision", "privacy", "untouched"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v054-targeted-pilot-result" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "branch": { "const": "codex/esh-4198-v051-mitigation" },
+    "pullRequest": { "const": 205 },
+    "status": { "const": "no-go-preflight-failed" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requiredStartingHead", "executionCommit", "planSha256", "frozenManifestSha256", "modelRevision", "modelInventorySha256", "runtimeArchiveSha256", "runtimeManifestDigest", "runtimeConfigDigest", "originalDevelopmentSha256", "mitigationDevelopmentSha256", "sealedHoldoutSha256"],
+      "properties": {
+        "requiredStartingHead": { "const": "099d04b7f59ff13d0a81ed2c27b4ea4b1499fa13" },
+        "executionCommit": { "$ref": "#/$defs/commit" },
+        "planSha256": { "$ref": "#/$defs/sha256" },
+        "frozenManifestSha256": { "const": "92f997666d83664e8319a59188941bc1510320d733bd891c8ab0ed2ee17812ad" },
+        "modelRevision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+        "modelInventorySha256": { "$ref": "#/$defs/sha256" },
+        "runtimeArchiveSha256": { "const": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf" },
+        "runtimeManifestDigest": { "const": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca" },
+        "runtimeConfigDigest": { "const": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87" },
+        "originalDevelopmentSha256": { "const": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881" },
+        "mitigationDevelopmentSha256": { "const": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd" },
+        "sealedHoldoutSha256": { "const": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4" }
+      }
+    },
+    "screens": {
+      "type": "object", "additionalProperties": false,
+      "required": ["vpsPreflight", "a11Preflight", "vpsPilot", "a11Pilot", "vpsPanel", "a11Panel"],
+      "properties": {
+        "vpsPreflight": { "const": "sr4198-v054-vps-preflight-a8f3c" },
+        "a11Preflight": { "const": "sr4198-v054-preflight-a8f3c" },
+        "vpsPilot": { "type": "null" },
+        "a11Pilot": { "type": "null" },
+        "vpsPanel": { "type": "null" },
+        "a11Panel": { "type": "null" }
+      }
+    },
+    "vpsValidation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "v054PythonTests", "v054NodeTests", "v053PythonTests", "v053NodeTests", "secretScanFiles", "frozenTrainingGatePassed", "semanticGatePassed", "tokenizerNoTruncationPassed", "safetyLeakageLineagePassed", "imageGatePassed", "evidenceSchemaPassed"],
+      "properties": {
+        "status": { "const": "passed" },
+        "v054PythonTests": { "const": 46 },
+        "v054NodeTests": { "const": 15 },
+        "v053PythonTests": { "const": 37 },
+        "v053NodeTests": { "const": 31 },
+        "secretScanFiles": { "const": 1082 },
+        "frozenTrainingGatePassed": { "const": true },
+        "semanticGatePassed": { "const": true },
+        "tokenizerNoTruncationPassed": { "const": true },
+        "safetyLeakageLineagePassed": { "const": true },
+        "imageGatePassed": { "const": true },
+        "evidenceSchemaPassed": { "const": true }
+      }
+    },
+    "staging": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fileCount", "totalBytes", "vpsLedgerSha256", "a11LedgerSha256", "independentA11RehashPassed", "modelFileCount", "modelTotalBytes", "runtimeArchiveSizeBytes", "privateModesVerified"],
+      "properties": {
+        "fileCount": { "const": 41 },
+        "totalBytes": { "const": 13636474404 },
+        "vpsLedgerSha256": { "$ref": "#/$defs/sha256" },
+        "a11LedgerSha256": { "$ref": "#/$defs/sha256" },
+        "independentA11RehashPassed": { "const": true },
+        "modelFileCount": { "const": 9 },
+        "modelTotalBytes": { "const": 10278846140 },
+        "runtimeArchiveSizeBytes": { "const": 3350200320 },
+        "privateModesVerified": { "const": true }
+      }
+    },
+    "preflight": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "runId", "sourceHashes", "timing", "coverage", "loss", "order", "assistantOnlyLoss", "checkpoint", "recovery", "terminators", "failure", "sealedHoldoutRowsRead"],
+      "properties": {
+        "status": { "const": "failed-closed" },
+        "runId": { "const": "saferide-v054-preflight-s419805-20260808a8f3c" },
+        "sourceHashes": {
+          "type": "object", "additionalProperties": false,
+          "required": ["hostSnapshotSha256", "failureReceiptSha256", "trainingManifestSha256", "sanitizedLogSha256", "a11ScreenLogSha256", "vpsScreenLogSha256"],
+          "properties": {
+            "hostSnapshotSha256": { "$ref": "#/$defs/sha256" },
+            "failureReceiptSha256": { "$ref": "#/$defs/sha256" },
+            "trainingManifestSha256": { "$ref": "#/$defs/sha256" },
+            "sanitizedLogSha256": { "$ref": "#/$defs/sha256" },
+            "a11ScreenLogSha256": { "$ref": "#/$defs/sha256" },
+            "vpsScreenLogSha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "timing": {
+          "type": "object", "additionalProperties": false,
+          "required": ["startedAt", "finishedAt", "containerWallSeconds", "trainerRuntimeSeconds"],
+          "properties": {
+            "startedAt": { "type": "string", "format": "date-time" },
+            "finishedAt": { "type": "string", "format": "date-time" },
+            "containerWallSeconds": { "type": "number", "minimum": 0 },
+            "trainerRuntimeSeconds": { "type": "number", "minimum": 0 }
+          }
+        },
+        "coverage": {
+          "type": "object", "additionalProperties": false,
+          "required": ["epochsCompleted", "globalSteps", "rowsSeen", "uniqueRows"],
+          "properties": {
+            "epochsCompleted": { "const": 1 },
+            "globalSteps": { "const": 1 },
+            "rowsSeen": { "const": 1 },
+            "uniqueRows": { "const": 1 }
+          }
+        },
+        "loss": {
+          "type": "object", "additionalProperties": false,
+          "required": ["terminalReportedTrainLoss", "normalizedTrainObjective", "bestDevelopmentLoss", "finalDevelopmentLoss", "finiteObservedValues", "gatePassed", "historicalAggregateDefectReintroduced"],
+          "properties": {
+            "terminalReportedTrainLoss": { "type": "number" },
+            "normalizedTrainObjective": { "type": "null" },
+            "bestDevelopmentLoss": { "type": "number" },
+            "finalDevelopmentLoss": { "type": "number" },
+            "finiteObservedValues": { "const": true },
+            "gatePassed": { "const": false },
+            "historicalAggregateDefectReintroduced": { "const": false }
+          }
+        },
+        "order": {
+          "type": "object", "additionalProperties": false,
+          "required": ["sampleOrderSha256", "exactOrderOutputVerified"],
+          "properties": {
+            "sampleOrderSha256": { "type": "null" },
+            "exactOrderOutputVerified": { "const": false }
+          }
+        },
+        "assistantOnlyLoss": {
+          "type": "object", "additionalProperties": false,
+          "required": ["frozenContractPassed", "completedOutputAttestation"],
+          "properties": {
+            "frozenContractPassed": { "const": true },
+            "completedOutputAttestation": { "const": false }
+          }
+        },
+        "checkpoint": {
+          "type": "object", "additionalProperties": false,
+          "required": ["step", "inventorySha256", "fileCount", "totalBytes", "files", "finalAdapterExported", "adapterTensorIntegrity"],
+          "properties": {
+            "step": { "const": 1 },
+            "inventorySha256": { "$ref": "#/$defs/sha256" },
+            "fileCount": { "const": 11 },
+            "totalBytes": { "const": 177583708 },
+            "files": { "type": "array", "minItems": 11, "maxItems": 11, "items": { "$ref": "#/$defs/fileRecord" } },
+            "finalAdapterExported": { "const": false },
+            "adapterTensorIntegrity": { "const": "not-run-after-loss-evidence-failure" }
+          }
+        },
+        "recovery": {
+          "type": "object", "additionalProperties": false,
+          "required": ["resumeUsed", "optimizerStatePresent", "schedulerStatePresent", "rngStatePresent", "trainerStatePresent", "status"],
+          "properties": {
+            "resumeUsed": { "const": false },
+            "optimizerStatePresent": { "const": true },
+            "schedulerStatePresent": { "const": true },
+            "rngStatePresent": { "const": true },
+            "trainerStatePresent": { "const": true },
+            "status": { "const": "structurally-complete-not-resumed" }
+          }
+        },
+        "terminators": {
+          "type": "object", "additionalProperties": false,
+          "required": ["ids", "configurationBound", "cpuContractPassed", "realModelPanelTested"],
+          "properties": {
+            "ids": { "const": [1, 106, 50] },
+            "configurationBound": { "const": true },
+            "cpuContractPassed": { "const": true },
+            "realModelPanelTested": { "const": false }
+          }
+        },
+        "failure": {
+          "type": "object", "additionalProperties": false,
+          "required": ["phase", "errorType", "message", "rootCause"],
+          "properties": {
+            "phase": { "const": "preflight-loss-evidence" },
+            "errorType": { "const": "RuntimeError" },
+            "message": { "const": "Preflight training and development loss histories are both required." },
+            "rootCause": { "const": "one-step preflight inherited loggingSteps=5, so Trainer emitted development loss but no step-1 training-loss history entry" }
+          }
+        },
+        "sealedHoldoutRowsRead": { "const": 0 }
+      }
+    },
+    "pilot": { "$ref": "#/$defs/notStarted" },
+    "panel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "originalDevelopmentRows", "mitigationDevelopmentRows", "metrics"],
+      "properties": {
+        "status": { "const": "not-started" },
+        "originalDevelopmentRows": { "const": 300 },
+        "mitigationDevelopmentRows": { "const": 20 },
+        "metrics": { "type": "null" }
+      }
+    },
+    "gpu": {
+      "type": "object", "additionalProperties": false,
+      "required": ["preTransfer", "preflightLaunch", "postFailure", "contentionObserved", "unrelatedWorkloadStopped"],
+      "properties": {
+        "preTransfer": { "$ref": "#/$defs/idleSample" },
+        "preflightLaunch": {
+          "type": "object", "additionalProperties": false,
+          "required": ["idleSample", "minimumFreeVramMiB", "peakUtilizationPercent", "peakTemperatureC", "maximumComputeProcessCount"],
+          "properties": {
+            "idleSample": { "$ref": "#/$defs/idleSample" },
+            "minimumFreeVramMiB": { "const": 10495 },
+            "peakUtilizationPercent": { "const": 33 },
+            "peakTemperatureC": { "const": 36 },
+            "maximumComputeProcessCount": { "const": 1 }
+          }
+        },
+        "postFailure": {
+          "type": "object", "additionalProperties": false,
+          "required": ["freeVramMiB", "utilizationPercent", "temperatureC", "computeProcessCount", "containerPresent"],
+          "properties": {
+            "freeVramMiB": { "const": 22512 },
+            "utilizationPercent": { "const": 0 },
+            "temperatureC": { "const": 32 },
+            "computeProcessCount": { "const": 0 },
+            "containerPresent": { "const": false }
+          }
+        },
+        "contentionObserved": { "const": false },
+        "unrelatedWorkloadStopped": { "const": false }
+      }
+    },
+    "decision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["strictDecision", "readyForTwoFullCandidateTraining", "nextTechnicalCorrection", "reauthorizationRequired"],
+      "properties": {
+        "strictDecision": { "const": "NO-GO" },
+        "readyForTwoFullCandidateTraining": { "const": false },
+        "nextTechnicalCorrection": { "const": "bind one-step preflight loggingSteps=1, add a fixture proving step-1 train/eval history, freeze the corrected execution plan, and obtain a new one-preflight authorization" },
+        "reauthorizationRequired": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rawPromptsCommitted", "rawResponsesCommitted", "protectedIdsCommitted", "privatePathsCommitted", "modelWeightsCommitted", "credentialsCommitted", "sealedHoldoutRead"],
+      "properties": {
+        "rawPromptsCommitted": { "const": false },
+        "rawResponsesCommitted": { "const": false },
+        "protectedIdsCommitted": { "const": false },
+        "privatePathsCommitted": { "const": false },
+        "modelWeightsCommitted": { "const": false },
+        "credentialsCommitted": { "const": false },
+        "sealedHoldoutRead": { "const": false }
+      }
+    },
+    "untouched": {
+      "type": "object", "additionalProperties": false,
+      "required": ["unrelatedProcesses", "unrelatedContainers", "unrelatedServices", "fullCandidates", "selection", "promotion", "deployment", "publication", "sealedHoldout", "mainBranch"],
+      "properties": {
+        "unrelatedProcesses": { "const": true },
+        "unrelatedContainers": { "const": true },
+        "unrelatedServices": { "const": true },
+        "fullCandidates": { "const": true },
+        "selection": { "const": true },
+        "promotion": { "const": true },
+        "deployment": { "const": true },
+        "publication": { "const": true },
+        "sealedHoldout": { "const": true },
+        "mainBranch": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "fileRecord": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "sizeBytes"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sizeBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "notStarted": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": { "const": "not-started" },
+        "reason": { "const": "preflight-gate-failed" }
+      }
+    },
+    "idleSample": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sampleCount", "durationSeconds", "totalVramMiB", "minimumFreeVramMiB", "peakUtilizationPercent", "maximumComputeProcessCount", "passed"],
+      "properties": {
+        "sampleCount": { "const": 16 },
+        "durationSeconds": { "const": 30 },
+        "totalVramMiB": { "const": 23028 },
+        "minimumFreeVramMiB": { "minimum": 22000, "type": "integer" },
+        "peakUtilizationPercent": { "maximum": 1, "type": "integer" },
+        "maximumComputeProcessCount": { "const": 0 },
+        "passed": { "const": true }
+      }
+    }
+  }
+}

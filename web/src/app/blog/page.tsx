@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import MediaClip from '@/components/MediaClip';
 import Nav from '@/components/Nav';
 import { JsonLd, blogCollectionSchema, breadcrumbSchema, graph } from '@/lib/json-ld';
+import { SPICE_FM_CLIP } from '@/lib/media';
 import { pageMetadata } from '@/lib/metadata';
 import { PRESS_COVERAGE } from '@/lib/press';
 import { SITE } from '@/lib/site';
@@ -146,6 +148,11 @@ export default function Page() {
             </article>
           </div>
         </section>
+
+        {/* The same clip card as on the story page, so a reader who missed it there finds it here. */}
+        <div className="[&>section]:border-t-0" data-testid="blog-media-clip">
+          <MediaClip clip={SPICE_FM_CLIP} />
+        </div>
 
         {featured ? (
           <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 lg:px-0" aria-labelledby="featured-update">

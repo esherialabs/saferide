@@ -2,7 +2,6 @@
 
 # SafeRide Mobile
 
-[![Public CI and Coverage](https://github.com/esherialabs/saferide/actions/workflows/public-ci.yml/badge.svg)](https://github.com/esherialabs/saferide/actions/workflows/public-ci.yml)
 [![Public Documentation](https://github.com/esherialabs/saferide/actions/workflows/public-docs.yml/badge.svg)](https://esherialabs.github.io/saferide/)
 [![License](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE)
 
@@ -10,7 +9,7 @@
 
 SafeRide is an Android-first development prototype that helps women capture evidence, get trauma-informed guidance, and prepare structured reports. The app is designed for offline-first use and explicit consent boundaries. The canonical public repository is open source under Apache-2.0, with separately scoped CC-BY-4.0 content and artifact-specific model/data terms. Publication does not claim production deployment, survivor-facing launch, emergency-service status, partner endorsement, or UNICEF approval.
 
-**Release status:** [SafeRide v0.5.8 Android Preview](https://saferide.esheria.org/download/) is approved for public controlled testing on `arm64-v8a` Android devices. The signed APK SHA-256 is `56b61c7a7002a97aedc0c943a382d0e200ef152aec398ea82720effe235c65f5`. It is not a production, emergency-service, survivor-facing, Google Play, or UNICEF-approved release.
+**Release status:** [SafeRide 1.0.4 Android Preview (build 26)](https://saferide.esheria.org/download/) is a public testing preview. Its signed APK, SHA-256 checksum and signing certificate are published on the download page and in the [release record](web/public/releases/saferide-1.0.4-code26-android.json), which is the source of truth for the current build. Full handset acceptance is still pending, and the record carries no device test. Outside the supervised HURIA pilot, use synthetic reports only. The preview is signed with a different key from the August v0.5.8 preview, so Android will not install one over the other. It is not a production, emergency-service, survivor-facing, Google Play, or UNICEF-approved release. The APK is built from the private source commit named in the release record, not from this snapshot, so the two are not assumed to be byte-for-byte the same code.
 
 Public surfaces:
 
@@ -86,6 +85,15 @@ Public surfaces:
 
 ## Technical Overview
 
+Android build, versioning, signing and deployment work starts with the
+[release playbook](docs/release/android-release-playbook.md).
+Use `npm run release:android:check` before producing a candidate. The canonical
+website preview and an EAS UI-test APK can have different signers and upgrade
+compatibility; build success alone does not update the canonical release.
+The current selected path is local Gradle builds and private GitHub Releases
+for internal test downloads. See the playbook for draft preparation, immutable
+versioned assets, checksums, access requirements and publication readback.
+
 ### Mobile App Stack
 - React Native 0.85.3 with Expo SDK 56 and TypeScript 6.0.
 - React Navigation 7 and React Native Paper 5 for navigation and UI.
@@ -123,7 +131,7 @@ Public surfaces:
 
 ## Local Development
 
-The signed v0.5.8 APK is approved only for public controlled testing through the canonical download page. Building another artifact, publishing the AAB, submitting to a store, or promoting production still requires the release gates in `config/release/release-controls.v1.json` and explicit owner authority.
+The signed APK on the canonical download page is offered only as a public testing preview, as described in its release record. Building another artifact, publishing the AAB, submitting to a store, or promoting production still requires the release gates in `config/release/release-controls.v1.json` and explicit owner authority.
 
 ### Development Environment
 **Prerequisites**
@@ -210,7 +218,7 @@ Additional roots of note:
 - `apps/api/` contains the owned API, repositories, routes, metrics, and WebSocket gateway.
 - `infra/local/` contains the local Postgres, object storage, auth, cache, and observability stack.
 - `Saferide_Design_Style_System.md` documents design decisions.
-- APK/AAB and model binaries remain outside Git. The public APK is distributed from the versioned website download path, the AAB remains private for future Google Play internal testing, and the model remains on Hugging Face.
+- APK/AAB and model binaries remain outside source commits. New internal-test APK downloads use private GitHub Release assets after local Gradle builds. The published August APK remains on the versioned website and public GitHub preview release; the AAB stays private and the model stays on Hugging Face.
 
 ## Privacy & Safeguarding
 
@@ -232,6 +240,15 @@ Additional roots of note:
 - Accessibility checks with TalkBack, high-contrast mode, and large text scaling.
 - Performance and usability targets are acceptance goals, not established field or participant results.
 - Security reviews include dependency scanning, API authorization validation, and incident response planning.
+
+## Verification
+
+GitHub Actions is currently unavailable for this organisation (billing lock), so the
+required checks ("Typecheck, Test, Coverage, Public Safety" and "Reproducible Source
+Archive") are run on the maintainers' server and posted as commit statuses, with an
+evidence file you can check yourself. See
+[local verification](docs/open-source/local-verification.md); run the gates locally with
+`npm run verify:public -- --snapshot . --out ../saferide-verify`.
 
 ## Contributing
 

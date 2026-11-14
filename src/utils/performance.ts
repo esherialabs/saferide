@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { devPrivacyInfo } from './privacyLog';
 
 // Debounce hook for performance optimization
 export function useDebounce<T>(value: T, delay: number): T {
@@ -121,7 +122,10 @@ export function usePerformance(name: string, enabled: boolean = __DEV__) {
     return () => {
       if (startTime.current !== null) {
         const duration = performance.now() - startTime.current;
-        console.log(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
+        devPrivacyInfo('performance measurement', {
+          label: name,
+          durationMs: Number(duration.toFixed(2)),
+        });
       }
     };
   });

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-prompt-source-embedding-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "status", "datasetId", "policySha256", "method", "sourceBindings", "sourceOrdering", "runtime", "tokenization", "embeddings", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-prompt-source-embedding-manifest" },
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "complete" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.0" },
+    "policySha256": { "$ref": "#/$defs/sha" },
+    "method": {
+      "type": "object", "additionalProperties": false, "required": ["modelId", "immutableRevision", "distanceMetric", "representation", "implementationSha256", "modelInventorySha256"],
+      "properties": {
+        "modelId": { "const": "sentence-transformers/LaBSE" },
+        "immutableRevision": { "const": "836121a0533e5664b21c7aacc5d22951f2b8b25b" },
+        "distanceMetric": { "const": "cosine-similarity" },
+        "representation": { "const": "normalized-user-turns-only-v1" },
+        "implementationSha256": { "$ref": "#/$defs/sha" },
+        "modelInventorySha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "sourceBindings": {
+      "type": "object", "additionalProperties": false, "required": ["trainSha256", "developmentSha256", "qualityHoldoutSha256", "safetyHoldoutSha256", "blindSuiteSha256"],
+      "properties": {
+        "trainSha256": { "$ref": "#/$defs/sha" }, "developmentSha256": { "$ref": "#/$defs/sha" }, "qualityHoldoutSha256": { "$ref": "#/$defs/sha" }, "safetyHoldoutSha256": { "$ref": "#/$defs/sha" }, "blindSuiteSha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "sourceOrdering": {
+      "type": "object", "additionalProperties": false, "required": ["algorithm", "rowCount", "inventorySha256"],
+      "properties": { "algorithm": { "const": "v05-core-global-row-id-ascending-then-blind-prompt-id-ascending" }, "rowCount": { "const": 2840 }, "inventorySha256": { "$ref": "#/$defs/sha" } }
+    },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "tokenization": {
+      "type": "object", "additionalProperties": false, "required": ["maximumTokensAllowed", "maximumInputTokens", "truncatedInputCount"],
+      "properties": { "maximumTokensAllowed": { "const": 256 }, "maximumInputTokens": { "type": "integer", "minimum": 1, "maximum": 256 }, "truncatedInputCount": { "const": 0 } }
+    },
+    "embeddings": {
+      "type": "object", "additionalProperties": false, "required": ["fileName", "sha256", "sizeBytes", "shape", "dtype"],
+      "properties": { "fileName": { "const": "prompt-source-embeddings.npy" }, "sha256": { "$ref": "#/$defs/sha" }, "sizeBytes": { "type": "integer", "minimum": 1 }, "shape": { "const": [2840, 768] }, "dtype": { "const": "float32" } }
+    },
+    "privacy": { "const": { "rawTextIncluded": false, "sourceIdentifiersIncluded": false, "embeddingsCommittable": false, "contentLogged": false } }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "runtime": {
+      "type": "object", "additionalProperties": false, "required": ["python", "numpy", "onnxruntime", "transformers", "providers", "intraOpThreads", "interOpThreads", "executionMode"],
+      "properties": { "python": { "type": "string" }, "numpy": { "type": "string" }, "onnxruntime": { "type": "string" }, "transformers": { "type": "string" }, "providers": { "const": ["CPUExecutionProvider"] }, "intraOpThreads": { "const": 8 }, "interOpThreads": { "const": 1 }, "executionMode": { "const": "ORT_SEQUENTIAL" } }
+    }
+  }
+}

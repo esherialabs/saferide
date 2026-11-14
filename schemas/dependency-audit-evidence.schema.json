@@ -32,10 +32,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["workspace", "lockfile", "vulnerabilities"],
+        "required": ["workspace", "lockfile", "lockfileSha256", "vulnerabilities"],
         "properties": {
           "workspace": { "enum": ["mobile", "api", "web"] },
           "lockfile": { "type": "string", "minLength": 1 },
+          "lockfileSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "vulnerabilities": {
             "type": "object",
             "additionalProperties": false,

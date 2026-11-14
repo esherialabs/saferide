@@ -1,5 +1,6 @@
 import type { EvidencePrivacyStatusMap } from './evidencePrivacyStatus';
 import type { AnonymousAggregateConsentCheckpoint } from './consentLedger';
+import type { PartnerSharingDraft } from './partnerSharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { EvidenceVaultCaptureSource } from './evidenceVaultStatus';
@@ -128,6 +129,8 @@ export interface DraftData {
     grantedAt: string;
   };
   anonymousAggregateConsent?: AnonymousAggregateConsentCheckpoint;
+  /** Optional, per-report choice to also share with SafeRide's partner HURIA (off unless chosen). */
+  partnerSharing?: PartnerSharingDraft;
   selectedProvider?: string;
   selectedChannel?: ReferralContactChannel;
   fallbackNumber?: string;
@@ -677,6 +680,11 @@ class DraftStorageManager {
         // caller snapshot cannot overwrite fields another screen persisted
         // between this caller's read and this write.
         const updatedDraft = mergeDraftForLocalPersistence(existingDraft, incomingDraft, explicitKeys);
+        // Blur/autosave snapshots cannot add or remove attachments. Membership
+        // changes must come from an explicit edit or the existing-draft queue.
+        if (existingDraft && !explicitKeys.has('mediaFiles')) {
+          updatedDraft.mediaFiles = existingDraft.mediaFiles;
+        }
 
         const rescuedFields = (['patterns', 'location', 'datetime', 'mediaFiles', 'textEvidence'] as const)
           .filter(key => updatedDraft[key] !== incomingDraft[key]);
@@ -727,6 +735,21 @@ class DraftStorageManager {
         const backend = await this.ensureReady();
         const drafts = await this.readAllDraftsFromBackend(backend);
         const filteredDrafts = drafts.filter(draft => draft.id !== draftId);
+        const removedDraft = drafts.find(draft => draft.id === draftId);
+        const managedUris = [...new Set((removedDraft?.mediaFiles ?? []).map(media => media.uri))]
+          .filter(uri => /\/saferide-evidence\/evidence-[a-f0-9-]+\.[a-z0-9]+$/i.test(uri))
+          .filter(uri => !filteredDrafts.some(draft => draft.mediaFiles?.some(media => media.uri === uri)));
+        if (managedUris.length) {
+          const files = await import('expo-file-system/legacy');
+          const directory = files.documentDirectory ? `${files.documentDirectory}saferide-evidence/` : null;
+          for (const uri of managedUris) {
+            // Exact app-generated filenames only; never follow nested paths or
+            // remove imported/cache files. Retain the row on failure for retry.
+            if (directory && uri.startsWith(directory) && !uri.slice(directory.length).includes('/')) {
+              await files.deleteAsync(uri, { idempotent: true });
+            }
+          }
+        }
         if (backend === 'sqlite') {
           await localDraftDatabase.deleteDraftRow(draftId);
         } else {
@@ -745,6 +768,32 @@ class DraftStorageManager {
     });
 
     this.emitChange({ type: 'delete', draftId });
+  }
+
+  /** Mutate an existing draft atomically; delayed work must never recreate it after deletion. */
+  async updateExistingDraft(
+    draftId: string,
+    update: (current: DraftData) => Partial<DraftData> | null,
+  ): Promise<DraftData | null> {
+    const saved = await this.enqueueWrite(async () => {
+      const backend = await this.ensureReady();
+      const drafts = await this.readAllDraftsFromBackend(backend);
+      const index = drafts.findIndex(draft => draft.id === draftId);
+      if (index < 0) return null;
+      const current = drafts[index];
+      const patch = update(current);
+      if (!patch) return null;
+      const incoming = { ...current, ...patch, id: draftId, createdAt: current.createdAt, updatedAt: new Date() };
+      const next = mergeDraftForLocalPersistence(current, incoming, getDraftUpdateKeys(patch));
+      if (next.privacySettings) next.privacySettings = normalizeEvidencePrivacySettings(next.privacySettings);
+      if (next.mediaFiles) next.mediaFiles = normalizeMediaPrivacyStatuses(next.mediaFiles, next.privacySettings);
+      drafts[index] = next;
+      await this.upsertDraftInBackend(backend, next, drafts);
+      if (isEditableDraft(next)) await this.persistActiveDraftId(backend, next.id);
+      return next;
+    });
+    if (saved) this.emitChange({ type: 'save', draftId: saved.id });
+    return saved;
   }
 
   async setDrafts(drafts: DraftData[]): Promise<void> {

@@ -54,24 +54,24 @@ export const Input = forwardRef<TextInput, InputProps>(({
       case 'sm':
         return {
           height: 48,
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: spacing.sm,
           paddingVertical: spacing.xs,
           fontSize: typography.bodyS.fontSize,
           lineHeight: typography.bodyS.lineHeight,
         };
       case 'lg':
         return {
-          height: 60,
-          paddingHorizontal: spacing.xl,
+          height: 56,
+          paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
           fontSize: typography.bodyM.fontSize,
           lineHeight: typography.bodyM.lineHeight,
         };
       default:
         return {
-          height: 56,
-          paddingHorizontal: spacing.xl,
-          paddingVertical: spacing.sm,
+          height: 52,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.xs,
           fontSize: typography.bodyM.fontSize,
           lineHeight: typography.bodyM.lineHeight,
         };
@@ -86,7 +86,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
       borderRadius: radii.input,
       borderWidth: 1,
       backgroundColor: colors.surface,
-      borderColor: colors.divider,
+      borderColor: colors.input,
     };
 
     switch (variant) {
@@ -105,7 +105,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
       default:
         return {
           ...baseStyle,
-          borderColor: colors.divider,
+          borderColor: colors.input,
         };
     }
   };
@@ -165,8 +165,13 @@ export const Input = forwardRef<TextInput, InputProps>(({
       fontFamily: fontFamilies.text,
       paddingVertical: 0, // Remove default padding to control height precisely
     },
-    adornment: {
-      marginHorizontal: spacing.xs,
+    startAdornment: {
+      marginRight: spacing.xs,
+    },
+    endAdornment: {
+      // Lets a 48dp trailing control sit close to the field edge.
+      marginLeft: spacing.xxs,
+      marginRight: -spacing.xs,
     },
     helperText: {
       ...typography.caption,
@@ -186,7 +191,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
       
       <View style={styles.inputContainer}>
         {startAdornment && (
-          <View style={styles.adornment}>
+          <View style={styles.startAdornment}>
             {startAdornment}
           </View>
         )}
@@ -196,13 +201,14 @@ export const Input = forwardRef<TextInput, InputProps>(({
           style={[styles.input, inputStyle, style]}
           placeholderTextColor={colors.textTertiary}
           editable={!disabled}
+          accessibilityLabel={label}
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...rest}
         />
         
         {endAdornment && (
-          <View style={styles.adornment}>
+          <View style={styles.endAdornment}>
             {endAdornment}
           </View>
         )}

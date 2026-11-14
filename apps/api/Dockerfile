@@ -1,4 +1,4 @@
-FROM node:24-alpine AS deps
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS deps
 WORKDIR /app
 COPY apps/api/package*.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ COPY apps/api/tsconfig.json ./tsconfig.json
 COPY apps/api/src ./src
 RUN npm run build
 
-FROM node:24-alpine AS runtime
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY apps/api/package*.json ./

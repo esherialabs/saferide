@@ -1,13 +1,13 @@
 {
   "schema": "com.saferide.provider-pack-manifest",
   "schemaVersion": 1,
-  "manifestId": "ke-support-directory-1.0.0-candidate.2",
+  "manifestId": "ke-support-directory-1.0.0-candidate.4",
   "packId": "ke-support-directory",
-  "packVersion": "1.0.0-candidate.2",
-  "packSha256": "bb4c173b140f417cb1e3b8495460213db0d7e28d26fb2be17f4c2a4e32084775",
+  "packVersion": "1.0.0-candidate.4",
+  "packSha256": "39e790bfad7ec135be329c18dea828e142a2de6d33e9c8aae1822f0923ea4fb1",
   "hashCanonicalization": "sorted-json-v1",
-  "createdAt": "2026-08-15T00:00:00.000Z",
-  "expiresAt": "2026-08-30T00:00:00.000Z",
+  "createdAt": "2026-10-22T00:00:00.000Z",
+  "expiresAt": "2026-12-12T00:00:00.000Z",
   "status": "candidate",
   "attestation": {
     "status": "pending",
@@ -31,6 +31,8 @@
   "changelog": [
     "Updates the schema-bound candidate pack to five source-linked listings.",
     "Adds Human Rights Agenda (HURIA) as a Coast-based legal-aid and human-rights listing from official sources.",
+    "Corrects the HURIA toll-free call contact from 0769 546 252 to 0769 546 253, as confirmed with HURIA.",
+    "Renews the listing expiry to 12 December 2026 (the HURIA pilot review cutoff); the 30 August expiry had marked every listing expired and blocked choosing HURIA. Contacts stay pending attributable review.",
     "Marks every contact, hours statement, and eligibility statement pending attributable review.",
     "Keeps remote distribution and referral contact actions disabled."
   ],

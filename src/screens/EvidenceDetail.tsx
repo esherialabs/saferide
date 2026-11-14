@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { getReportNavigationStyles } from '../components/report/reportNavigationStyles';
+import { View, Text, StyleSheet, ScrollView, Image, Pressable, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,7 +16,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { ReportWizardProgress } from '../components/report/ReportWizardProgress';
 import Screen from '../components/ui/Screen';
 import Button from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
+import { ReportStepHeader } from '../components/report/ReportStepHeader';
 import { Textarea } from '../components/ui/Textarea';
 import { Alert as AlertComponent } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
@@ -23,7 +25,6 @@ import { Switch } from '../components/ui/Switch';
 import { ActionSheet, InfoModal, InfoModalSection } from '../components/ui';
 import { EmptyState, OfflineBanner } from '../components/ui/SystemStates';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
 import { pushReportRoute } from '../navigation/reportNavigation';
@@ -37,7 +38,7 @@ import { useCompletedReportRedirect } from '../hooks/useCompletedReportRedirect'
 import { useDraftState } from '../hooks/useDraftState';
 import { useReportDraftIdentity } from '../hooks/useReportDraftIdentity';
 import { useOnline } from '../context/OnlineProvider';
-import { borders, spacing } from '../theme/tokens';
+import { borders, spacing, radii, typography } from '../theme/tokens';
 import type {
   EvidencePrivacyProcessingStatus,
   EvidencePrivacySettings,
@@ -46,7 +47,7 @@ import type {
 import {
   normalizeMediaPrivacyStatuses,
   resolveEvidencePrivacySettingsForDraft,
-  withEvidencePrivacyStatus,
+  SAFE_DEFAULT_EVIDENCE_PRIVACY_SETTINGS,
 } from '../utils/evidencePrivacyStatus';
 import type { EvidenceVaultCaptureSource } from '../utils/evidenceVaultStatus';
 import {
@@ -58,6 +59,9 @@ import {
 import PhotoAnnotationOverlay, { usePhotoAnnotation, AnnotationPoint } from '../components/ui/PhotoAnnotationOverlay';
 import { transcribeAudio, TranscriptionError } from '../services/transcriptionService';
 import { captureMeasurementEvent } from '../lib/measurement/localEventStore';
+import { addPersistentEvidence, reconcileEvidenceDraft, removePersistentEvidence, type EvidenceDraftEdits } from '../utils/evidenceFiles';
+import { useAppReset } from '../utils/appReset';
+import { draftStorage } from '../utils/draftStorage';
 
 type EvidenceDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EvidenceDetail'>;
 type EvidenceDetailRouteProp = RouteProp<RootStackParamList, 'EvidenceDetail'>;
@@ -90,11 +94,9 @@ interface EvidenceData {
   stealthModeActive: boolean;
 }
 
-const DEFAULT_EVIDENCE_PRIVACY_SETTINGS: Required<EvidencePrivacySettings> = {
-  blurFaces: true,
-  removeMetadata: true,
-  encryptFiles: true,
-};
+// Off until a draft's saved choice loads: these requests are not processed in
+// this build, so switching them on by default only held photos back.
+const DEFAULT_EVIDENCE_PRIVACY_SETTINGS: Required<EvidencePrivacySettings> = SAFE_DEFAULT_EVIDENCE_PRIVACY_SETTINGS;
 
 export default function EvidenceDetailScreen() {
   const navigation = useNavigation<EvidenceDetailNavigationProp>();
@@ -102,17 +104,22 @@ export default function EvidenceDetailScreen() {
   const { colors } = useTheme();
   const toast = useToast();
   const photoAnnotation = usePhotoAnnotation();
-  const insets = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingRef = React.useRef<typeof audioRecorder | null>(null);
   
-  const [evidenceData, setEvidenceData] = useState<EvidenceData>({
+  const [evidenceData, setEvidenceState] = useState<EvidenceData>({
     mediaFiles: [],
     textEvidence: '',
     privacySettings: DEFAULT_EVIDENCE_PRIVACY_SETTINGS,
     stealthModeActive: false,
   });
+  const evidenceDataRef = React.useRef(evidenceData);
+  const setEvidenceData = (update: React.SetStateAction<EvidenceData>) => {
+    const next = typeof update === 'function' ? update(evidenceDataRef.current) : update;
+    evidenceDataRef.current = next;
+    setEvidenceState(next);
+  };
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -123,6 +130,11 @@ export default function EvidenceDetailScreen() {
   const [isUploadSheetVisible, setIsUploadSheetVisible] = useState(false);
   const [isPrivacyDetailsVisible, setIsPrivacyDetailsVisible] = useState(false);
   const [activeMediaDetailsId, setActiveMediaDetailsId] = useState<string | null>(null);
+  const [isAddingEvidence, setIsAddingEvidence] = useState(false);
+  const evidenceGeneration = React.useRef(0);
+  const evidenceBusy = React.useRef(false);
+  const evidenceFocused = React.useRef(false);
+  const evidenceEdits = React.useRef<EvidenceDraftEdits>({});
 
   const routeDraftId = typeof route.params?.draftId === 'string' && route.params.draftId.trim()
     ? route.params.draftId
@@ -136,6 +148,43 @@ export default function EvidenceDetailScreen() {
   const { draftData, updateDraft, saveDraftPatch, isSaving, lastSaved, error } = useDraftState(initialDraftId);
   useCompletedReportRedirect(navigation, draftData, { enabled: !isEditingCompleted });
   const { isOnline } = useOnline();
+  const invalidateEvidenceSelection = React.useCallback(() => {
+    evidenceGeneration.current += 1;
+    evidenceBusy.current = false;
+    setIsAddingEvidence(false);
+  }, []);
+  const applyPersistedEvidence = React.useCallback((draft: NonNullable<typeof draftData>) => {
+    const reconciled = reconcileEvidenceDraft(draft, evidenceEdits.current);
+    const next = { ...evidenceDataRef.current, ...reconciled,
+      stealthModeActive: reconciled.mediaFiles.some(file => file.isFromStealth || file.captureSource === 'stealth_auto') };
+    evidenceDataRef.current = next;
+    setEvidenceState(next);
+    // Update the hook reference before its next blur flush; no second write.
+    void updateDraft(reconciled);
+    return next;
+  }, [updateDraft]);
+  const refreshEvidence = React.useCallback(async () => {
+    if (!initialDraftId) return null;
+    const generation = evidenceGeneration.current;
+    const draft = await draftStorage.getDraft(initialDraftId);
+    if (!draft || !evidenceFocused.current || evidenceGeneration.current !== generation) return null;
+    return applyPersistedEvidence(draft);
+  }, [initialDraftId, applyPersistedEvidence]);
+  const reportEvidenceSaveError = () => toast.show({ title: 'Evidence save incomplete', message: 'Try again before continuing.', variant: 'error' });
+  useFocusEffect(React.useCallback(() => {
+    evidenceFocused.current = true;
+    void refreshEvidence().catch(() => undefined);
+    return () => { evidenceFocused.current = false; invalidateEvidenceSelection(); };
+  }, [invalidateEvidenceSelection, refreshEvidence]));
+  useAppReset(invalidateEvidenceSelection);
+  useEffect(() => draftStorage.subscribe(event => {
+    if (event.type === 'clear' || event.type === 'replace' || (event.type === 'delete' && event.draftId === initialDraftId)) {
+      invalidateEvidenceSelection();
+    }
+    if (event.type === 'save' && event.draftId === initialDraftId && evidenceFocused.current) {
+      void refreshEvidence().catch(() => undefined);
+    }
+  }), [initialDraftId, invalidateEvidenceSelection, refreshEvidence]);
   const goBackToWhereWhen = useReportWizardBack(navigation, initialDraftId ? {
     route: 'WhereWhen',
     params: { draftId: initialDraftId, ...(isEditingCompleted ? { editCompleted: true } : {}) },
@@ -149,6 +198,7 @@ export default function EvidenceDetailScreen() {
 
   useEffect(() => {
     if (draftData) {
+      evidenceEdits.current = {};
       setEvidenceData(prev => {
         const privacySettings = resolveEvidencePrivacySettingsForDraft(draftData.privacySettings);
         const mediaFiles = normalizeMediaPrivacyStatuses(draftData.mediaFiles || [], privacySettings) || [];
@@ -163,6 +213,39 @@ export default function EvidenceDetailScreen() {
       });
     }
   }, [draftData?.id]);
+
+  const persistEvidenceEdits = async () => {
+    if (!initialDraftId) return null;
+    const generation = evidenceGeneration.current;
+    const edits = evidenceEdits.current;
+    if (!Object.keys(edits).length) return refreshEvidence();
+    const saved = await draftStorage.updateExistingDraft(initialDraftId, draft => {
+      const reconciled = reconcileEvidenceDraft(draft, edits);
+      return {
+        ...(edits.media || edits.privacySettings ? { mediaFiles: reconciled.mediaFiles } : {}),
+        ...(edits.textEvidence !== undefined ? { textEvidence: reconciled.textEvidence } : {}),
+        ...(edits.privacySettings ? { privacySettings: reconciled.privacySettings } : {}),
+      };
+    });
+    if (!saved) return null;
+    if (evidenceGeneration.current !== generation) return null;
+    // Leave any newer edits in place while acknowledging exactly this save.
+    const pendingMedia = { ...evidenceEdits.current.media };
+    const remaining: EvidenceDraftEdits = { ...evidenceEdits.current, media: pendingMedia };
+    for (const [id, fields] of Object.entries(edits.media ?? {})) {
+      const pending = { ...pendingMedia[id] };
+      for (const key of Object.keys(fields) as Array<keyof typeof fields>) {
+        if (pending[key] === fields[key]) delete pending[key];
+      }
+      if (Object.keys(pending).length) pendingMedia[id] = pending;
+      else delete pendingMedia[id];
+    }
+    if (!Object.keys(pendingMedia).length) delete remaining.media;
+    if (remaining.textEvidence === edits.textEvidence) delete remaining.textEvidence;
+    if (remaining.privacySettings === edits.privacySettings) delete remaining.privacySettings;
+    evidenceEdits.current = remaining;
+    return evidenceFocused.current ? applyPersistedEvidence(saved) : null;
+  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -242,6 +325,7 @@ export default function EvidenceDetailScreen() {
   };
 
   const styles = StyleSheet.create({
+    ...getReportNavigationStyles(colors),
     screenRoot: {
       flex: 1,
     },
@@ -251,58 +335,79 @@ export default function EvidenceDetailScreen() {
     contentContainer: {
       paddingHorizontal: 16,
       paddingTop: 16,
-      paddingBottom: Math.max(spacing.massive, insets.bottom + spacing.massive),
+      paddingBottom: spacing.md,
       gap: 16,
     },
-    sectionHeader: {
-      gap: 4,
-      marginTop: 4,
-    },
-    sectionHeaderCard: {
-      marginTop: 4,
-    },
-    sectionHeaderCardContent: {
-      gap: 4,
-      paddingTop: 14,
+    sectionBlock: {
+      gap: spacing.xs,
     },
     sectionTitle: {
-      fontSize: 18,
-      fontWeight: '700',
+      ...typography.titleMedium,
       color: colors.foreground,
     },
     sectionCaption: {
-      fontSize: 13,
-      color: colors.mutedForeground,
-      lineHeight: 18,
+      ...typography.bodySmall,
+      color: colors.textSecondary,
     },
     uploadPanel: {
       alignItems: 'center',
-      flexDirection: 'row',
-      gap: 10,
-      minHeight: 72,
+      backgroundColor: colors.surface,
+      borderColor: colors.primary,
+      borderRadius: radii.card,
+      borderStyle: 'dashed',
+      borderWidth: borders.emphasized,
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.lg,
+    },
+    uploadPanelPressed: {
+      backgroundColor: colors.primaryMuted,
     },
     uploadIcon: {
       alignItems: 'center',
       backgroundColor: colors.primaryMuted,
-      borderRadius: 18,
-      height: 36,
+      borderRadius: radii.round,
+      height: 48,
       justifyContent: 'center',
-      width: 36,
+      width: 48,
     },
-    uploadCopy: {
+    uploadTitle: {
+      ...typography.titleSmall,
+      color: colors.foreground,
+      textAlign: 'center',
+    },
+    uploadCaption: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    privacyRow: {
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: borders.hairline,
+      flexDirection: 'row',
+      gap: spacing.sm,
+      minHeight: 64,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+    },
+    privacyIcon: {
+      alignItems: 'center',
+      backgroundColor: colors.privacyMuted,
+      borderRadius: radii.round,
+      height: 40,
+      justifyContent: 'center',
+      width: 40,
+    },
+    privacyCopy: {
       flex: 1,
       minWidth: 0,
     },
-    uploadTitle: {
+    privacyTitle: {
+      ...typography.titleSmall,
       color: colors.foreground,
-      fontSize: 15,
-      fontWeight: '700',
-    },
-    uploadCaption: {
-      color: colors.mutedForeground,
-      fontSize: 12,
-      lineHeight: 16,
-      marginTop: 2,
     },
     mediaCarousel: {
       gap: 12,
@@ -345,7 +450,7 @@ export default function EvidenceDetailScreen() {
     mediaThumb: {
       width: '100%',
       height: 112,
-      borderRadius: 8,
+      borderRadius: radii.card,
       backgroundColor: colors.surfaceAlt,
       justifyContent: 'center',
       alignItems: 'center',
@@ -417,30 +522,15 @@ export default function EvidenceDetailScreen() {
     mediaActionButton: {
       flex: 1,
     },
-    cardContentStack: {
-      gap: 12,
-    },
     switchStack: {
       gap: 12,
     },
-    privacyDetailsButton: {
-      alignSelf: 'flex-start',
-    },
-    navigationButtons: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    navigationDock: {
-      backgroundColor: colors.background,
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
-      paddingHorizontal: 16,
-      paddingTop: 16,
-    },
     backButton: {
+      alignSelf: 'stretch',
       flex: 1,
     },
     nextButton: {
+      alignSelf: 'stretch',
       flex: 2,
     },
   });
@@ -451,8 +541,6 @@ export default function EvidenceDetailScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
-
   const getTranscriptionStatus = (id: string): 'idle' | 'loading' | 'success' | 'error' => {
     if (transcriptionState[id]) {
       return transcriptionState[id].status;
@@ -461,47 +549,63 @@ export default function EvidenceDetailScreen() {
     return hasTranscript ? 'success' : 'idle';
   };
 
-  const addMediaFile = (file: Omit<MediaFile, 'id' | 'timestamp'>) => {
-    const newFile: MediaFile = withEvidencePrivacyStatus(
-      {
-        ...file,
-        id: generateId(),
-        timestamp: new Date(),
-        uploadStatus: file.uploadStatus ?? 'pending',
+  const beginEvidenceSelection = () => {
+    if (!initialDraftId || !draftData || evidenceBusy.current) return null;
+    evidenceBusy.current = true;
+    setIsAddingEvidence(true);
+    const generation = evidenceGeneration.current;
+    return {
+      draftId: initialDraftId,
+      isCurrent: () => evidenceGeneration.current === generation,
+      finish: () => {
+        if (evidenceGeneration.current === generation) {
+          evidenceBusy.current = false;
+          setIsAddingEvidence(false);
+        }
       },
-      evidenceData.privacySettings,
-    );
+    };
+  };
 
-    setEvidenceData(prev => {
-      const updated = { ...prev, mediaFiles: [...prev.mediaFiles, newFile] };
-      updateDraft({ mediaFiles: updated.mediaFiles }, true);
-      return updated;
-    });
+  const addMediaFile = async (
+    file: Omit<MediaFile, 'id' | 'timestamp'>,
+    selection: NonNullable<ReturnType<typeof beginEvidenceSelection>>,
+  ) => {
+    const saved = await addPersistentEvidence({ ...selection, media: file });
+    if (!saved || !selection.isCurrent()) return false;
+    await refreshEvidence();
+    return true;
   };
 
   const updatePrivacySetting = (key: keyof Required<EvidencePrivacySettings>, value: boolean) => {
     setEvidenceData(prev => {
       const privacySettings = { ...prev.privacySettings, [key]: value };
+      evidenceEdits.current = { ...evidenceEdits.current, privacySettings };
       const mediaFiles = normalizeMediaPrivacyStatuses(prev.mediaFiles, privacySettings) || [];
-      updateDraft({ mediaFiles, privacySettings }, true);
+      void updateDraft({ mediaFiles, privacySettings });
       return { ...prev, mediaFiles, privacySettings };
     });
+    void persistEvidenceEdits().catch(reportEvidenceSaveError);
   };
 
-  const updateMediaDescription = (fileId: string, description: string, saveImmediately = false) => {
+  const updateMediaDescription = (fileId: string, description: string) => {
+    evidenceEdits.current = { ...evidenceEdits.current, media: { ...evidenceEdits.current.media,
+      [fileId]: { ...evidenceEdits.current.media?.[fileId], description } } };
     setEvidenceData(prev => {
       const mediaFiles = prev.mediaFiles.map(file =>
         file.id === fileId
           ? { ...file, description }
           : file,
       );
-      updateDraft({ mediaFiles }, saveImmediately);
+      void updateDraft({ mediaFiles });
       return { ...prev, mediaFiles };
     });
+    // Queue notes as they change so Back/Quick Exit cannot lose a field that
+    // is intentionally excluded from full-snapshot autosave membership.
+    void persistEvidenceEdits().catch(reportEvidenceSaveError);
   };
 
   const persistTextEvidence = () => {
-    updateDraft({ textEvidence: evidenceData.textEvidence }, true);
+    void persistEvidenceEdits().catch(reportEvidenceSaveError);
   };
 
   const navigateToOptionalSkipTarget = (skipTarget: ReportWizardOptionalSkipTarget) => {
@@ -540,6 +644,7 @@ export default function EvidenceDetailScreen() {
   };
 
   const handleSkipOptionalSteps = async () => {
+    if (evidenceBusy.current || isRecording) return;
     const skipTarget = getOptionalReportStepSkipTarget(draftData, 'EvidenceDetail');
     if (!skipTarget) return;
 
@@ -549,10 +654,11 @@ export default function EvidenceDetailScreen() {
     ]));
 
     try {
+      const current = await persistEvidenceEdits();
+      if (!current) return;
       const saved = await saveDraftPatch({
-        mediaFiles: evidenceData.mediaFiles,
-        textEvidence: evidenceData.textEvidence,
-        privacySettings: evidenceData.privacySettings,
+        textEvidence: current.textEvidence,
+        privacySettings: current.privacySettings,
         completedSteps,
         currentStep: skipTarget.target.route,
       });
@@ -578,15 +684,18 @@ export default function EvidenceDetailScreen() {
   };
 
   const handleTranscriptChange = (fileId: string, text: string) => {
+    evidenceEdits.current = { ...evidenceEdits.current, media: { ...evidenceEdits.current.media,
+      [fileId]: { ...evidenceEdits.current.media?.[fileId], transcript: text } } };
     setEvidenceData(prev => {
       const mediaFiles = prev.mediaFiles.map(file =>
         file.id === fileId
           ? { ...file, transcript: text }
           : file,
       );
-      updateDraft({ mediaFiles }, true);
+      void updateDraft({ mediaFiles });
       return { ...prev, mediaFiles };
     });
+    void persistEvidenceEdits().catch(reportEvidenceSaveError);
 
     setTranscriptionState(prev => ({
       ...prev,
@@ -607,6 +716,8 @@ export default function EvidenceDetailScreen() {
         uri: file.uri,
         fileName: file.fileName,
       });
+      evidenceEdits.current = { ...evidenceEdits.current, media: { ...evidenceEdits.current.media,
+        [file.id]: { ...evidenceEdits.current.media?.[file.id], transcript } } };
 
       setEvidenceData(prev => {
         const mediaFiles = prev.mediaFiles.map(item =>
@@ -614,9 +725,10 @@ export default function EvidenceDetailScreen() {
             ? { ...item, transcript }
             : item,
         );
-        updateDraft({ mediaFiles }, true);
+        void updateDraft({ mediaFiles });
         return { ...prev, mediaFiles };
       });
+      await persistEvidenceEdits();
 
       setTranscriptionState(prev => ({
         ...prev,
@@ -648,15 +760,31 @@ export default function EvidenceDetailScreen() {
     }
   };
 
-  const removeMediaFile = (id: string) => {
+  const removeMediaFile = async (id: string) => {
+    if (!initialDraftId || evidenceBusy.current) return;
+    evidenceBusy.current = true;
+    setIsAddingEvidence(true);
+    const generation = evidenceGeneration.current;
+    try {
+      const removed = await removePersistentEvidence({
+        draftId: initialDraftId, mediaId: id, uri: evidenceData.mediaFiles.find(file => file.id === id)?.uri ?? '',
+        isCurrent: () => evidenceGeneration.current === generation,
+        onSaved: applyPersistedEvidence,
+      });
+      if (!removed || evidenceGeneration.current !== generation) return;
+    } catch {
+      toast.show({ title: 'Evidence removal incomplete', message: 'Try again before continuing.', variant: 'error' });
+      return;
+    } finally {
+      if (evidenceGeneration.current === generation) {
+        evidenceBusy.current = false;
+        setIsAddingEvidence(false);
+      }
+    }
     if (activeMediaDetailsId === id) {
       setActiveMediaDetailsId(null);
     }
-    setEvidenceData(prev => {
-      const updated = { ...prev, mediaFiles: prev.mediaFiles.filter(file => file.id !== id) };
-      updateDraft({ mediaFiles: updated.mediaFiles }, true);
-      return updated;
-    });
+    await refreshEvidence();
     setTranscriptionState(prev => {
       if (!prev[id]) return prev;
       const next = { ...prev };
@@ -666,6 +794,9 @@ export default function EvidenceDetailScreen() {
   };
 
   const takePhoto = async () => {
+    if (isRecording) return;
+    const selection = beginEvidenceSelection();
+    if (!selection) return;
     try {
       const hasPermission = await ensureCameraPermission();
       if (!hasPermission) return;
@@ -679,22 +810,27 @@ export default function EvidenceDetailScreen() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        addMediaFile({
+        const added = await addMediaFile({
           type: 'photo',
           uri: asset.uri,
           fileName: asset.fileName || 'photo_' + Date.now() + '.jpg',
           size: asset.fileSize || 0,
           captureSource: 'camera',
           mimeType: asset.mimeType,
-        });
-        toast.show({ title: 'Photo added', variant: 'success' });
+        }, selection);
+        if (added) toast.show({ title: 'Photo added', variant: 'success' });
       }
     } catch (error) {
-      toast.show({ title: 'Failed to take photo', variant: 'error' });
+      if (selection.isCurrent()) toast.show({ title: 'Failed to save photo', variant: 'error' });
+    } finally {
+      selection.finish();
     }
   };
 
   const selectFromLibrary = async (captureSource: EvidenceVaultCaptureSource = 'media_library') => {
+    if (isRecording) return;
+    const selection = beginEvidenceSelection();
+    if (!selection) return;
     try {
       const hasPermission = await ensureMediaLibraryPermission();
       if (!hasPermission) return;
@@ -706,24 +842,28 @@ export default function EvidenceDetailScreen() {
       });
 
       if (!result.canceled) {
-        result.assets.forEach(asset => {
-          addMediaFile({
+        let added = false;
+        for (const asset of result.assets) {
+          added = await addMediaFile({
             type: getEvidenceVaultMediaTypeFromPickerAsset(asset),
             uri: asset.uri,
             fileName: asset.fileName || 'media_' + Date.now(),
             size: asset.fileSize || 0,
             captureSource,
             mimeType: asset.mimeType,
-          });
-        });
-        toast.show({ title: 'Media added', variant: 'success' });
+          }, selection) || added;
+        }
+        if (added && selection.isCurrent()) toast.show({ title: 'Media added', variant: 'success' });
       }
     } catch (error) {
-      toast.show({ title: 'Failed to select media', variant: 'error' });
+      if (selection.isCurrent()) toast.show({ title: 'Failed to save media', variant: 'error' });
+    } finally {
+      selection.finish();
     }
   };
 
   const startRecording = async () => {
+    if (evidenceBusy.current || isRecording) return;
     try {
       const { status } = await requestRecordingPermissionsAsync();
       if (status !== 'granted') {
@@ -755,6 +895,8 @@ export default function EvidenceDetailScreen() {
     const activeRecording = recordingRef.current;
     if (!activeRecording) return;
 
+    const selection = beginEvidenceSelection();
+    if (!selection) return;
     try {
       setIsRecording(false);
       await activeRecording.stop();
@@ -762,24 +904,29 @@ export default function EvidenceDetailScreen() {
       
       if (uri) {
         const fileInfo = await FileSystem.getInfoAsync(uri);
-        addMediaFile({
+        const added = await addMediaFile({
           type: 'audio',
           uri,
           fileName: 'recording_' + Date.now() + '.m4a',
           size: fileInfo.exists ? fileInfo.size || 0 : 0,
           captureSource: 'microphone',
-        });
+        }, selection);
+        if (added) toast.show({ title: 'Recording saved', variant: 'success' });
       }
-      toast.show({ title: 'Recording saved', variant: 'success' });
       
       recordingRef.current = null;
       setRecordingDuration(0);
     } catch (error) {
-      toast.show({ title: 'Failed to stop recording', variant: 'error' });
+      if (selection.isCurrent()) toast.show({ title: 'Failed to save recording', variant: 'error' });
+    } finally {
+      selection.finish();
     }
   };
 
   const pickDocument = async () => {
+    if (isRecording) return;
+    const selection = beginEvidenceSelection();
+    if (!selection) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -788,20 +935,23 @@ export default function EvidenceDetailScreen() {
       });
 
       if (!result.canceled) {
-        result.assets.forEach(asset => {
-          addMediaFile({
+        let added = false;
+        for (const asset of result.assets) {
+          added = await addMediaFile({
             type: 'document',
             uri: asset.uri,
             fileName: asset.name,
             size: asset.size || 0,
             captureSource: 'document_picker',
             mimeType: asset.mimeType,
-          });
-        });
-        toast.show({ title: 'Document(s) added', variant: 'success' });
+          }, selection) || added;
+        }
+        if (added && selection.isCurrent()) toast.show({ title: 'Document(s) added', variant: 'success' });
       }
     } catch (error) {
-      toast.show({ title: 'Failed to pick document', variant: 'error' });
+      if (selection.isCurrent()) toast.show({ title: 'Failed to save document', variant: 'error' });
+    } finally {
+      selection.finish();
     }
   };
 
@@ -814,6 +964,7 @@ export default function EvidenceDetailScreen() {
   };
 
   const handleContinue = async () => {
+    if (evidenceBusy.current || isRecording) return;
     if (!initialDraftId) {
       toast.show({
         title: 'Draft still opening',
@@ -825,10 +976,11 @@ export default function EvidenceDetailScreen() {
 
     const completedSteps = draftData?.completedSteps ?? [];
     try {
+      const current = await persistEvidenceEdits();
+      if (!current) return;
       const saved = await saveDraftPatch({
-        mediaFiles: evidenceData.mediaFiles,
-        textEvidence: evidenceData.textEvidence,
-        privacySettings: evidenceData.privacySettings,
+        textEvidence: current.textEvidence,
+        privacySettings: current.privacySettings,
         completedSteps: Array.from(new Set([...completedSteps, 'EvidenceDetail'])),
         currentStep: 'ConsentGate',
       });
@@ -967,7 +1119,7 @@ export default function EvidenceDetailScreen() {
               <Ionicons name={getMediaIconName(file.type) as any} size={22} color={colors.primary} />
             </View>
             <View style={styles.mediaTitleWrap}>
-              <Text style={styles.mediaTitle} numberOfLines={2}>{vaultItem.title}</Text>
+              <Text style={styles.mediaTitle}>{vaultItem.title}</Text>
               <Text style={styles.mediaMeta}>{metadataLine}</Text>
             </View>
             <Badge variant={getEvidenceVaultStatusVariant(vaultItem.uploadStatus.status)} size="sm">
@@ -1015,7 +1167,8 @@ export default function EvidenceDetailScreen() {
     : undefined;
 
   return (
-    <Screen>
+    // BottomTabs already reserves the bottom safe area for the report stack.
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.screenRoot}>
         <ScrollView
           style={styles.scroll}
@@ -1030,7 +1183,7 @@ export default function EvidenceDetailScreen() {
             lastSaved={lastSaved}
             error={error ?? draftIdError}
             showSaveStatus
-            onSkipOptionalSteps={optionalSkipTarget ? handleSkipOptionalSteps : undefined}
+            onSkipOptionalSteps={optionalSkipTarget && !isAddingEvidence && !isRecording ? handleSkipOptionalSteps : undefined}
             skipOptionalLabel="Skip to review"
             skipOptionalDisabled={isSaving || isRecording}
           />
@@ -1064,103 +1217,86 @@ export default function EvidenceDetailScreen() {
             </AlertComponent>
           )}
 
-          <Card variant="outlined" accentColor={colors.evidence}>
-            <CardHeader>
-              <CardTitle>Add evidence</CardTitle>
-              <CardDescription>Choose the source first. Permission prompts appear only after you choose one.</CardDescription>
-            </CardHeader>
-            <CardContent style={styles.cardContentStack}>
-              <View style={styles.uploadPanel}>
-                <View style={styles.uploadIcon}>
-                  <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
-                </View>
-                <View style={styles.uploadCopy}>
-                  <Text style={styles.uploadTitle}>Upload media</Text>
-                  <Text style={styles.uploadCaption}>Photo, audio, video, screenshot, or document.</Text>
-                </View>
-                <Button
-                  title="Choose"
-                  size="sm"
-                  onPress={() => setIsUploadSheetVisible(true)}
-                  disabled={isSaving}
-                  accessibilityLabel="Choose media evidence type"
-                />
-              </View>
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined" accentColor={colors.evidence}>
-            <CardHeader>
-              <CardTitle>Text evidence</CardTitle>
-              <CardDescription>Use this for quotes, descriptions, or context. It is saved as draft text.</CardDescription>
-            </CardHeader>
-            <CardContent style={styles.cardContentStack}>
-              <Textarea
-                placeholder="Describe additional evidence, quotes, or details that support your report."
-                value={evidenceData.textEvidence}
-                onChangeText={(text) => setEvidenceData(prev => {
-                  const updated = { ...prev, textEvidence: text };
-                  updateDraft({ textEvidence: updated.textEvidence });
-                  return updated;
-                })}
-                onBlur={persistTextEvidence}
-                rows={4}
-                helperText="Evidence is optional. Skip this step if adding evidence would increase risk."
-              />
-            </CardContent>
-          </Card>
-
-          <Card variant="filled" accentColor={colors.evidence} style={styles.sectionHeaderCard}>
-            <CardContent style={styles.sectionHeaderCardContent}>
-              <Text style={styles.sectionTitle}>Evidence items ({evidenceData.mediaFiles.length})</Text>
-              <Text style={styles.sectionCaption}>Review each item. Details opens status, notes, transcript tools, and removal.</Text>
-            </CardContent>
-          </Card>
-          {evidenceData.mediaFiles.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.mediaCarousel}
-              keyboardShouldPersistTaps="handled"
+          <View>
+            <ReportStepHeader
+              title="Add evidence"
+              helper="Optional. Choose the source first. Permission prompts appear only after you choose one."
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Choose media evidence type"
+              accessibilityHint="Opens photo, audio, video, screenshot and document options"
+              disabled={isSaving}
+              onPress={() => setIsUploadSheetVisible(true)}
+              style={({ pressed }) => [styles.uploadPanel, pressed ? styles.uploadPanelPressed : null, isSaving ? { opacity: 0.6 } : null]}
             >
-              {evidenceData.mediaFiles.map(renderMediaItem)}
-            </ScrollView>
-          ) : (
-            <Card variant="outlined" hideAccent>
-              <CardContent>
-                <EmptyState
-                  title="No media evidence added"
-                  message="You can continue without media evidence, or add text details above."
-                  icon="folder-open-outline"
-                  tone="neutral"
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          <Card variant="outlined" accentColor={colors.privacy}>
-            <CardHeader>
-              <CardTitle>Privacy request</CardTitle>
-              <CardDescription>Open the request panel to choose what SafeRide should note for this draft.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <View style={styles.switchStack}>
-                <Button
-                  title="Privacy request"
-                  variant="outline"
-                  size="md"
-                  fullWidth
-                  icon={<Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />}
-                  onPress={() => setIsPrivacyDetailsVisible(true)}
-                  style={styles.privacyDetailsButton}
-                  accessibilityLabel="Open privacy request options"
-                />
+              <View style={styles.uploadIcon}>
+                <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
               </View>
-            </CardContent>
-          </Card>
+              <Text style={styles.uploadTitle}>Upload media</Text>
+              <Text style={styles.uploadCaption}>Photo, audio, video, screenshot, or document.</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>Text evidence</Text>
+            <Text style={styles.sectionCaption}>Use this for quotes, descriptions, or context. It is saved as draft text.</Text>
+            <Textarea
+              placeholder="Describe additional evidence, quotes, or details that support your report."
+              value={evidenceData.textEvidence}
+              onChangeText={(text) => setEvidenceData(prev => {
+                const updated = { ...prev, textEvidence: text };
+                evidenceEdits.current = { ...evidenceEdits.current, textEvidence: text };
+                updateDraft({ textEvidence: updated.textEvidence });
+                return updated;
+              })}
+              onBlur={persistTextEvidence}
+              rows={4}
+              helperText="Evidence is optional. Skip this step if adding evidence would increase risk."
+            />
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>Evidence items ({evidenceData.mediaFiles.length})</Text>
+            <Text style={styles.sectionCaption}>Review each item. Details opens status, notes, transcript tools, and removal.</Text>
+            {evidenceData.mediaFiles.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.mediaCarousel}
+                keyboardShouldPersistTaps="handled"
+              >
+                {evidenceData.mediaFiles.map(renderMediaItem)}
+              </ScrollView>
+            ) : (
+              <EmptyState
+                title="No media evidence added"
+                message="You can continue without media evidence, or add text details above."
+                icon="folder-open-outline"
+                tone="neutral"
+              />
+            )}
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open privacy request options"
+            accessibilityHint="Choose what SafeRide should note for this draft"
+            onPress={() => setIsPrivacyDetailsVisible(true)}
+            style={({ pressed }) => [styles.privacyRow, pressed ? { backgroundColor: colors.surfaceAlt } : null]}
+          >
+            <View style={styles.privacyIcon}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.privacy} />
+            </View>
+            <View style={styles.privacyCopy}>
+              <Text style={styles.privacyTitle}>Privacy request</Text>
+              <Text style={styles.sectionCaption}>Choose what SafeRide should note for this draft.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
         </ScrollView>
 
-        <View style={[styles.navigationDock, { paddingBottom: Math.max(12, insets.bottom + 12) }]}>
+        <View style={styles.navigationDock}>
           <View style={styles.navigationButtons}>
             <Button
               title="Back"
@@ -1175,7 +1311,7 @@ export default function EvidenceDetailScreen() {
               onPress={() => {
                 void handleContinue();
               }}
-              disabled={isSaving || isResolvingDraftId}
+              disabled={isSaving || isResolvingDraftId || isAddingEvidence || isRecording}
               loading={isSaving || isResolvingDraftId}
               style={styles.nextButton}
               accessibilityLabel="Continue to review and next step"
@@ -1194,7 +1330,7 @@ export default function EvidenceDetailScreen() {
           {
             title: 'Take photo',
             icon: 'camera-outline',
-            disabled: isSaving,
+            disabled: isSaving || isAddingEvidence || isRecording,
             onPress: () => {
               void takePhoto();
             },
@@ -1202,7 +1338,7 @@ export default function EvidenceDetailScreen() {
           {
             title: 'Choose photo or video',
             icon: 'images-outline',
-            disabled: isSaving,
+            disabled: isSaving || isAddingEvidence || isRecording,
             onPress: () => {
               void selectFromLibrary('media_library');
             },
@@ -1211,13 +1347,13 @@ export default function EvidenceDetailScreen() {
             title: isRecording ? 'Stop audio recording' : 'Record audio',
             icon: 'mic-outline',
             destructive: isRecording,
-            disabled: isSaving,
+            disabled: isSaving || isAddingEvidence,
             onPress: toggleRecording,
           },
           {
             title: 'Import screenshot',
             icon: 'phone-portrait-outline',
-            disabled: isSaving,
+            disabled: isSaving || isAddingEvidence || isRecording,
             onPress: () => {
               void selectFromLibrary('screenshot_import');
             },
@@ -1225,7 +1361,7 @@ export default function EvidenceDetailScreen() {
           {
             title: 'Attach document',
             icon: 'document-text-outline',
-            disabled: isSaving,
+            disabled: isSaving || isAddingEvidence || isRecording,
             onPress: () => {
               void pickDocument();
             },
@@ -1346,7 +1482,7 @@ export default function EvidenceDetailScreen() {
               placeholder="Add source, context, or follow-up notes for this item."
               value={activeMediaFile.description ?? ''}
               onChangeText={(text) => updateMediaDescription(activeMediaFile.id, text)}
-              onBlur={() => updateMediaDescription(activeMediaFile.id, activeMediaFile.description ?? '', true)}
+              onBlur={() => { void persistEvidenceEdits().catch(reportEvidenceSaveError); }}
               rows={3}
               helperText="Notes are saved in the draft. They are not a verified transcript or privacy process."
               containerStyle={styles.noteTextarea}
@@ -1368,25 +1504,36 @@ export default function EvidenceDetailScreen() {
         imageUri={photoAnnotation.currentImage || ''}
         annotations={photoAnnotation.annotations}
         onClose={photoAnnotation.closeAnnotation}
-        onSave={(annotations) => {
+        onSave={async (annotations) => {
           // Update the specific media file with annotations
           if (photoAnnotation.currentImage) {
+            for (const file of evidenceDataRef.current.mediaFiles) {
+              if (file.uri === photoAnnotation.currentImage) evidenceEdits.current = { ...evidenceEdits.current,
+                media: { ...evidenceEdits.current.media, [file.id]: { ...evidenceEdits.current.media?.[file.id], annotations } } };
+            }
             setEvidenceData(prev => {
               const mediaFiles = prev.mediaFiles.map(file => 
                 file.uri === photoAnnotation.currentImage 
                   ? { ...file, annotations }
                   : file
               );
-              updateDraft({ mediaFiles }, true);
+              void updateDraft({ mediaFiles });
               return { ...prev, mediaFiles };
             });
-            toast.show({ 
-              title: 'Annotations saved', 
-              message: `${annotations.length} annotation(s) added`,
-              variant: 'success' 
-            });
+            try {
+              const saved = await persistEvidenceEdits();
+              if (!saved) return false;
+              toast.show({
+                title: 'Annotations saved',
+                message: `${annotations.length} annotation(s) added`,
+                variant: 'success'
+              });
+            } catch {
+              reportEvidenceSaveError();
+              return false;
+            }
           }
-          photoAnnotation.closeAnnotation();
+          return true;
         }}
       />
     </Screen>

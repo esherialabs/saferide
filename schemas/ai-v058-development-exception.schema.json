@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v058-development-exception.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "decisionId", "exceptionId", "decidedAt", "authority", "status", "selectedLineage", "developmentResult", "exceptionScope", "exactBindings", "historicalIntegrity", "privacy"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v058-original-419806-development-exception"},
+    "schemaVersion": {"const": 1}, "issue": {"const": "ESH-4198"},
+    "decisionId": {"const": "ESH-4198-v058-original-419806-selection-20260809-01"},
+    "exceptionId": {"const": "ESH-4198-v058-original-419806-development-exception-20260809-01"},
+    "decidedAt": {"type": "string", "format": "date-time"},
+    "authority": {"const": "explicit-user-leadership-decision"},
+    "status": {"const": "approved-transparent-noncritical-development-exception"},
+    "selectedLineage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["runId", "seed", "metadataSha256", "adapterInventorySha256", "adapterTensorSha256", "continuationSelected"],
+      "properties": {
+        "runId": {"const": "saferide-v058-candidate-s419806-20260809c"}, "seed": {"const": 419806},
+        "metadataSha256": {"$ref": "#/$defs/hash"}, "adapterInventorySha256": {"$ref": "#/$defs/hash"},
+        "adapterTensorSha256": {"$ref": "#/$defs/hash"}, "continuationSelected": {"const": false}
+      }
+    },
+    "developmentResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rowCount", "completed", "truncated", "noncriticalTruncation", "errors", "criticalFailures", "modelTerminatorStops", "minimumHardUsefulness", "allHardUsefulnessCategoriesAtLeastInclusiveFloor"],
+      "properties": {
+        "rowCount": {"const": 320}, "completed": {"const": 319}, "truncated": {"const": 1},
+        "noncriticalTruncation": {"const": true}, "errors": {"const": 0}, "criticalFailures": {"const": 0},
+        "modelTerminatorStops": {"const": 319}, "minimumHardUsefulness": {"const": 2},
+        "allHardUsefulnessCategoriesAtLeastInclusiveFloor": {"const": true}
+      }
+    },
+    "exceptionScope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["waived", "notWaived", "holdoutAcceptanceChanged", "holdoutAcceptance"],
+      "properties": {
+        "waived": {"type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": {"type": "string"}},
+        "notWaived": {"type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": {"type": "string"}},
+        "holdoutAcceptanceChanged": {"const": false},
+        "holdoutAcceptance": {
+          "type": "object", "additionalProperties": false,
+          "required": ["criticalFailuresMaximum", "executionErrorsMaximum"],
+          "properties": {"criticalFailuresMaximum": {"const": 0}, "executionErrorsMaximum": {"const": 0}}
+        }
+      }
+    },
+    "exactBindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["modelRevision", "modelInventorySha256", "frozenDatasetManifestSha256", "weightedTrainSha256", "originalDevelopmentSha256", "mitigationDevelopmentSha256", "developmentSummarySha256", "developmentExecutionSha256", "developmentReplaySha256", "developmentResultJsonSha256", "developmentResultMarkdownSha256", "rubricPolicySha256"],
+      "properties": {
+        "modelRevision": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+        "modelInventorySha256": {"$ref": "#/$defs/hash"}, "frozenDatasetManifestSha256": {"$ref": "#/$defs/hash"},
+        "weightedTrainSha256": {"$ref": "#/$defs/hash"}, "originalDevelopmentSha256": {"$ref": "#/$defs/hash"},
+        "mitigationDevelopmentSha256": {"$ref": "#/$defs/hash"}, "developmentSummarySha256": {"$ref": "#/$defs/hash"},
+        "developmentExecutionSha256": {"$ref": "#/$defs/hash"}, "developmentReplaySha256": {"$ref": "#/$defs/hash"},
+        "developmentResultJsonSha256": {"$ref": "#/$defs/hash"}, "developmentResultMarkdownSha256": {"$ref": "#/$defs/hash"},
+        "rubricPolicySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "historicalIntegrity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["strictStatusRewritten", "historicalReportsRewritten", "historicalReportCount", "historicalReportInventorySha256"],
+      "properties": {
+        "strictStatusRewritten": {"const": false}, "historicalReportsRewritten": {"const": false},
+        "historicalReportCount": {"const": 52}, "historicalReportInventorySha256": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rawRowsIncluded", "rawOutputsIncluded", "rowIdentifiersIncluded", "privatePathsIncluded", "identitiesIncluded"],
+      "properties": {
+        "rawRowsIncluded": {"const": false}, "rawOutputsIncluded": {"const": false},
+        "rowIdentifiersIncluded": {"const": false}, "privatePathsIncluded": {"const": false}, "identitiesIncluded": {"const": false}
+      }
+    }
+  },
+  "$defs": {"hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+}

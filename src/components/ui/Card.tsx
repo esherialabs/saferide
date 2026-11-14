@@ -218,14 +218,15 @@ export function Card({
     surfaceStyles.push(surfaceStyle);
   }
 
-  const accentVisible = !hideAccent && variant !== 'filled';
+  // Selection is shown by the 2dp outline and the caller's label; the accent bar stays a tone cue only.
+  const accentVisible = !hideAccent && variant !== 'filled' && Boolean(accentColor);
   const accentStyle: ViewStyle = accentPosition === 'top'
     ? {
       position: 'absolute',
       left: 0,
       right: 0,
       top: 0,
-      height: 4,
+      height: 3,
       backgroundColor: accentColor ?? colors.primary,
       opacity: disabled ? 0.6 : 1,
     }
@@ -234,7 +235,7 @@ export function Card({
       bottom: 0,
       left: 0,
       top: 0,
-      width: 4,
+      width: 3,
       backgroundColor: accentColor ?? colors.primary,
       opacity: disabled ? 0.6 : 1,
     };

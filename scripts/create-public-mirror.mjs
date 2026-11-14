@@ -6,14 +6,18 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { resolveReleaseRecord, resolveSourceBranch } from './lib/public-mirror-provenance.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config/release/public-mirror.v1.json');
 const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
 const outArg = process.argv.find((value, index, args) => args[index - 1] === '--out');
 const allowDirty = process.argv.includes('--allow-dirty');
+const allowNonMain = process.argv.includes('--allow-non-main');
+const explicitSourceBranch = process.argv.find((value, index, args) => args[index - 1] === '--source-branch');
 
 if (!outArg) {
-  console.error('Usage: node scripts/create-public-mirror.mjs --out /tmp/saferide-public-mirror');
+  console.error('Usage: node scripts/create-public-mirror.mjs --out /tmp/saferide-public-mirror [--source-branch NAME] [--allow-non-main] [--allow-dirty]');
   process.exit(2);
 }
 
@@ -34,6 +38,29 @@ function git(args) {
 const trackedStatus = git(['status', '--porcelain', '--untracked-files=no']);
 if (trackedStatus && !allowDirty) {
   console.error('Public publication requires a clean tracked working tree. Commit or restore tracked changes first.');
+  process.exit(1);
+}
+
+function headBranches() {
+  const current = git(['rev-parse', '--abbrev-ref', 'HEAD']);
+  if (current && current !== 'HEAD') return [current];
+  return git(['branch', '-r', '--points-at', 'HEAD', '--format=%(refname:lstrip=3)'])
+    .split('\n')
+    .map(name => name.trim())
+    .filter(name => name && name !== 'HEAD');
+}
+
+let sourceBranch;
+try {
+  sourceBranch = resolveSourceBranch({
+    headBranches: headBranches(),
+    explicit: explicitSourceBranch,
+    policyBranch: policy.sourceBranch,
+    allowNonMain,
+    headShort: git(['rev-parse', '--short=12', 'HEAD']),
+  });
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
 
@@ -121,12 +148,28 @@ totalBytes = [...copiedFiles]
 
 const sourceCommit = git(['rev-parse', 'HEAD']);
 const sourceCommittedAt = git(['show', '-s', '--format=%cI', 'HEAD']);
+if (sourceBranch !== policy.sourceBranch) {
+  console.warn(`Review build: source branch ${sourceBranch} is not the publication branch ${policy.sourceBranch}.`);
+}
+// The current Android release record is the JSON the website imports.
+const releaseImporter = 'web/src/lib/android-release.ts';
+let releaseMetadata;
+try {
+  releaseMetadata = resolveReleaseRecord({
+    importerPath: releaseImporter,
+    importerText: fs.readFileSync(path.join(root, releaseImporter), 'utf8'),
+    published: copiedFiles,
+  });
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 const provenance = {
   schemaVersion: 1,
   mirrorPolicyId: policy.policyId,
   repositoryUrl: policy.repositoryUrl,
   sourceRepository: policy.sourceRepository,
-  sourceBranch: policy.sourceBranch,
+  sourceBranch,
   sourceCommit,
   sourceCommittedAt,
   publicationModel: policy.publicationModel,
@@ -134,7 +177,7 @@ const provenance = {
   fileCount: selected.length,
   totalBytes,
   licenseBoundary: policy.licenseBoundary,
-  releaseMetadata: 'web/public/releases/saferide-v0.5.8-android.json',
+  releaseMetadata,
 };
 
 fs.writeFileSync(

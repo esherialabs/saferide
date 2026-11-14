@@ -19,7 +19,10 @@ export interface ChipProps {
   testID?: string;
 }
 
-const CHIP_HEIGHT = touchTargets.minimum;
+// Chips look compact; the vertical hit slop keeps a full 48dp touch target.
+const CHIP_HEIGHT = 40;
+const CHIP_SLOP = (touchTargets.minimum - CHIP_HEIGHT) / 2;
+const CHIP_HIT_SLOP = { top: CHIP_SLOP, bottom: CHIP_SLOP, left: 0, right: 0 };
 const CHIP_RADIUS = radii.chip;
 
 export function Chip({
@@ -86,6 +89,7 @@ export function Chip({
         }
         accessibilityLabel={accessibilityLabel ?? label}
         testID={testID}
+        hitSlop={CHIP_HIT_SLOP}
         style={pressableStyles}
       >
         {leadingIcon ? (
@@ -120,7 +124,7 @@ const styles = StyleSheet.create({
   chipBase: {
     minHeight: CHIP_HEIGHT,
     borderRadius: CHIP_RADIUS,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',

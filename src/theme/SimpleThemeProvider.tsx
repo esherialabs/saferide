@@ -12,6 +12,7 @@ import {
   type ThemePreference,
 } from './tokens';
 import { Storage } from '../lib/storage';
+import { getVisualStyleColors, normalizeVisualStyle, type VisualStyle } from './visualStyles';
 
 export type Theme = ThemePreference;
 export type ResolvedColorScheme = 'light' | 'dark';
@@ -25,7 +26,9 @@ export interface ThemeContextType {
   semanticStates: typeof semanticStates;
   paperTheme: MD3Theme;
   isHighContrast: boolean;
-  setTheme: (theme: ThemePreference) => void;
+  visualStyle: VisualStyle;
+  setVisualStyle: (style: VisualStyle) => Promise<void>;
+  setTheme: (theme: ThemePreference) => Promise<void>;
 }
 
 function toResolvedColorScheme(colorScheme: ColorSchemeName | null | undefined): ResolvedColorScheme {
@@ -40,9 +43,9 @@ function resolveThemeMode(theme: ThemePreference, systemColorScheme: ResolvedCol
   return theme;
 }
 
-function buildPaperTheme(mode: ThemeMode): MD3Theme {
+function buildPaperTheme(mode: ThemeMode, style: VisualStyle = 'warm'): MD3Theme {
   const baseTheme = mode === 'dark' ? MD3DarkTheme : MD3LightTheme;
-  const colors = themeColors[mode];
+  const colors = getVisualStyleColors(style, mode);
   const isDark = mode === 'dark';
 
   return {
@@ -112,19 +115,24 @@ const defaultThemeContext: ThemeContextType = {
   semanticStates,
   paperTheme: defaultPaperTheme,
   isHighContrast: false,
-  setTheme: () => {},
+  visualStyle: 'warm',
+  setVisualStyle: async () => {},
+  setTheme: async () => {},
 };
 
 const ThemeContext = createContext<ThemeContextType>(defaultThemeContext);
 
 export function SimpleThemeProvider({
   children,
-  initialTheme = 'system',
+  initialTheme = 'light',
+  initialVisualStyle = 'warm',
 }: {
   children: React.ReactNode;
   initialTheme?: ThemePreference;
+  initialVisualStyle?: VisualStyle;
 }) {
   const [theme, setThemeState] = useState<ThemePreference>(initialTheme);
+  const [visualStyle, setVisualStyleState] = useState<VisualStyle>(initialVisualStyle);
   const [systemColorScheme, setSystemColorScheme] = useState<ResolvedColorScheme>(() =>
     toResolvedColorScheme(Appearance.getColorScheme()),
   );
@@ -144,6 +152,7 @@ export function SimpleThemeProvider({
       .then(settings => {
         if (mounted) {
           setThemeState(settings.theme);
+          setVisualStyleState(normalizeVisualStyle(settings.visualStyle));
         }
       })
       .catch(() => undefined);
@@ -153,15 +162,19 @@ export function SimpleThemeProvider({
     };
   }, []);
 
-  const setTheme = useCallback((nextTheme: ThemePreference) => {
+  const setTheme = useCallback(async (nextTheme: ThemePreference) => {
+    await Storage.saveSettings({ theme: nextTheme });
     setThemeState(nextTheme);
-    void Storage.saveSettings({ theme: nextTheme }).catch(() => undefined);
   }, []);
 
   const mode = useMemo(() => resolveThemeMode(theme, systemColorScheme), [theme, systemColorScheme]);
+  const setVisualStyle = useCallback(async (nextStyle: VisualStyle) => {
+    await Storage.saveSettings({ visualStyle: nextStyle });
+    setVisualStyleState(nextStyle);
+  }, []);
   const colorScheme: ResolvedColorScheme = mode === 'dark' ? 'dark' : 'light';
-  const colors = themeColors[mode];
-  const paperTheme = safeRidePaperThemes[mode];
+  const colors = getVisualStyleColors(visualStyle, mode);
+  const paperTheme = useMemo(() => buildPaperTheme(mode, visualStyle), [mode, visualStyle]);
 
   const contextValue = useMemo<ThemeContextType>(
     () => ({
@@ -173,9 +186,11 @@ export function SimpleThemeProvider({
       semanticStates,
       paperTheme,
       isHighContrast: mode === 'highContrast',
+      visualStyle,
+      setVisualStyle,
       setTheme,
     }),
-    [colorScheme, colors, mode, paperTheme, theme],
+    [colorScheme, colors, mode, paperTheme, theme, visualStyle, setVisualStyle, setTheme],
   );
 
   return (

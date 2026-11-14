@@ -54,6 +54,10 @@ the private integration repository's all-rights-reserved notice is not copied.
   exception for reviewed Expo/Metro/Xcode build-tool advisories; they do not
   authorize a production or store release.
 
+Update (November 2026): the organisation's GitHub Actions are locked by a billing
+issue, so these checks now run on the maintainers' server; see
+`docs/open-source/local-verification.md`.
+
 Public CI uploads coverage and reproducibility artifacts. Tag automation builds
 the source archive twice, compares the bytes, and publishes the archive,
 SHA-256 ledger, and provenance JSON.

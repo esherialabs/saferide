@@ -1,8 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
+import PilotStrip, { type PilotStripData } from '@/components/PilotStrip';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import MediaClip from '@/components/MediaClip';
 import Nav from '@/components/Nav';
 import { JsonLd, type JsonLdNode } from '@/lib/json-ld';
+import type { MediaClipData } from '@/lib/media';
 
 type Stat = {
   value: string;
@@ -51,6 +54,22 @@ type PresentationImage = {
   caption: string;
 };
 
+type Faq = {
+  question: string;
+  answer: string;
+};
+
+type Feature = {
+  eyebrow: string;
+  title: string;
+  paragraphs: readonly string[];
+  points?: readonly string[];
+  image: string;
+  imageAlt: string;
+  imageWidth: number;
+  imageHeight: number;
+};
+
 type PageVariant = 'manifesto' | 'playbook' | 'index' | 'editorial';
 
 type PageShellProps = {
@@ -69,10 +88,18 @@ type PageShellProps = {
   evidenceTitle?: string;
   resources?: readonly ResourceLink[];
   press?: readonly PressLink[];
+  media?: MediaClipData;
   partners?: readonly PartnerLogo[];
   presentationImages?: readonly PresentationImage[];
+  pilotStrip?: PilotStripData;
+  /** Short questions people ask, answered only from what the page already states. */
+  faq?: readonly Faq[];
+  /** One image-led explainer block shown above the questions. */
+  feature?: Feature;
   image?: string;
   imageAlt?: string;
+  /** Tailwind object-position class when the hero image is cropped to its frame */
+  imagePosition?: string;
   stepsTitle: string;
   steps: readonly string[];
   ctaTitle?: string;
@@ -111,12 +138,14 @@ function FieldVisual({
   title,
   image,
   imageAlt,
+  imagePosition = '',
   stats,
 }: {
   accent: string;
   title: string;
   image?: string;
   imageAlt?: string;
+  imagePosition?: string;
   stats: readonly Stat[];
 }) {
   const highlights = stats.slice(0, 2);
@@ -133,7 +162,7 @@ function FieldVisual({
           alt={imageAlt ?? ''}
           loading="eager"
           decoding="async"
-          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${imagePosition}`}
         />
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_24%,rgba(255,255,255,0.65),transparent_28%),linear-gradient(135deg,rgba(0,0,0,0.02),rgba(0,0,0,0.28))]" />
@@ -168,8 +197,85 @@ function IntroHero({ eyebrow, title, intro }: Pick<PageShellProps, 'eyebrow' | '
   );
 }
 
-function CtaBand({ cta, ctaTitle, contextLink }: Pick<PageShellProps, 'cta' | 'ctaTitle' | 'contextLink'>) {
+function FeatureBlock({ feature }: { feature?: Feature }) {
+  if (!feature) {
+    return null;
+  }
+
   return (
+    <section data-testid="page-feature" className="border-y-3 border-black bg-[#F7EC36] py-14 md:py-20" aria-labelledby="page-feature-heading">
+      <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-0">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-normal text-green-900">{feature.eyebrow}</p>
+          <h2
+            id="page-feature-heading"
+            className="mt-2 max-w-2xl hyphens-none font-display text-[clamp(2rem,4.4vw,3.4rem)] font-semibold leading-[0.95] tracking-normal text-green-950"
+          >
+            {feature.title}
+          </h2>
+          {feature.paragraphs.map(paragraph => (
+            <p key={paragraph} className="mt-5 max-w-xl text-lg leading-8 text-green-950/80">
+              {paragraph}
+            </p>
+          ))}
+          {feature.points ? (
+            <ul className="mt-6 grid max-w-xl gap-3">
+              {feature.points.map(point => (
+                <li key={point} className="border-l-3 border-black pl-4 text-base font-semibold leading-7 text-green-950">
+                  {point}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <figure className="interactive-card overflow-hidden border-3 border-black bg-white shadow-[6px_6px_0_#0D1B12]">
+          <img
+            src={feature.image}
+            alt={feature.imageAlt}
+            width={feature.imageWidth}
+            height={feature.imageHeight}
+            loading="lazy"
+            decoding="async"
+            className="h-auto w-full"
+          />
+        </figure>
+      </div>
+    </section>
+  );
+}
+
+function FaqList({ faq }: { faq?: readonly Faq[] }) {
+  if (!faq || faq.length === 0) {
+    return null;
+  }
+
+  return (
+    <section data-testid="page-faq" className="mx-auto max-w-[1200px] px-4 pb-16 pt-14 sm:px-6 lg:px-0" aria-labelledby="page-faq-heading">
+      <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
+        <h2 id="page-faq-heading" className="hyphens-none font-display text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[0.92] tracking-normal">
+          Questions people ask.
+        </h2>
+        <div className="border-t-3 border-black">
+          {faq.map(item => (
+            <details key={item.question} className="group border-b-3 border-black py-4">
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-display text-xl font-semibold leading-tight tracking-normal outline-none focus-visible:ring-4 focus-visible:ring-black md:text-2xl">
+                <span>{item.question}</span>
+                <span aria-hidden="true" className="mt-1 text-2xl leading-none transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-3 max-w-2xl text-lg leading-8 text-black/80">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CtaBand({ cta, ctaTitle, contextLink, faq, feature }: Pick<PageShellProps, 'cta' | 'ctaTitle' | 'contextLink' | 'faq' | 'feature'>) {
+  return (
+    <>
+    <FeatureBlock feature={feature} />
+    <FaqList faq={faq} />
     <section className="px-4 pb-20 sm:px-6 lg:px-0">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-6 rounded-tr-[5rem] border-3 border-black bg-[#161616] p-8 text-white md:flex-row md:items-center md:justify-between">
         <div>
@@ -192,10 +298,11 @@ function CtaBand({ cta, ctaTitle, contextLink }: Pick<PageShellProps, 'cta' | 'c
         </Link>
       </div>
     </section>
+    </>
   );
 }
 
-function EvidenceBand({ eyebrow, evidence, evidenceTitle, image, imageAlt, accent }: Pick<PageShellProps, 'eyebrow' | 'evidence' | 'evidenceTitle' | 'image' | 'imageAlt' | 'accent'>) {
+function EvidenceBand({ eyebrow, evidence, evidenceTitle, image, imageAlt, imagePosition = '', accent }: Pick<PageShellProps, 'eyebrow' | 'evidence' | 'evidenceTitle' | 'image' | 'imageAlt' | 'imagePosition' | 'accent'>) {
   if (!evidence?.length) {
     return null;
   }
@@ -205,7 +312,7 @@ function EvidenceBand({ eyebrow, evidence, evidenceTitle, image, imageAlt, accen
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
         <div className={`relative min-h-[22rem] overflow-hidden border-3 border-black ${accent}`}>
           {image ? (
-            <img src={image} alt={imageAlt ?? ''} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={image} alt={imageAlt ?? ''} loading="lazy" decoding="async" className={`absolute inset-0 h-full w-full object-cover ${imagePosition}`} />
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_24%,rgba(255,255,255,0.65),transparent_28%),linear-gradient(135deg,rgba(0,0,0,0.02),rgba(0,0,0,0.28))]" />
           )}
@@ -425,6 +532,8 @@ function ManifestoLayout(props: PageShellProps) {
         </div>
       </section>
 
+      {props.media ? <MediaClip clip={props.media} /> : null}
+
       <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 lg:px-0">
         <div className="grid gap-5 md:grid-cols-3">
           {cards.map((card, index) => (
@@ -440,6 +549,7 @@ function ManifestoLayout(props: PageShellProps) {
       </section>
 
       <EvidenceBand {...props} />
+      <PilotStrip strip={props.pilotStrip} />
       <PresentationMoment images={props.presentationImages} />
 
       <section className="mx-auto max-w-[1200px] px-4 pb-16 sm:px-6 lg:px-0">
@@ -462,7 +572,7 @@ function ManifestoLayout(props: PageShellProps) {
 }
 
 function PlaybookLayout(props: PageShellProps) {
-  const { eyebrow, title, intro, heroTitle, heroBody, tone, accent, stats, cards, image, imageAlt, stepsTitle, steps } = props;
+  const { eyebrow, title, intro, heroTitle, heroBody, tone, accent, stats, cards, image, imageAlt, imagePosition, stepsTitle, steps } = props;
 
   return (
     <>
@@ -472,7 +582,7 @@ function PlaybookLayout(props: PageShellProps) {
           <h1 className="font-display text-[clamp(2.75rem,7vw,5.75rem)] font-semibold leading-[0.9] tracking-normal">{title}</h1>
           <p className="mt-8 max-w-2xl text-xl leading-8 md:text-2xl md:leading-9">{intro}</p>
         </div>
-        <FieldVisual accent={accent} title={eyebrow} image={image} imageAlt={imageAlt} stats={stats} />
+        <FieldVisual accent={accent} title={eyebrow} image={image} imageAlt={imageAlt} imagePosition={imagePosition} stats={stats} />
       </section>
 
       <section className="border-y-3 border-black bg-[#161616] py-14 text-white md:py-20">
@@ -513,6 +623,7 @@ function PlaybookLayout(props: PageShellProps) {
       </section>
 
       <EvidenceBand {...props} />
+      <PilotStrip strip={props.pilotStrip} />
 
       <section className="mx-auto grid max-w-[1200px] border-y-3 border-black md:grid-cols-3 md:border-x-3">
         {stats.map((stat, index) => (
@@ -558,6 +669,7 @@ function IndexLayout(props: PageShellProps) {
       </section>
 
       <EvidenceBand {...props} />
+      <PilotStrip strip={props.pilotStrip} />
 
       <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 lg:px-0">
         <div className="grid gap-5 md:grid-cols-[1.1fr_0.9fr]">
@@ -628,6 +740,7 @@ function EditorialLayout(props: PageShellProps) {
       </section>
 
       <EvidenceBand {...props} />
+      <PilotStrip strip={props.pilotStrip} />
       <ResourceLinks resources={props.resources} />
       <PartnerMarquee partners={props.partners} />
       <PresentationMoment images={props.presentationImages} />

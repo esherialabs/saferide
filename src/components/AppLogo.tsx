@@ -8,6 +8,7 @@ import {
   Pressable,
   StyleProp,
 } from 'react-native';
+import { BrandWordmark } from './BrandWordmark';
 import { useOnboarding } from '../context/OnboardingProvider';
 import { APP_EVENT_STEALTH_SECRET_TAP } from '../utils/appEvents';
 
@@ -29,9 +30,7 @@ export function AppLogo({ width = 140, height = 48, inverted = false, animated =
   const tapCountRef = useRef(0);
   const lastTapTimestampRef = useRef<number | null>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const idleProgressRef = useRef(new Animated.Value(0));
   const pressScaleRef = useRef(new Animated.Value(1));
-  const idleProgress = idleProgressRef.current;
   const pressScale = pressScaleRef.current;
   const motionEnabled = animated && !reduceMotion;
 
@@ -65,36 +64,13 @@ export function AppLogo({ width = 140, height = 48, inverted = false, animated =
 
   useEffect(() => {
     if (!motionEnabled) {
-      idleProgress.stopAnimation();
-      idleProgress.setValue(0);
       pressScale.stopAnimation();
       pressScale.setValue(1);
       return undefined;
     }
 
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(idleProgress, {
-          toValue: 1,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(idleProgress, {
-          toValue: 0,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    loop.start();
-
-    return () => {
-      loop.stop();
-    };
-  }, [idleProgress, motionEnabled, pressScale]);
+    return undefined;
+  }, [motionEnabled, pressScale]);
 
   useEffect(() => {
     return () => {
@@ -180,19 +156,6 @@ export function AppLogo({ width = 140, height = 48, inverted = false, animated =
     }
   }, [activeTrigger, reset, triggerLogoFeedback]);
 
-  const idleScale = idleProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.018],
-  });
-  const idleTranslateY = idleProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -1.5],
-  });
-  const idleOpacity = idleProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.97, 1],
-  });
-
   return (
     <Pressable
       onPress={handlePress}
@@ -203,20 +166,19 @@ export function AppLogo({ width = 140, height = 48, inverted = false, animated =
       accessibilityRole="image"
       accessibilityLabel="SafeRide logo"
     >
-      <Animated.Image
-        source={inverted ? require('../../assets/logo-inverted.png') : require('../../assets/logo.png')}
-        resizeMode="contain"
+      <Animated.View
         style={[
-          { width, height },
+          { width, height, justifyContent: 'center', alignItems: 'center' },
           style,
           motionEnabled
             ? {
-                opacity: idleOpacity,
-                transform: [{ translateY: idleTranslateY }, { scale: idleScale }, { scale: pressScale }],
+                transform: [{ scale: pressScale }],
               }
             : null,
         ]}
-      />
+      >
+        <BrandWordmark width={width} inverted={inverted} accessible={false} animated={animated} />
+      </Animated.View>
     </Pressable>
   );
 }

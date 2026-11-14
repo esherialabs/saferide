@@ -1,11 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { ZodError } from 'zod';
 
 import { corsOriginList, env } from './config/env.js';
-import { AppError } from './http/errors.js';
-import { resolveRequestId } from './http/requestId.js';
+import { decodePartnerKey } from './config/partnerKey.js';
+import { parseTrustedProxyCidrs, partnerRealmRefusal } from './config/partnerNetwork.js';
+import { registerErrorHandler } from './http/errorHandler.js';
+import { REQUEST_ID_OPTIONS } from './http/requestId.js';
 import { privacySafeSerializers } from './logging/privacySafeSerializers.js';
 import { registerRequestContext } from './middleware/requestContext.js';
 import { closeDb } from './plugins/db.js';
@@ -20,6 +21,13 @@ import { registerRuntimeConfigRoutes } from './routes/runtimeConfig.js';
 import { registerPrivacyRoutes } from './routes/privacy.js';
 import { registerRsiRoutes } from './routes/rsi.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { registerPartnerApi } from './routes/partnerAuth.js';
+import { startScannerHealthMonitor } from './services/clamav/scannerHealth.js';
+import { startEvidenceScanWorker } from './services/evidenceMalwareScan.js';
+import { partnerPushConfig } from './services/partnerPushProtocol.js';
+import { startPartnerPushWorker } from './services/partnerPushWorker.js';
+
+const pushConfig = partnerPushConfig(decodePartnerKey(env.partnerTotpKey));
 
 export async function buildApp() {
   const app: FastifyInstance = Fastify({
@@ -39,9 +47,10 @@ export async function buildApp() {
       },
       serializers: privacySafeSerializers,
     },
-    genReqId: request => resolveRequestId(request.headers['x-request-id']),
+    ...REQUEST_ID_OPTIONS,
   });
 
+  registerErrorHandler(app);
   await app.register(cors, { origin: corsOriginList(), credentials: true });
   await app.register(helmet);
   await registerRequestContext(app);
@@ -56,42 +65,46 @@ export async function buildApp() {
   await registerCaseRoutes(app);
   await registerChatRoutes(app);
 
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof AppError) {
-      reply.status(error.statusCode).send({
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        requestId: request.id,
-      });
-      return;
-    }
-
-    if (error instanceof ZodError) {
-      reply.status(400).send({
-        code: 'bad_request',
-        message: 'Invalid request',
-        details: error.flatten(),
-        requestId: request.id,
-      });
-      return;
-    }
-
-    request.log.error({ err: error }, 'Unhandled API error');
-    reply.status(500).send({
-      code: 'internal_error',
-      message: 'Internal server error',
-      requestId: request.id,
-    });
+  // The partner realm is off unless its origin, TOTP key and trusted gateway
+  // range are all set; a partial configuration is refused and logged.
+  const partnerTotpKey = decodePartnerKey(env.partnerTotpKey);
+  const partnerRefusal = partnerRealmRefusal({
+    publicOrigin: env.partnerPublicOrigin,
+    totpKey: partnerTotpKey,
+    trustedProxies: parseTrustedProxyCidrs(env.partnerTrustedProxyCidrs),
   });
+  if (partnerRefusal) app.log.error(partnerRefusal);
+  if (env.partnerPublicOrigin && partnerTotpKey && !partnerRefusal) {
+    await registerPartnerApi(app, {
+      publicOrigin: env.partnerPublicOrigin,
+      totpKey: partnerTotpKey,
+      trustedProxies: parseTrustedProxyCidrs(env.partnerTrustedProxyCidrs),
+      callbackKey: decodePartnerKey(env.partnerCallbackKey),
+      evidenceDownload: env.partnerEvidenceDownload,
+      push: pushConfig,
+    });
+  }
 
   return app;
 }
 
 const app = await buildApp();
 
+// Evidence malware scanning (ClamAV). Without CLAMD_HOST there is no
+// scanner: ingestion stays refused and the worker never claims anything.
+const stopScannerMonitor = startScannerHealthMonitor();
+const pushWorker = pushConfig ? startPartnerPushWorker(pushConfig, app.log) : null;
+const scanWorker = env.clamdHost
+  ? startEvidenceScanWorker({ concurrency: env.evidenceScanConcurrency, log: app.log })
+  : null;
+if (!env.clamdHost) app.log.warn('CLAMD_HOST is not set: evidence malware scanning is off and evidence ingestion is refused');
+
 const shutdown = async () => {
   app.log.info('Shutting down SafeRide API');
+  stopScannerMonitor();
+  await Promise.race([pushWorker?.stop(), new Promise(resolve => setTimeout(resolve, 13_000).unref())]);
+  // An interrupted scan's claim lapses and the attachment is scanned again later.
+  await Promise.race([scanWorker?.stop(), new Promise(resolve => setTimeout(resolve, 5_000).unref())]);
   await app.close();
   await closeDb();
   redis.disconnect();

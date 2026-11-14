@@ -1,25 +1,40 @@
 import { PRESS_COVERAGE } from './press';
-import { PARENT_ORG } from './site';
+import { PILOT_PHOTOS } from './pilotPhotos';
+import { SPICE_FM_CLIP } from './media';
+import { MODEL_VERSION, PARENT_ORG, PILOT } from './site';
 
 export const INTERIOR_PAGES = {
   'what-we-do': {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/what-we-do.jpg',
     evidenceTitle: 'What the app already does.',
     variant: 'manifesto',
     eyebrow: 'What we do',
-    title: 'Private harassment reporting and safer matatu routes.',
+    title: 'Private reporting, survivor control, and a Mombasa pilot.',
     intro:
-      'SafeRide supports a complete survivor-controlled journey: discreet entry, private drafts, evidence capture, incident details, support choices, consent review, and case tracking.',
+      `SafeRide ran a supervised pilot with ${PILOT.partner} in ${PILOT.region}. The app supports a survivor-controlled journey: discreet entry, private drafts, evidence capture, support choices, consent review, and case tracking.`,
     heroTitle: 'An Android-first safety companion, not a hotline replacement.',
     heroBody:
-      'SafeRide helps a rider document what happened, understand Kenyan support options, and decide whether to keep the record private, contribute an anonymous route signal, seek referral support, or prepare an escalation packet.',
+      'SafeRide helps a rider document what happened, understand Kenyan support options, and decide whether to keep the record private, seek referral support, or prepare an escalation packet. Anonymous route signals remain a planned layer.',
     wideHeroTitle: true,
     tone: 'bg-[#50C9F0]',
     accent: 'bg-[#F7EC36]',
-    image: '/images/app-dashboard.webp',
-    imageAlt: 'SafeRide Android home dashboard with emergency, report, case tracker, support, and learning actions',
+    image: PILOT_PHOTOS.communityBanner.src,
+    imageAlt: PILOT_PHOTOS.communityBanner.alt,
+    imagePosition: 'object-top',
+    pilotStrip: {
+      eyebrow: 'How the pilot ran',
+      title: 'Briefing first, then the app.',
+      intro:
+        'The pilot opened with a briefing for the partner team: why most harassment is never reported, where the path to justice breaks, and the rule SafeRide is built on.',
+      photos: [PILOT_PHOTOS.briefingGesture],
+    },
     evidence: [
+      {
+        label: 'Mombasa pilot',
+        title: 'SafeRide ran a supervised pilot.',
+        body: `SafeRide ran a supervised pilot in October 2026 with ${PILOT.partner} in ${PILOT.region}.`,
+      },
       {
         label: 'Mobile flow',
         title: 'Eight reporting screens are already mapped.',
@@ -33,11 +48,11 @@ export const INTERIOR_PAGES = {
       {
         label: 'Pathways',
         title: 'The product separates private evidence from route accountability.',
-        body: 'Anonymous map updates, referrals, and escalation packets are different choices, not one forced report path.',
+        body: 'Anonymous map updates, referrals, and escalation packets are different choices, not one forced report path. The route index itself remains a planned layer, not a live score.',
       },
     ],
     stats: [
-      { value: '4', label: 'pathways: private, map, referral, escalation' },
+      { value: '4', label: 'product pathways; route mapping is not live' },
       { value: '20', label: 'offline tips and rights cards' },
       { value: '15', label: 'legal tags for incident structure' },
     ],
@@ -59,21 +74,27 @@ export const INTERIOR_PAGES = {
     steps: [
       'Start with a local draft that can be saved, resumed, edited, or deleted.',
       'Collect optional media, notes, route context, timing, impact, witnesses, and legal tags.',
-      'Choose one of four pathways before any support or accountability data is shared.',
+      'Choose a private, support, or escalation pathway before any data is shared; route mapping remains planned.',
       'Review exactly what leaves the device inside the consent gate before continuing.',
+    ],
+    faq: [
+      { question: 'Is SafeRide an emergency service?', answer: 'No. The app informs without pretending to be emergency care. Survivor-facing copy keeps the medical, legal, police, counselling and emergency-service boundaries explicit.' },
+      { question: 'Does a report leave my phone on its own?', answer: 'No. A report starts as a local draft. Referral and escalation paths need a review step before anything leaves the device.' },
+      { question: 'Is there a public route map or safety score?', answer: 'No. Anonymous route mapping remains a planned layer, and no route score is published. Private evidence, support choices and route signals are kept separate.' },
+      { question: 'Who develops SafeRide?', answer: `SafeRide is developed by ${PARENT_ORG.name}, the public-interest and social-impact initiative at esheria.org.` },
     ],
     ctaTitle: 'See how privacy and choice shape the reporting flow.',
     cta: { label: 'See how it works', href: '/how-it-works' },
   },
   'how-it-works': {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/how-it-works.jpg',
     evidenceTitle: 'How the reporting flow protects riders.',
     variant: 'playbook',
     eyebrow: 'How it works',
     title: 'How to document and report harassment on a matatu — privately.',
     intro:
-      'SafeRide assumes a rider may have low signal, low time, and high risk. The workflow therefore starts privately, records only what the user chooses, and delays sharing until the pathway is clear.',
+      'The workflow was tested in the supervised HURIA pilot in Mombasa. It was designed for a rider who may have low signal, low time, and high risk, so it started privately, recorded only what the user chose, and delayed sharing until the pathway was clear.',
     heroTitle: 'A structured path from incident to next step.',
     heroBody:
       'The reporting flow covers what happened, where and when, evidence, legal framing, pathway choice, consent review, referral selection, escalation details, and case status.',
@@ -81,6 +102,13 @@ export const INTERIOR_PAGES = {
     accent: 'bg-[#50C9F0]',
     image: '/images/how-it-works-consent-flow.webp',
     imageAlt: 'SafeRide Android incident draft, report steps, and case tracker screens',
+    pilotStrip: {
+      eyebrow: 'Testing the flow',
+      title: 'Tried on real phones, with the team beside them.',
+      intro:
+        'The pilot ran in two stages: practice first, then live reporting with HURIA present.',
+      photos: [PILOT_PHOTOS.liveDemoTalk],
+    },
     evidence: [
       {
         label: 'Draft state',
@@ -90,7 +118,7 @@ export const INTERIOR_PAGES = {
       {
         label: 'Offline queue',
         title: 'Network-dependent work waits until it can sync.',
-        body: 'The mobile app keeps local draft work available and queues share or case actions rather than blocking the rider at the first weak signal.',
+        body: 'The pilot build was designed to keep local draft work available and queue share or case actions rather than blocking the rider at the first weak signal.',
       },
       {
         label: 'Consent review',
@@ -100,7 +128,7 @@ export const INTERIOR_PAGES = {
     ],
     stats: [
       { value: '0', label: 'network required to begin a draft' },
-      { value: '90', label: 'day default retention note in consent flow' },
+      { value: 'Local', label: 'reports stay on the phone until the rider deletes them' },
       { value: '3', label: 'redaction levels for escalation packets' },
     ],
     cards: [
@@ -110,11 +138,11 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Pick a pathway',
-        body: 'Save privately, share an anonymous map update, get help through a hotline or provider, or escalate for operator/regulator action.',
+        body: 'Save privately, get help through a hotline or provider, or escalate for operator/regulator action. Anonymous route mapping remains a planned layer.',
       },
       {
         title: 'Confirm consent',
-        body: 'The consent screen summarizes when, where, what happened, attachments, tags, identity, provider, contact method, statement, and redactions.',
+        body: 'The consent screen summarizes when, where, what happened, attachments, tags, identity, provider, contact method, statement, and redactions before a referral or escalation.',
       },
     ],
     stepsTitle: 'The rider journey',
@@ -122,13 +150,19 @@ export const INTERIOR_PAGES = {
       'Open SafeRide directly or through stealth/decoy entry points when safety requires discretion.',
       'Start or resume a local incident draft and add only the details the rider feels safe recording.',
       'Use legal framing and rights content to understand possible categories without treating the app as legal advice.',
-      'Select a pathway and review the consent checklist before a referral, anonymous map update, or escalation is prepared.',
+      'Select a pathway and review the consent checklist before a referral or escalation is prepared.',
     ],
-    ctaTitle: 'Review the pilot before using it in the field.',
-    cta: { label: 'Download the pilot', href: '/download' },
+    faq: [
+      { question: 'Do I need a connection to start?', answer: 'No. A draft can be started with no network. Work that needs a connection waits in a queue rather than blocking you at the first weak signal.' },
+      { question: 'What can a draft hold?', answer: 'Patterns, a narrative, impact, witness details, route context, timing accuracy, media files, annotations, transcripts and legal tags, all optional.' },
+      { question: 'Can I stop and come back later?', answer: 'Yes. Progress is saved as you move, so a draft can be resumed, edited or deleted.' },
+      { question: 'What does the consent screen show?', answer: 'What will be sent, where it goes and what redaction level applies: when, where, what happened, attachments, tags, identity, provider, contact method, statement and redactions.' },
+    ],
+    ctaTitle: 'See what the Mombasa pilot has already delivered.',
+    cta: { label: 'Read the pilot update', href: '/impact' },
   },
   'for-survivors': {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/for-survivors.jpg',
     evidenceTitle: 'Safety features built for survivors.',
     variant: 'playbook',
@@ -138,11 +172,11 @@ export const INTERIOR_PAGES = {
       'SafeRide is not an emergency service, police service, lawyer, clinic, or counselling provider. It is a private tool for organizing information and deciding what support path feels safe.',
     heroTitle: 'No forced report. No hidden upload. No one-size-fits-all path.',
     heroBody:
-      'The app lets a rider keep everything on the phone, share only redacted route information, prepare a limited support brief, or prepare a structured escalation packet.',
+      'The app lets a rider keep everything on the phone, prepare a limited support brief, or prepare a structured escalation packet. Anonymous route information remains a planned layer.',
     tone: 'bg-[#F88539]',
     accent: 'bg-[#53E17C]',
-    image: '/images/survivor-private-draft.webp',
-    imageAlt: 'SafeRide Android incident draft and report step checklist screens',
+    image: '/images/story-origin-nairobi.webp',
+    imageAlt: 'Women commuters crossing a busy Nairobi matatu stage at sunset, with buses and a billboard wall behind them',
     evidence: [
       {
         label: 'Stealth controls',
@@ -152,7 +186,7 @@ export const INTERIOR_PAGES = {
       {
         label: 'Data controls',
         title: 'Retention is a choice with risk language.',
-        body: 'Privacy screens cover 30-day, 90-day, and keep-until-delete options, plus export, restore, backup, and two-step delete flows.',
+        body: 'Privacy screens keep reports on the phone until you delete them, and offer export, restore, backup, and two-step delete flows. Automatic deletion after 30 or 90 days is planned but switched off until legal approval.',
       },
       {
         label: 'Support boundaries',
@@ -162,7 +196,7 @@ export const INTERIOR_PAGES = {
     ],
     stats: [
       { value: 'Local', label: 'draft-first data handling' },
-      { value: '30/90', label: 'day retention options plus keep-until-delete' },
+      { value: 'Choice', label: 'keep on the phone or delete when you decide' },
       { value: 'Decoy', label: 'calculator mode and quick-exit support' },
     ],
     cards: [
@@ -176,93 +210,105 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Data controls',
-        body: 'Privacy screens cover retention, local encrypted backup, export, restore, and a deliberate two-step delete flow with confirmation language.',
+        body: 'Privacy screens keep reports on the phone until the rider deletes them, with local encrypted backup, export, restore, and a deliberate two-step delete flow. Automatic 30/90-day deletion remains off pending legal approval.',
       },
     ],
-    stepsTitle: 'What SafeRide will never claim',
+    stepsTitle: 'What SafeRide does not claim',
     steps: [
-      'It will not say a survivor must report to be believed or supported.',
-      'It will not claim to replace emergency care, police response, lawyers, clinics, or counsellors.',
-      'It will not publish survivor stories, exact journeys, evidence, or identity without explicit safeguarding review.',
-      'It will not make route-safety claims before field pilots produce measured evidence.',
+      'It does not say a survivor must report to be believed or supported.',
+      'It does not claim to replace emergency care, police response, lawyers, clinics, or counsellors.',
+      'It does not publish survivor stories, exact journeys, evidence, or identity without explicit safeguarding review.',
+      'It does not make route-safety claims before field pilots produce measured evidence.',
+    ],
+    faq: [
+      { question: 'Can I delete my report?', answer: 'Yes. Reports stay on the phone until you delete them, and deleting is a deliberate two-step action. Local encrypted backup, export and restore are also there.' },
+      { question: 'Will the app delete my report automatically?', answer: 'Not yet. Automatic deletion after 30 or 90 days is planned but switched off until legal approval.' },
+      { question: 'Can someone tell I have the app?', answer: 'The app includes a decoy PIN with a calculator mode, a quick-exit gesture and app masking. Android may still show a microphone indicator while audio is recording.' },
+      { question: 'Who do I call if I need help now?', answer: 'SafeRide is not an emergency service. Its local tips explain the 1195 helpline, PEP and emergency contraception windows, P3 forms and evidence handling.' },
     ],
     ctaTitle: 'Understand the privacy controls before sharing anything.',
     cta: { label: 'Review privacy and trust', href: '/privacy-safety-trust' },
   },
-  'route-safety-index': {
-    updatedAt: '2026-07-28',
-    ogImage: '/og/route-safety-index.jpg',
-    evidenceTitle: 'How route signals stay anonymous.',
+  'partner-dashboard': {
+    updatedAt: '2026-11-06',
+    ogImage: '/og/partner-dashboard.jpg',
+    evidenceTitle: 'What the partner dashboard is, and what it is not.',
     variant: 'index',
-    eyebrow: 'Route Safety Index',
-    title: 'Which Nairobi routes are safer? Anonymous data, real accountability.',
+    eyebrow: 'Partner dashboard',
+    title: 'Where a shared report reaches the partner, and nowhere else.',
     intro:
-      "SafeRide's route-safety concept is grounded in the app pathway called Anonymous map update: share redacted where/when and incident type, with no names and no audio.",
-    heroTitle: 'Private evidence. Public safety signals.',
+      'In the pilot, the partner dashboard was the signed-in workspace where named HURIA staff saw the reports riders chose to share and followed them up. It is not public, and it holds no exact locations.',
+    heroTitle: 'One workspace, for the people who follow up.',
     heroBody:
-      'The Route Safety Index should only use data that is minimized, aggregated, privacy-reviewed, and useful to operators, civic partners, regulators, and support organizations.',
+      'A rider decides what leaves her phone. During the pilot, if she shared, named HURIA staff saw it here at the level she chose, updated its status and added notes, and she could follow that status in the app.',
     tone: 'bg-[#F7EC36]',
     accent: 'bg-[#F88539]',
-    image: '/images/route-safety-index-dashboard.webp',
-    imageAlt: 'Anonymized route safety dashboard and Nairobi route map reviewed by transport stakeholders',
+    image: '/images/partner-dashboard-sign-in.webp',
+    imageAlt: 'The SafeRide and HURIA partner dashboard sign-in screen, with empty work email and password fields and a Continue button.',
     evidence: [
       {
-        label: 'Anonymous map update',
-        title: 'Only redacted route facts belong in public signals.',
-        body: 'The pathway is written around where/when and incident type, while excluding names, raw audio, and survivor-identifying details.',
+        label: 'Who sees it',
+        title: 'Named staff, with their own accounts.',
+        body: 'During the pilot, HURIA staff used individual accounts and passwords, with an authenticator step when their organization required it. Access is set up with each partner directly. There is no public link.',
       },
       {
-        label: 'Aggregation',
-        title: 'Small samples should not become public scores.',
-        body: 'Route scoring needs thresholds, time windows, bias notes, and methodology limits before it can responsibly inform operators or regulators.',
+        label: 'What it shows',
+        title: 'Only what the rider chose to share.',
+        body: 'For an escalation, the minimised packet at the redaction level she chose. For a support referral, a short brief. Sharing is off unless she turns it on and ticks the consent for that report.',
       },
       {
-        label: 'Action loop',
-        title: 'A route index is only useful if partners respond.',
-        body: 'The pilot should test whether transport partners can convert aggregate signals into lighting, staffing, reporting, and follow-up changes.',
+        label: 'What it leaves out',
+        title: 'No exact locations and no evidence files.',
+        body: 'Map coordinates are removed before staff see a packet. Staff see the list of evidence with the rider’s descriptions and transcripts, not the photos, audio, video or documents themselves.',
       },
     ],
     stats: [
-      { value: 'No', label: 'names or raw audio in anonymous map updates' },
-      { value: 'Coarse', label: 'location and timing before aggregation' },
-      { value: 'Pilot', label: 'evidence needed before public scoring' },
+      { value: 'Signed-in', label: 'staff accounts only' },
+      { value: 'Six areas', label: 'broad Mombasa subcounties' },
+      { value: 'No exact', label: 'locations in the dashboard' },
     ],
     cards: [
       {
-        title: 'Anonymous map update',
-        body: 'The pathway copy explicitly limits map contribution to redacted where/when and type, with no names or audio.',
+        title: 'Follow-up in one place',
+        body: 'During the pilot, HURIA staff updated the status of a report and added notes. The notes and status are stored on SafeRide’s server, and the rider could follow the status in the app.',
       },
       {
-        title: 'Escalation packet',
-        body: 'When a rider chooses action, the escalation form supports redaction levels, vehicle plate, SACCO/operator, alias contact, and packet preview.',
+        title: 'Broad coverage by area',
+        body: 'Shared cases are grouped by six Mombasa subcounties, using only already-scrubbed broad location text. Missing, withheld, multiple or legacy locations stay unmapped. The map is not a route score.',
       },
       {
-        title: 'Case follow-up',
-        body: 'Submitted cases can move through status, timeline events, attachment previews, deletion requests, and offline retry states.',
+        title: 'Every opening was recorded',
+        body: 'During the pilot, each time staff opened a report or a callback number, SafeRide recorded who did it and when. Those records held no report content and no IP address.',
       },
     ],
-    stepsTitle: 'Index guardrails before launch',
+    stepsTitle: 'How a shared report moves',
     steps: [
-      'Define minimum sample thresholds so small groups or exact journeys are not exposed.',
-      'Separate anonymous route signals from private drafts, evidence files, and referral briefs.',
-      'Publish methodology, limitations, and known bias before displaying public scores.',
-      'Give operators and civic partners action loops without giving them survivor-identifying data.',
+      'A rider chooses to share, ticks the consent for that report, and picks the redaction level.',
+      'SafeRide routes the report to the partner only while its recorded agreement is current and intake is enabled.',
+      'Named staff open it in the dashboard, and the opening is recorded.',
+      'Staff update the status and add notes. The rider follows the status in the app and can call the partner with her reference number.',
     ],
-    ctaTitle: 'Help test route signals without exposing riders.',
-    cta: { label: 'Join as a pilot partner', href: '/partners' },
+    faq: [
+      { question: 'Can anyone open the partner dashboard?', answer: 'No. It is for named staff at a partner organization. Each person has an individual account, and access is set up with the partner directly rather than published on this site.' },
+      { question: 'What can partner staff see?', answer: 'Only what the rider chose to share: a minimised escalation packet at her chosen redaction level, or a short support brief. They do not see her exact location, her evidence files, or the email address or phone number of her SafeRide account.' },
+      { question: 'Does the dashboard rank routes or operators?', answer: 'No. It groups shared cases by broad Mombasa subcounty for follow-up. Case counts do not measure route safety, operator performance or individual risk, and no public route score exists.' },
+      { question: 'Who else works with the dashboard?', answer: 'In the pilot HURIA is the only partner the app offers. Other organizations are not connected.' },
+    ],
+    ctaTitle: 'Want to work with SafeRide as a partner?',
+    cta: { label: 'Talk to us about partnering', href: '/partners' },
   },
   'open-source': {
-    updatedAt: '2026-08-18',
+    updatedAt: '2026-11-01',
     ogImage: '/og/open-source.jpg',
     evidenceTitle: 'What reviewers can inspect publicly.',
     variant: 'editorial',
     eyebrow: 'Source and model transparency',
-    title: 'A production-grade open-source repository with explicit boundaries.',
+    title: 'An auditable open-source snapshot with explicit boundaries.',
     intro:
-      'SafeRide publishes its reviewed mobile app, website, owned API, local infrastructure, public-safe AI tooling, tests, and release evidence under approved open licenses without exposing restricted people or operational records.',
+      'SafeRide publishes a reviewed public snapshot of its mobile app, website, owned API, local infrastructure, public-safe AI tooling, tests, and release evidence under approved open licenses without exposing restricted people or operational records.',
     heroTitle: 'Public-interest technology needs public accountability.',
     heroBody:
-      'The public surface includes the Android client, owned API, local infrastructure, website, on-device assistant configuration, release checksums, model cards, and clear statements about what is tested, restricted, or still pending.',
+      'The public snapshot includes the Android client, owned API, local infrastructure, website, on-device assistant configuration, release checksums, model cards, and clear statements about what is tested, restricted, or still pending.',
     tone: 'bg-[#F88539]',
     accent: 'bg-[#50C9F0]',
     image: '/images/open-source-review-desk.webp',
@@ -276,12 +322,12 @@ export const INTERIOR_PAGES = {
       {
         label: 'Backend',
         title: 'The owned API and local infrastructure are reviewable.',
-        body: 'The mirror includes the current first-party API, Postgres migrations, local services, storage contracts, and privacy controls used by the migration branch.',
+        body: 'The public repository is a sanitised snapshot from August 2026 (v0.5.8). It shows the first-party API, Postgres migrations and privacy controls as they were then. The current app and server, including the HURIA pilot code, live in a private repository and have not been republished.',
       },
       {
         label: 'Assistant',
         title: 'The tested local model path is hash-bound.',
-        body: 'The v0.5.8 LiteRT-LM model, immutable revision, byte size, checksum, runtime, and Android testing limits are published without claiming production or survivor-facing approval.',
+        body: `The ${MODEL_VERSION} LiteRT-LM model, immutable revision, byte size, checksum, runtime, and Android testing limits are published without claiming production or survivor-facing approval.`,
       },
       {
         label: 'Launch site',
@@ -293,13 +339,13 @@ export const INTERIOR_PAGES = {
       {
         label: 'Source',
         title: 'Canonical GitHub repository',
-        body: 'Review, build, test, discuss, and contribute to the Apache-2.0 mobile app, website, owned API, local infrastructure, public AI tooling, and release evidence.',
+        body: 'Review the Apache-2.0 v0.5.8 snapshot of the mobile app, website, owned API, local infrastructure, public AI tooling, and release evidence. It does not yet include Android 1.0.x.',
         href: 'https://github.com/esherialabs/saferide',
       },
       {
         label: 'Model',
         title: 'Gemma 4 mobile model card',
-        body: 'Inspect the exact v0.5.8 LiteRT-LM artifact, checksum, Android observation, evaluation boundaries, and required device-matrix caveats.',
+        body: `Inspect the exact ${MODEL_VERSION} LiteRT-LM artifact, checksum, Android observation, evaluation boundaries, and required device-matrix caveats.`,
         href: 'https://huggingface.co/esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm',
       },
       {
@@ -328,9 +374,9 @@ export const INTERIOR_PAGES = {
       },
     ],
     stats: [
-      { value: 'Visible', label: 'clean source snapshot for public review' },
+      { value: 'Snapshot', label: 'public source is v0.5.8 (Aug 2026), not the current build' },
       { value: 'Separate', label: 'code, content, model, and dataset terms' },
-      { value: 'v0.5.8', label: 'hash-bound LiteRT-LM testing artifact' },
+      { value: MODEL_VERSION, label: 'hash-bound LiteRT-LM testing artifact' },
     ],
     cards: [
       {
@@ -339,11 +385,11 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Local assistant',
-        body: 'The Gemma 4 E2B registry binds the exact v0.5.8 LiteRT-LM file, immutable URL, checksum, storage lifecycle, survivor-centred prompt, and fail-closed capability controls.',
+        body: `The Gemma 4 E2B registry binds the exact ${MODEL_VERSION} LiteRT-LM file, immutable URL, checksum, storage lifecycle, survivor-centred prompt, and fail-closed capability controls.`,
       },
       {
         title: 'Backend transition',
-        body: 'The current branch includes the first-party SafeRide API and local Postgres/object-storage stack. Older Supabase material is historical and excluded from the public mirror.',
+        body: 'The pilot used SafeRide’s own first-party API and Postgres/object-storage stack. The public snapshot does not include the current build.',
       },
       {
         title: 'Launch transparency',
@@ -357,26 +403,43 @@ export const INTERIOR_PAGES = {
       'Verify the Android preview and on-device model against the published hashes and stated device limits.',
       'Validate legal and support content with Kenyan GBV, medical, legal, and safeguarding experts.',
     ],
+    faq: [
+      { question: 'Is the public repository the current build?', answer: 'No. The Apache-2.0 repository is a sanitised August 2026 snapshot. The current pilot build, partner dashboard and HURIA workflow live in a private repository and have not been republished.' },
+      { question: 'Does the assistant run on the phone?', answer: 'The Android testing preview is built to run the tuned assistant locally for text guidance. It is a controlled testing build: transcription, tagging, production use and lower-memory devices are still gated.' },
+      { question: 'Where can I read the code?', answer: 'The public source links on this page point to the canonical open-source repository.' },
+    ],
     ctaTitle: 'Review the public source, model, and release evidence.',
-    cta: { label: 'Read pilot updates', href: '/blog' },
+    cta: { label: 'Read the pilot update', href: '/impact' },
   },
   partners: {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/partners.jpg',
     evidenceTitle: 'Where partners make the difference.',
     variant: 'editorial',
     eyebrow: 'Partners',
     title: 'Partner with us: GBV organizations, matatu operators, funders.',
     intro:
-      'SafeRide is ready for serious review. The next step is safeguarding, privacy, legal, transport, infrastructure, and evaluation work with organizations that understand Kenya.',
-    heroTitle: 'Operational partnerships, not extractive pilots.',
+      'SafeRide ran a supervised HURIA pilot in Mombasa. The next phase needs safeguarding, privacy, legal, transport, infrastructure, and evaluation partners who can help the work learn safely.',
+    heroTitle: 'A pilot, built through operational partnership.',
     heroBody:
-      'We need partners who can test language, referral boundaries, route data methods, escalation workflows, and first-party API design without asking survivors to carry platform risk.',
+      'HURIA is the partner. The wider partner work is to test language, referral boundaries, route data methods, escalation workflows, and first-party API design without asking survivors to carry platform risk.',
     tone: 'bg-[#53E17C]',
     accent: 'bg-[#F88539]',
-    image: '/images/partners-workshop-table.webp',
-    imageAlt: 'SafeRide partner workshop table with anonymized route safety and referral workflow materials',
+    image: '/images/huria-community.webp',
+    imageAlt: 'A large group of partners and community members seated and standing together, many of them waving, in a hall hung with colourful fabric.',
+    pilotStrip: {
+      eyebrow: 'Working with HURIA',
+      title: 'A partner in the room.',
+      intro:
+        'HURIA is the partner. This photograph shows the partner team and the SafeRide team together after the briefing in Mombasa.',
+      photos: [PILOT_PHOTOS.teamSmiling],
+    },
     evidence: [
+      {
+        label: 'Mombasa pilot',
+        title: 'HURIA is the partner.',
+        body: `HURIA is the partner in SafeRide's supervised pilot, which ran in October 2026 in ${PILOT.region}.`,
+      },
       {
         label: 'Support orgs',
         title: 'Referral language needs expert review.',
@@ -416,7 +479,7 @@ export const INTERIOR_PAGES = {
       },
       {
         name: 'Human Rights Agenda',
-        role: 'Coast-based rights organization',
+        role: 'Coast rights and legal aid · Toll-free 0769 546 253',
         initials: 'HA',
         logo: '/images/partners/human-rights-agenda.png',
         href: 'https://huria.ngo/',
@@ -431,9 +494,9 @@ export const INTERIOR_PAGES = {
     ],
     press: PRESS_COVERAGE,
     stats: [
-      { value: 'GBV', label: 'safeguarding and referral review' },
-      { value: 'SACCO', label: 'route and operator workflow validation' },
-      { value: 'API', label: 'backend migration and security review' },
+      { value: 'Oct 2026', label: 'supervised pilot with HURIA' },
+      { value: 'Mombasa', label: 'pilot location' },
+      { value: 'Opt-in', label: 'sharing with HURIA was a separate choice' },
     ],
     cards: [
       {
@@ -446,7 +509,7 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Engineering partners',
-        body: 'Help move from the Supabase prototype to an owned API with authentication, moderation, retention, encrypted evidence, observability, and RLS-equivalent access controls.',
+        body: 'Review the owned SafeRide API: authentication, retention, evidence handling, observability, and access controls.',
       },
     ],
     stepsTitle: 'Partnership criteria',
@@ -456,25 +519,30 @@ export const INTERIOR_PAGES = {
       'Transport partners must commit to action loops, not just dashboards.',
       'Technical partners must preserve offline-first behaviour while reducing backend and secret-management risk.',
     ],
-    ctaTitle: 'Build a responsible Kenya pilot with us.',
+    faq: [
+      { question: 'Who is the pilot partner?', answer: `HURIA is the partner in SafeRide’s supervised pilot, which ran in October 2026 in ${PILOT.region}.` },
+      { question: 'Where did the pilot run?', answer: `In ${PILOT.areas}, ${PILOT.region}.` },
+      { question: 'How can an organisation work with SafeRide?', answer: 'Write to the SafeRide team through the contact page.' },
+    ],
+    ctaTitle: 'Help the pilot learn safely.',
     cta: { label: 'Start a partner inquiry', href: '/contact' },
   },
   story: {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-02',
     ogImage: '/og/story.jpg',
     evidenceTitle: 'The evidence behind the story.',
     variant: 'manifesto',
     eyebrow: 'Our story',
-    title: 'Built in Nairobi, for the rides women take every day.',
+    title: 'Built in Nairobi, piloted with HURIA in Mombasa.',
     intro:
-      'Esheria built SafeRide for public transport harassment, private evidence handling, Kenyan legal and support guidance, and route-level accountability that still needs careful field validation.',
-    heroTitle: 'Nairobi-first, survivor-controlled, open for review.',
+      'Esheria built SafeRide for public transport harassment, private evidence handling, Kenyan legal and support guidance, and route-level accountability. The work ran as a supervised pilot in Mombasa in October 2026.',
+    heroTitle: 'From preparation to a Coast pilot.',
     heroBody:
-      'The work is practical: make it easier to record facts, understand rights, find support, preserve agency, and create prevention signals without turning survivor experiences into marketing material.',
+      'The work is practical: make it easier to record facts, understand rights, find support, preserve agency, and create prevention signals without turning survivor experiences into marketing material. That work ran in October 2026 as a supervised HURIA pilot in Mombasa.',
     tone: 'bg-[#F88539]',
     accent: 'bg-[#F7EC36]',
-    image: '/images/story-origin-nairobi.webp',
-    imageAlt: 'Nairobi public transport scene introducing the SafeRide origin story',
+    image: '/images/route-safety-bus.webp',
+    imageAlt: 'People gather around a route-safety board at a Nairobi matatu stage, beside a SafeRide-branded matatu.',
     evidence: [
       {
         label: 'Origin',
@@ -487,9 +555,14 @@ export const INTERIOR_PAGES = {
         body: 'Public claims, visuals, and metrics need to stay traceable to product behaviour or pilot evidence, not dramatic survivor storytelling.',
       },
       {
+        label: 'Mombasa pilot',
+        title: 'The partnership moved from preparation to delivery.',
+        body: `HURIA is the partner in SafeRide's supervised pilot, which ran in October 2026 in ${PILOT.region}.`,
+      },
+      {
         label: 'Review',
         title: 'Open work invites challenge before scale.',
-        body: 'The website, roadmap, content packs, mobile flows, and UNICEF Venture Fund presentation are presented as reviewable artifacts rather than a finished institutional promise.',
+        body: 'The website, roadmap, content packs, mobile flows, pilot records, and UNICEF Venture Fund presentation are presented as reviewable artifacts rather than a finished institutional promise.',
       },
     ],
     presentationImages: [
@@ -499,10 +572,11 @@ export const INTERIOR_PAGES = {
         caption: 'Founder presentation and reviewer discussion during the UNICEF Venture Fund meet.',
       },
     ],
+    media: SPICE_FM_CLIP,
     stats: [
-      { value: 'Android', label: 'first implementation target' },
-      { value: 'Offline', label: 'design assumption for stressful commutes' },
-      { value: 'Open', label: 'public accountability posture' },
+      { value: 'Mombasa', label: 'supervised pilot location' },
+      { value: 'HURIA', label: 'named Coast partner' },
+      { value: 'Ran', label: 'pilot status' },
     ],
     cards: [
       {
@@ -515,7 +589,7 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Built for accountability',
-        body: 'Route-level insights, case tracking, public source documentation, and a first-party API keep the product focused on measurable safety improvements.',
+        body: 'Case tracking, public source documentation, and a first-party API keep the product focused on measurable safety improvements. Route-level insights remain planned.',
       },
     ],
     stepsTitle: 'What guides the work',
@@ -525,93 +599,119 @@ export const INTERIOR_PAGES = {
       'Treat backend ownership, retention, encryption, and observability as safeguarding work.',
       'Keep the public work reviewable so partners can challenge and improve it.',
     ],
-    ctaTitle: 'See how Esheria is building SafeRide in the open.',
-    cta: { label: 'See the public-good stack', href: '/open-source' },
+    faq: [
+      { question: 'Why does SafeRide start a draft on the phone?', answer: 'So a rider can start a private report before the signal returns, and decide later what, if anything, leaves her phone.' },
+      { question: 'Who is behind SafeRide?', answer: `SafeRide is developed by ${PARENT_ORG.name}, the public-interest and social-impact initiative at esheria.org.` },
+      { question: 'Has SafeRide been tested with a partner?', answer: `Yes. It ran as a supervised pilot with HURIA in ${PILOT.region} in October 2026.` },
+    ],
+    ctaTitle: 'See how the Mombasa pilot was delivered.',
+    cta: { label: 'Read the pilot update', href: '/impact' },
     contextLink: { label: 'Visit Esheria, the organization behind SafeRide', href: PARENT_ORG.url },
   },
   impact: {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/impact.jpg',
-    evidenceTitle: 'What a responsible pilot measures.',
+    evidenceTitle: 'What the Mombasa pilot has delivered.',
     variant: 'index',
     eyebrow: 'Impact and transparency',
-    title: 'Measuring real safety, not hype.',
+    title: 'The pilot has run. We are measuring what comes next.',
     intro:
-      'The product is ready for structured review, but impact still depends on field evidence: completion, comprehension, privacy confidence, referral usefulness, route action, and infrastructure safety.',
-    heroTitle: 'Measure behaviour, not hype.',
+      `SafeRide ran a supervised pilot with ${PILOT.partner} in ${PILOT.region}. We recorded what was delivered, what was tested, and what we do not claim without evidence.`,
+    heroTitle: 'From promises to field evidence.',
     heroBody:
-      'A responsible pilot should track whether women can safely start reports, understand consent, use legal/support content, preserve evidence, and whether partners act on aggregate route signals.',
+      'The pilot tracked whether people could start reports, understand consent, use legal and support content, preserve evidence, and complete a safe handoff. It does not publish survivor narratives, exact journeys, or route scores.',
     tone: 'bg-[#F7EC36]',
     accent: 'bg-[#53E17C]',
-    image: '/images/impact-route-action.webp',
-    imageAlt: 'Transport safety review session focused on route action and accountability',
+    image: PILOT_PHOTOS.demoLively.src,
+    imageAlt: PILOT_PHOTOS.demoLively.alt,
+    imagePosition: 'object-[30%_40%]',
+    pilotStrip: {
+      eyebrow: 'What it looked like',
+      title: 'Questions, answered on the spot.',
+      intro:
+        'The overview above is deliberately broad. This photograph shows what the pilot looked like on the ground: a live demo, with the team taking questions there and then.',
+      photos: [PILOT_PHOTOS.liveDemoClap],
+    },
     evidence: [
       {
-        label: 'Usability',
-        title: 'Measure whether the flow works under stress.',
-        body: 'Completion, abandonment, comprehension, and recovery from offline states matter more than broad claims about safety outcomes.',
+        label: 'Delivered',
+        title: 'The partnership moved into delivery.',
+        body: 'HURIA is the partner in SafeRide’s supervised pilot, which ran in October 2026 in Mombasa.',
       },
       {
-        label: 'Safeguarding',
-        title: 'Measure whether guidance stays within boundaries.',
-        body: 'Tips, referrals, and assistant responses should be reviewed for overpromising, unsafe escalation, and unclear data-sharing language.',
+        label: 'Tested',
+        title: 'The controlled pilot tested the real workflow.',
+        body: 'The pilot tested survivor-controlled reporting and a safe, consented handoff. Sharing with HURIA remained a separate, opt-in choice.',
       },
       {
-        label: 'Accountability',
-        title: 'Measure whether partners actually change routes.',
-        body: 'The Route Safety Index should be judged by partner response and corrective action, not only by data collection.',
+        label: 'Measured',
+        title: 'We measure behaviour before outcomes.',
+        body: 'Completion, consent comprehension, support usefulness, reproducible problems, and partner follow-up matter more than broad claims about safety outcomes.',
       },
     ],
     stats: [
-      { value: 'Completion', label: 'draft-to-pathway conversion and abandonment' },
-      { value: 'Trust', label: 'user confidence in consent and data controls' },
-      { value: 'Action', label: 'operator or support response to route patterns' },
+      { value: 'Ran', label: 'supervised pilot in Mombasa' },
+      { value: 'HURIA', label: 'pilot partner' },
+      { value: 'Opt-in', label: 'sharing was a separate choice' },
     ],
     cards: [
       {
         title: 'Product evidence',
-        body: 'Measure whether the draft, evidence, legal framing, pathway, consent, and case tracker screens are usable under low-signal and high-stress conditions.',
+        body: 'We recorded whether the draft, evidence, legal framing, pathway, consent, and case tracker screens were usable under low-signal and high-stress conditions.',
       },
       {
         title: 'Safeguarding evidence',
-        body: 'Review whether tips, provider choices, referral briefs, and AI guidance avoid overpromising and point users toward qualified human support.',
+        body: 'We reviewed whether tips, provider choices, referral briefs, and AI guidance avoided overpromising and pointed users toward qualified human support.',
       },
       {
         title: 'Infrastructure evidence',
-        body: 'Publish what changed as SafeRide moves from prototype infrastructure to Esheria-controlled services with production-grade safeguards.',
+        body: 'The pilot ran on SafeRide’s own API, Postgres, and object storage. We recorded what changed without treating availability as field validation.',
       },
     ],
-    stepsTitle: 'Transparency commitments',
+    stepsTitle: 'What we publish, and what we do not',
     steps: [
-      'Separate implemented features from field-validated outcomes.',
-      'Report unresolved risks around evidence encryption, backend migration, CI debt, and content review.',
-      'Use privacy-safe analytics only when approved and never capture incident details in analytics.',
-      'Publish non-sensitive pilot learnings, methodology limits, and corrective actions.',
+      'We separated what was delivered from what remained under test.',
+      'We report unresolved risks around consent, evidence handling, access, and support coverage.',
+      'We do not publish survivor stories, exact journeys, raw evidence, or identifying pilot details.',
+      'We publish non-sensitive pilot learnings, methodology limits, and corrective actions after review.',
     ],
-    ctaTitle: 'Judge SafeRide by measured safety and partner action.',
-    cta: { label: 'Review the safety model', href: '/privacy-safety-trust' },
+    faq: [
+      { question: 'What did the pilot test?', answer: `Whether people could start reports, understand consent, use legal and support content, preserve evidence and complete a safe handoff, in a supervised pilot with HURIA in ${PILOT.region}.` },
+      { question: 'Where did it run?', answer: `In ${PILOT.areas}. ${PILOT.continuity}` },
+      { question: 'Are survivor stories or journeys published?', answer: 'No. The overview is deliberately broad: it names the pilot areas, not the people, journeys or reports behind them, and it publishes no route scores.' },
+    ],
+    ctaTitle: 'Review the pilot facts and the safety boundary.',
+    cta: { label: 'Read the privacy model', href: '/privacy-safety-trust' },
   },
   'privacy-safety-trust': {
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     ogImage: '/og/privacy-safety-trust.jpg',
     evidenceTitle: 'How privacy is enforced in the product.',
     variant: 'playbook',
     eyebrow: 'Privacy, safety, and trust',
     title: 'Your report stays private until you decide otherwise.',
     intro:
-      'SafeRide keeps drafts local, asks for consent before sharing, and gives riders retention, export, and delete choices.',
+      'The Mombasa pilot kept drafts local, asked for consent before sharing, and gave riders retention, export, and delete choices. Automatic deletion is still off pending legal approval.',
     heroTitle: 'Local first. Shared by choice.',
     heroBody:
-      'Before referral, map update, or escalation, the app summarizes what leaves the device and what stays private.',
+      'Before referral or escalation, the app summarizes what leaves the device and what stays private. Route mapping remains a planned layer.',
     tone: 'bg-[#53E17C]',
     accent: 'bg-[#50C9F0]',
-    image: '/images/privacy-controls-product.webp',
-    imageAlt: 'SafeRide Android permissions and privacy settings screens',
+    image: '/images/legal-aid-guidance.webp',
+    imagePosition: 'object-[22%_55%]',
+    imageAlt: 'Illustration of a support worker laying out cards for referral options, evidence safety and the 1195 helpline.',
+    pilotStrip: {
+      eyebrow: 'From the pilot',
+      title: 'The rule on the wall.',
+      intro:
+        'The privacy principle was part of the partner briefing: the rider decides what leaves her phone.',
+      photos: [PILOT_PHOTOS.privacySlide],
+    },
     evidence: [
       {
         label: 'Consent',
         title: 'The consent gate is the privacy contract.',
-        body: 'The app is structured so referral, map update, and escalation paths require a review step before data leaves the device.',
+        body: 'The app is structured so referral and escalation paths require a review step before data leaves the device. Route mapping remains a planned layer.',
       },
       {
         label: 'Retention',
@@ -621,13 +721,13 @@ export const INTERIOR_PAGES = {
       {
         label: 'Infrastructure',
         title: 'Backend restraint is part of user trust.',
-        body: 'The public roadmap keeps local-first behaviour while moving sensitive services under Esheria-controlled production infrastructure.',
+        body: 'The pilot ran on SafeRide’s own API, Postgres, and object storage. The public source snapshot is separate from the current pilot build.',
       },
     ],
     stats: [
-      { value: 'Consent', label: 'before referral, map update, or escalation' },
+      { value: 'Consent', label: 'before referral or escalation' },
       { value: 'Redact', label: 'none, light, or heavy escalation options' },
-      { value: 'Owned', label: 'Esheria-controlled production services' },
+      { value: 'Owned', label: 'SafeRide first-party pilot services' },
     ],
     cards: [
       {
@@ -640,16 +740,37 @@ export const INTERIOR_PAGES = {
       },
       {
         title: 'Backend ownership',
-        body: 'Prototype documentation remains useful for review, while production planning moves toward Esheria-controlled services with stronger authentication, encryption, retention, and access controls.',
+        body: 'SafeRide’s own API, Postgres, and object storage carried the pilot workflow. Authentication, retention, evidence handling, and access controls remain active review areas.',
       },
     ],
-    stepsTitle: 'Launch safeguards',
+    stepsTitle: 'Pilot safeguards',
     steps: [
-      'Review all public claims for safety, privacy, medical, legal, and emergency-service overpromising.',
-      'Approve retention, deletion, backup, analytics, evidence encryption, and support-provider language before public onboarding.',
-      'Document the first-party API migration path before collecting sensitive production data.',
-      'Never publish survivor stories, exact route details, or evidence screenshots without explicit safeguarding review.',
+      'We review all public claims for safety, privacy, medical, legal, and emergency-service overpromising.',
+      'We kept automatic deletion, backup, analytics, and evidence-sharing choices under review during the pilot.',
+      'We used SafeRide’s first-party API and object storage for the pilot workflow and recorded the boundaries.',
+      'We do not publish survivor stories, exact route details, or evidence screenshots without explicit safeguarding review.',
     ],
+    faq: [
+      { question: 'What does redaction do?', answer: 'Before an escalation packet is shared you can choose none, light or heavy redaction, and review exactly what will be sent.' },
+      { question: 'Whose servers carried the pilot?', answer: 'SafeRide’s own API, Postgres and object storage carried the pilot workflow. Authentication, retention, evidence handling and access controls remain active review areas.' },
+      { question: 'Can the app pretend to be a support service?', answer: 'No. It can prepare a sanitised brief for a hotline, GBV centre, legal aid, counselling or fallback number, but it must not impersonate any of them.' },
+    ],
+    feature: {
+      eyebrow: 'In the app',
+      title: 'You choose what the app can use.',
+      paragraphs: [
+        'The first screen asks for permissions and says plainly that you can continue without granting everything. Nothing is switched on for you.',
+      ],
+      points: [
+        'Location is added only when you choose to use device location.',
+        'The microphone records only when you use a supported SafeRide capture action.',
+        'You can skip for now and change either choice later in Settings.',
+      ],
+      image: '/images/privacy-controls-product.webp',
+      imageAlt: 'SafeRide Android permission screen with Ask location and Ask microphone choices, a Request Permissions button and a Skip for Now button, beside a settings list',
+      imageWidth: 1024,
+      imageHeight: 768,
+    },
     ctaTitle: 'Review what stays private and what can be shared.',
     cta: { label: 'Read how it works', href: '/how-it-works' },
   },

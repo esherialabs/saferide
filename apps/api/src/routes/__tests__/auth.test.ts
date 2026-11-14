@@ -16,6 +16,7 @@ const db = vi.hoisted(() => ({
 
 const privacyState = vi.hoisted(() => ({
   minorProcessingEnabled: false,
+  submittedCaseIngestionEnabled: false,
 }));
 const testPassword = 'test-password-placeholder';
 
@@ -27,7 +28,7 @@ vi.mock('../../config/env.js', () => ({
 
 vi.mock('../../plugins/db.js', () => db);
 vi.mock('../../config/privacyControls.js', () => ({
-  isPrivacyCapabilityEnabled: vi.fn(() => privacyState.minorProcessingEnabled),
+  isPrivacyCapabilityEnabled: vi.fn((capability: string) => capability === 'submitted_case_ingestion' ? privacyState.submittedCaseIngestionEnabled : privacyState.minorProcessingEnabled),
 }));
 
 async function buildRouteApp(): Promise<FastifyInstance> {
@@ -74,6 +75,7 @@ describe('auth user route', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     privacyState.minorProcessingEnabled = false;
+    privacyState.submittedCaseIngestionEnabled = false;
     app = await buildRouteApp();
   });
 
@@ -121,7 +123,7 @@ describe('auth user route', () => {
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps minor processing disabled before account data is written', async () => {
+  it('keeps signup disabled while report submission is unavailable', async () => {
     expect(indicatesMinor({ age: 17 }, new Date('2026-07-30'))).toBe(true);
     expect(indicatesMinor({ dateOfBirth: '2010-01-01' }, new Date('2026-07-30'))).toBe(true);
     expect(indicatesMinor({ age: 18 }, new Date('2026-07-30'))).toBe(false);
@@ -140,7 +142,7 @@ describe('auth user route', () => {
     { isMinor: false },
     { isMinor: 'false' },
     { age: 18 },
-  ])('does not treat unverified adult metadata as permission to create a remote account: %j', async data => {
+  ])('blocks signup while submission is disabled regardless of adult metadata: %j', async data => {
     const response = await app.inject({
       method: 'POST',
       url: '/auth/signup',
@@ -151,8 +153,23 @@ describe('auth user route', () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it('retains the explicit known-minor denial if safeguarding approval later enables processing', async () => {
-    privacyState.minorProcessingEnabled = true;
+  it('creates an anonymous adult session while minor processing remains disabled', async () => {
+    privacyState.submittedCaseIngestionEnabled = true;
+    expect(privacyState.minorProcessingEnabled).toBe(false);
+    db.query.mockResolvedValueOnce({ rows: [{
+      id: '00000000-0000-4000-8000-000000000001', email: null, password_hash: null,
+      role: 'survivor', user_metadata: { age: 18 }, is_anonymous: true,
+      created_at: '2026-10-22T00:00:00.000Z',
+    }] }).mockResolvedValue({ rows: [] });
+    const response = await app.inject({ method: 'POST', url: '/auth/signup', payload: { data: { age: 18 } } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ token_type: 'bearer', user: { app_metadata: { is_anonymous: true } } });
+    expect(response.json().access_token).toEqual(expect.any(String));
+    expect(db.query).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a declared minor while adult pilot signup is enabled', async () => {
+    privacyState.submittedCaseIngestionEnabled = true;
     const response = await app.inject({
       method: 'POST',
       url: '/auth/signup',

@@ -28,7 +28,7 @@
         "type": { "const": "ml.g5.xlarge" },
         "count": { "const": 1 },
         "volumeSizeGb": { "type": "integer", "minimum": 40, "maximum": 200 },
-        "quotaCode": { "const": "L-1928E07B" }
+        "quotaCode": { "const": "L-B6D80D9C" }
       }
     },
     "storage": {
@@ -77,14 +77,32 @@
           "additionalProperties": false,
           "required": ["rows", "seed", "learningRates", "epochs"],
           "properties": {
-            "rows": { "const": 320 },
+            "rows": { "enum": [320, 1816, 1864, 2088] },
             "seed": { "const": 419805 },
             "learningRates": {
-              "type": "array",
-              "prefixItems": [{ "const": 0.00001 }, { "const": 0.00002 }],
-              "minItems": 2,
-              "maxItems": 2,
-              "items": false
+              "oneOf": [
+                {
+                  "type": "array",
+                  "prefixItems": [{ "const": 0.00001 }, { "const": 0.00002 }],
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": false
+                },
+                {
+                  "type": "array",
+                  "prefixItems": [{ "const": 0.00002 }],
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": false
+                },
+                {
+                  "type": "array",
+                  "prefixItems": [{ "const": 0.00001 }],
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": false
+                }
+              ]
             },
             "epochs": { "const": 1 }
           }
@@ -94,7 +112,7 @@
           "additionalProperties": false,
           "required": ["trainRows", "devRows", "seeds", "epochs"],
           "properties": {
-            "trainRows": { "const": 1600 },
+            "trainRows": { "enum": [1600, 1720, 1768, 1832] },
             "devRows": { "const": 300 },
             "seeds": {
               "type": "array",

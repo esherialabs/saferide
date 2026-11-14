@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v053-pilot-panel-input.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "panelId", "createdAt", "issue", "sourceCommit", "datasetId", "executionScript", "suites", "baseModel", "candidate", "archivedBaseComparator", "generationConfig", "executionPolicy", "selectionPolicy", "scoringPolicy", "packageFiles", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v053-pilot-panel-input" },
+    "schemaVersion": { "const": 1 },
+    "panelId": { "type": "string", "pattern": "^saferide-v053-pilot-panel-[a-f0-9]{12}-[a-f0-9]{12}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "issue": { "const": "ESH-4198" },
+    "sourceCommit": { "$ref": "#/$defs/commit" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.3" },
+    "executionScript": { "$ref": "#/$defs/safePath" },
+    "suites": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/originalDevelopment" },
+        { "$ref": "#/$defs/mitigationDevelopment" }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": false
+    },
+    "baseModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelId", "revision", "inputManifest", "files"],
+      "properties": {
+        "modelId": { "const": "google/gemma-4-E2B-it" },
+        "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+        "inputManifest": { "$ref": "#/$defs/fileHash" },
+        "files": { "type": "array", "minItems": 9, "maxItems": 9, "items": { "$ref": "#/$defs/file" } }
+      }
+    },
+    "candidate": { "$ref": "#/$defs/candidate" },
+    "archivedBaseComparator": { "$ref": "#/$defs/baseComparator" },
+    "generationConfig": { "$ref": "ai-v051-development-panel-input.schema.json#/$defs/generation" },
+    "executionPolicy": { "$ref": "#/$defs/executionPolicy" },
+    "selectionPolicy": { "$ref": "ai-v051-development-panel-input.schema.json#/$defs/selectionPolicy" },
+    "scoringPolicy": {
+      "type": "object",
+      "required": ["policyId", "usefulnessScale", "alignment", "criticalSignals", "overRefusal", "scope", "sha256"],
+      "properties": {
+        "policyId": { "const": "saferide-v05-development-panel-deterministic-rubric.2" },
+        "usefulnessScale": { "type": "array", "prefixItems": [{"const": 0}, {"const": 1}, {"const": 2}, {"const": 3}], "minItems": 4, "maxItems": 4, "items": false },
+        "scope": { "const": "development-only-automatic-selection-gate-not-human-review" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "packageFiles": { "type": "array", "minItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/file" } },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classification", "syntheticOnly", "containsMitigationHoldoutRows", "containsProtectedV05Rows", "containsBlindPrompts", "containsReviewerIdentity", "baseOutputsRegenerated", "rawContentLogging", "promotionEligible"],
+      "properties": {
+        "classification": { "const": "controlled-development-only" },
+        "syntheticOnly": { "const": true },
+        "containsMitigationHoldoutRows": { "const": false },
+        "containsProtectedV05Rows": { "const": false },
+        "containsBlindPrompts": { "const": false },
+        "containsReviewerIdentity": { "const": false },
+        "baseOutputsRegenerated": { "const": false },
+        "rawContentLogging": { "const": "forbidden" },
+        "promotionEligible": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "executionPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["generationBatchSize", "batchOrder", "paddingSide", "decoding"],
+      "properties": {
+        "generationBatchSize": { "const": 2 },
+        "batchOrder": { "const": "suite-order-then-canonical-row-id" },
+        "paddingSide": { "const": "left" },
+        "decoding": { "const": "deterministic-greedy-no-sampling" }
+      }
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "safePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$" },
+    "fileHash": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": { "path": { "$ref": "#/$defs/safePath" }, "sha256": { "$ref": "#/$defs/sha256" } }
+    },
+    "file": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256", "sizeBytes"],
+      "properties": { "path": { "$ref": "#/$defs/safePath" }, "sha256": { "$ref": "#/$defs/sha256" }, "sizeBytes": { "type": "integer", "minimum": 1 } }
+    },
+    "suite": {
+      "type": "object", "additionalProperties": false,
+      "required": ["suiteId", "split", "requiredCount", "data", "rowInventorySha256", "selectionUse"],
+      "properties": {
+        "suiteId": { "enum": ["original-development", "mitigation-development"] },
+        "split": { "enum": ["dev", "mitigation-dev"] },
+        "requiredCount": { "enum": [20, 300] },
+        "data": { "$ref": "#/$defs/file" },
+        "rowInventorySha256": { "$ref": "#/$defs/sha256" },
+        "selectionUse": { "const": "blocking-eligibility" }
+      }
+    },
+    "originalDevelopment": { "allOf": [{ "$ref": "#/$defs/suite" }, { "properties": { "suiteId": { "const": "original-development" }, "split": { "const": "dev" }, "requiredCount": { "const": 300 } } }] },
+    "mitigationDevelopment": { "allOf": [{ "$ref": "#/$defs/suite" }, { "properties": { "suiteId": { "const": "mitigation-development" }, "split": { "const": "mitigation-dev" }, "requiredCount": { "const": 20 } } }] },
+    "finiteTensorGate": {
+      "type": "object", "additionalProperties": false, "required": ["tensorCount", "elementCount", "nonFiniteTensorCount"],
+      "properties": {
+        "tensorCount": { "type": "integer", "minimum": 1 },
+        "elementCount": { "type": "integer", "minimum": 1 },
+        "nonFiniteTensorCount": { "const": 0 }
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seed", "runId", "runKind", "manifest", "bestCheckpoint", "developmentAssistantTokenLoss", "adapterRoot", "adapterInventorySha256", "adapterFiles", "finiteTensorGate"],
+      "properties": {
+        "seed": { "const": 419805 },
+        "runId": { "type": "string", "pattern": "^saferide-v053-pilot-[a-z0-9-]{8,48}$", "maxLength": 63 },
+        "runKind": { "const": "pilot" },
+        "manifest": { "$ref": "#/$defs/fileHash" },
+        "bestCheckpoint": { "type": "string", "minLength": 3 },
+        "developmentAssistantTokenLoss": { "type": "number", "minimum": 0 },
+        "adapterRoot": { "const": "adapter" },
+        "adapterInventorySha256": { "$ref": "#/$defs/sha256" },
+        "adapterFiles": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/$defs/file" } },
+        "finiteTensorGate": { "$ref": "#/$defs/finiteTensorGate" }
+      }
+    },
+    "coverageMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rowCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage"],
+      "properties": {
+        "rowCount": { "enum": [20, 300] },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 300 },
+        "truncated": { "type": "integer", "minimum": 0, "maximum": 300 },
+        "errors": { "type": "integer", "minimum": 0, "maximum": 300 },
+        "criticalFailures": { "type": "integer", "minimum": 0 },
+        "overRefusalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usefulnessAverage": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "baseSuite": {
+      "type": "object", "additionalProperties": false, "required": ["suiteId", "bundleSha256", "metrics"],
+      "properties": {
+        "suiteId": { "enum": ["original-development", "mitigation-development"] },
+        "bundleSha256": { "$ref": "#/$defs/sha256" },
+        "metrics": { "$ref": "#/$defs/coverageMetrics" }
+      }
+    },
+    "baseComparator": {
+      "type": "object", "additionalProperties": false,
+      "required": ["diagnosisSha256", "scoringPolicySha256", "outputsRegenerated", "suites"],
+      "properties": {
+        "diagnosisSha256": { "$ref": "#/$defs/sha256" },
+        "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+        "outputsRegenerated": { "const": false },
+        "suites": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/baseSuite" } }
+      }
+    }
+  }
+}

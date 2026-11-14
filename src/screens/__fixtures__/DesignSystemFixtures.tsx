@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -36,6 +36,9 @@ import {
 } from '../../components/ui';
 import { useTheme } from '../../theme/SimpleThemeProvider';
 import { borders, radii, spacing, typography } from '../../theme/tokens';
+import { ActionSheet } from '../../components/ui/ActionSheet';
+import { DateField, TimeField } from '../../components/ui/DateTimeField';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/Dialog';
 
 const noop = () => {};
 
@@ -54,6 +57,9 @@ const providerOptions = [
 
 export default function DesignSystemFixtures() {
   const { colors } = useTheme();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [fixtureDate, setFixtureDate] = useState(new Date(2026, 9, 1, 14, 30));
 
   return (
     <DashboardTemplate showNetworkStatus={false} contentStyle={styles.content}>
@@ -63,7 +69,7 @@ export default function DesignSystemFixtures() {
             Design system fixtures
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Static component states for SafeRide screen migration and visual QA.
+            Synthetic component states for SafeRide visual QA. Actions never send, delete, upload, or contact anyone.
           </Text>
         </View>
         <IconButton
@@ -74,6 +80,24 @@ export default function DesignSystemFixtures() {
           variant="outline"
         />
       </View>
+
+      <Section title="Overlay and date controls" contentStyle={styles.stack}>
+        <Button title="Open synthetic action sheet" onPress={() => setSheetOpen(true)} />
+        <Button title="Open synthetic review dialog" variant="outline" onPress={() => setDialogOpen(true)} />
+        <DateField label="Synthetic date" value={fixtureDate} onChange={setFixtureDate} />
+        <TimeField label="Synthetic time" value={fixtureDate} onChange={setFixtureDate} />
+        <ActionSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title="Synthetic evidence actions" message="These controls have no service side effects." actions={[
+          { title: 'Keep this deliberately long synthetic evidence title private on the device', onPress: noop },
+          { title: 'Unavailable action', onPress: noop, disabled: true },
+          { title: 'Destructive appearance only — no deletion', onPress: noop, destructive: true },
+        ]} />
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Synthetic consent review with a long heading</DialogTitle><DialogDescription>No choice is saved or transmitted by this fixture.</DialogDescription></DialogHeader>
+            <Button title="Close preview" onPress={() => setDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      </Section>
 
       <Section
         title="Status and action states"

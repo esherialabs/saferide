@@ -22,8 +22,12 @@ import { runAppReset } from './appReset';
 import { offlineSyncManager } from './offlineSync';
 import { devPrivacyError, devPrivacyWarn, getPrivacySafeErrorReason } from './privacyLog';
 import {
+  DECOY_PIN_ATTEMPTS_STORE_KEY,
+  DECOY_PIN_STORE_KEY,
   PRIVACY_CONSENT_LEDGER_KEY,
   TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY,
+  AI_PILOT_DIAGNOSTICS_KEY,
+  AI_PILOT_INFLIGHT_KEY,
 } from './storageKeys';
 import {
   getPrivacyRetentionPreference,
@@ -79,6 +83,8 @@ const ASYNC_DELETE_EXACT_KEYS = new Set([
   'NAVIGATION_STATE',
   '@saferide_runtime_config_override',
   TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY,
+  AI_PILOT_DIAGNOSTICS_KEY,
+  AI_PILOT_INFLIGHT_KEY,
   '@error_log',
   AUTH_SESSION_STORE_KEY,
   LOCAL_GUEST_SESSION_STORE_KEY,
@@ -97,10 +103,15 @@ const SECURE_EXPORT_KEYS = new Set([
   'user_data',
 ]);
 
+// The Decoy PIN verifier and attempt record live in SecureStore. The privacy
+// controls inventory marks the Decoy PIN as deleted by this wipe; only its
+// legacy AsyncStorage copy used to be removed.
 const SECURE_DELETE_KEYS = new Set([
   ...SECURE_EXPORT_KEYS,
   AUTH_SESSION_STORE_KEY,
   LOCAL_GUEST_SESSION_STORE_KEY,
+  DECOY_PIN_STORE_KEY,
+  DECOY_PIN_ATTEMPTS_STORE_KEY,
 ]);
 
 const GENERATED_FILE_PATTERNS = [
@@ -138,8 +149,8 @@ export const PRIVACY_DATA_DELETE_INCLUDED_STORES = [
   'queued offline submissions and cached offline packets',
   'local case-update notes saved under offline packet storage',
   'offline chat cache and retry queue',
-  'report workflow state, onboarding state, privacy consent history, retention preference, and local settings',
-  'support catalog caches, navigation state, runtime endpoint overrides, local rollout assignments, and diagnostic error logs',
+  'report workflow state, onboarding state, privacy consent history, retention preference, local settings, and the Decoy PIN (set it again to use Quick-Exit)',
+  'support catalog caches, navigation state, runtime endpoint overrides, local rollout assignments, diagnostic error logs, and AI pilot diagnostics',
   'auth session state stored by the owned auth adapter',
   'app-managed media, generated exports/backups/PDFs/statements, downloaded evidence cache, and on-device model files',
 ];

@@ -22,7 +22,10 @@ import {
 } from '../services/privacyLifecycle.js';
 
 const consentSchema = z.object({
-  purpose: z.enum(['pathway_submission', 'anonymous_aggregate', 'analytics', 'research', 'model_training', 'partner_follow_up']),
+  purpose: z.enum([
+    'pathway_submission', 'anonymous_aggregate', 'analytics', 'research', 'model_training',
+    'partner_follow_up', 'partner_callback',
+  ]),
   consentVersion: z.string().min(1).max(120),
 }).strict();
 

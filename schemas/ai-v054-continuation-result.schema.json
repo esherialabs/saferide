@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v054-continuation-result.schema.json",
+  "title": "SafeRide v0.5.4 governed continuation result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt", "bindings", "preservation", "transfer", "screens", "preflight", "pilot", "panel", "gpu", "decision", "privacy", "untouched"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v054-continuation-result" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "branch": { "const": "codex/esh-4198-v051-mitigation" },
+    "pullRequest": { "const": 205 },
+    "status": { "const": "no-go-pilot-loss-evidence-failed" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredStartingHead", "executionCommit", "planSha256", "frozenManifestSha256", "modelRevision", "modelInventorySha256", "runtimeArchiveSha256", "runtimeManifestDigest", "runtimeConfigDigest", "originalDevelopmentSha256", "mitigationDevelopmentSha256", "sealedHoldoutSha256"],
+      "properties": {
+        "requiredStartingHead": { "const": "099d04b7f59ff13d0a81ed2c27b4ea4b1499fa13" },
+        "executionCommit": { "$ref": "#/$defs/commit" },
+        "planSha256": { "$ref": "#/$defs/sha256" },
+        "frozenManifestSha256": { "const": "92f997666d83664e8319a59188941bc1510320d733bd891c8ab0ed2ee17812ad" },
+        "modelRevision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+        "modelInventorySha256": { "$ref": "#/$defs/sha256" },
+        "runtimeArchiveSha256": { "const": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf" },
+        "runtimeManifestDigest": { "const": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca" },
+        "runtimeConfigDigest": { "const": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87" },
+        "originalDevelopmentSha256": { "const": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881" },
+        "mitigationDevelopmentSha256": { "const": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd" },
+        "sealedHoldoutSha256": { "const": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4" }
+      }
+    },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priorNoGoResultSha256", "priorTerminalEvidenceSha256", "priorPlanSha256", "priorImmutableLedgerSha256", "priorFailedRunPreserved"],
+      "properties": {
+        "priorNoGoResultSha256": { "$ref": "#/$defs/sha256" },
+        "priorTerminalEvidenceSha256": { "$ref": "#/$defs/sha256" },
+        "priorPlanSha256": { "$ref": "#/$defs/sha256" },
+        "priorImmutableLedgerSha256": { "$ref": "#/$defs/sha256" },
+        "priorFailedRunPreserved": { "const": true }
+      }
+    },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changedPayloadFileCount", "changedPayloadTotalBytes", "deltaLedgerSha256", "deltaLedgerSizeBytes", "a11CodeFileCount", "independentA11RehashPassed", "privateModesVerified"],
+      "properties": {
+        "changedPayloadFileCount": { "const": 3 },
+        "changedPayloadTotalBytes": { "const": 138938 },
+        "deltaLedgerSha256": { "$ref": "#/$defs/sha256" },
+        "deltaLedgerSizeBytes": { "const": 339 },
+        "a11CodeFileCount": { "const": 20 },
+        "independentA11RehashPassed": { "const": true },
+        "privateModesVerified": { "const": true }
+      }
+    },
+    "screens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vpsPreflight", "a11Preflight", "vpsPilot", "a11Pilot", "vpsPanel", "a11Panel"],
+      "properties": {
+        "vpsPreflight": { "const": "sr4198-v054-vps-preflight-238177" },
+        "a11Preflight": { "const": "sr4198-v054-preflight-238177" },
+        "vpsPilot": { "const": "sr4198-v054-vps-pilot-b6df81" },
+        "a11Pilot": { "const": "sr4198-v054-pilot-b6df81" },
+        "vpsPanel": { "type": "null" },
+        "a11Panel": { "type": "null" }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "runId", "hashes", "timing", "coverage", "loss", "integrity", "adapter", "checkpoint"],
+      "properties": {
+        "status": { "const": "passed" },
+        "runId": { "const": "saferide-v054-preflight-s419805-20260808-238177" },
+        "hashes": { "$ref": "#/$defs/preflightHashes" },
+        "timing": { "$ref": "#/$defs/completedTiming" },
+        "coverage": {
+          "const": { "epochsCompleted": 1, "globalSteps": 1, "rowsSeen": 1 }
+        },
+        "loss": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rawTrainerLoss", "meanTrainingObjectiveLoss", "bestDevelopmentLoss", "finalDevelopmentLoss", "finite", "gatePassed", "historicalAggregateDefectReintroduced"],
+          "properties": {
+            "rawTrainerLoss": { "type": "number" },
+            "meanTrainingObjectiveLoss": { "type": "number" },
+            "bestDevelopmentLoss": { "type": "number" },
+            "finalDevelopmentLoss": { "type": "number" },
+            "finite": { "const": true },
+            "gatePassed": { "const": true },
+            "historicalAggregateDefectReintroduced": { "const": false }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assistantOnlyLoss", "exactSampleOrderVerified", "sampleOrderSha256", "sealedHoldoutRowsRead", "terminatorIds", "terminatorsBoundAndCpuTested"],
+          "properties": {
+            "assistantOnlyLoss": { "const": true },
+            "exactSampleOrderVerified": { "const": true },
+            "sampleOrderSha256": { "$ref": "#/$defs/sha256" },
+            "sealedHoldoutRowsRead": { "const": 0 },
+            "terminatorIds": { "const": [1, 106, 50] },
+            "terminatorsBoundAndCpuTested": { "const": true }
+          }
+        },
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inventorySha256", "tensorSha256", "tensorSizeBytes", "tensorCount", "elementCount", "nonFiniteTensorCount"],
+          "properties": {
+            "inventorySha256": { "$ref": "#/$defs/sha256" },
+            "tensorSha256": { "$ref": "#/$defs/sha256" },
+            "tensorSizeBytes": { "const": 48376416 },
+            "tensorCount": { "const": 410 },
+            "elementCount": { "const": 12079104 },
+            "nonFiniteTensorCount": { "const": 0 }
+          }
+        },
+        "checkpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["step", "inventorySha256", "contentInventorySha256", "fileCount", "totalBytes", "optimizerStatePresent", "schedulerStatePresent", "rngStatePresent", "trainerStatePresent", "resumeReadiness"],
+          "properties": {
+            "step": { "const": 1 },
+            "inventorySha256": { "$ref": "#/$defs/sha256" },
+            "contentInventorySha256": { "$ref": "#/$defs/sha256" },
+            "fileCount": { "const": 11 },
+            "totalBytes": { "type": "integer", "minimum": 1 },
+            "optimizerStatePresent": { "const": true },
+            "schedulerStatePresent": { "const": true },
+            "rngStatePresent": { "const": true },
+            "trainerStatePresent": { "const": true },
+            "resumeReadiness": { "const": "resume-ready" }
+          }
+        }
+      }
+    },
+    "pilot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "runId", "hashes", "timing", "recipe", "observedCoverage", "loss", "developmentHistory", "integrity", "checkpoint", "failure"],
+      "properties": {
+        "status": { "const": "failed-closed" },
+        "runId": { "const": "saferide-v054-pilot-s419805-20260808-b6df81" },
+        "hashes": { "$ref": "#/$defs/pilotHashes" },
+        "timing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startedAt", "failedAt", "containerWallSeconds", "trainerRuntimeDisplayedSeconds"],
+          "properties": {
+            "startedAt": { "type": "string", "format": "date-time" },
+            "failedAt": { "type": "string", "format": "date-time" },
+            "containerWallSeconds": { "type": "number", "minimum": 0 },
+            "trainerRuntimeDisplayedSeconds": { "type": "number", "minimum": 0 }
+          }
+        },
+        "recipe": {
+          "const": { "seed": 419805, "epochs": 1, "learningRate": 0.00002, "gradientAccumulationSteps": 8, "loggingSteps": 5, "evaluationSteps": 25, "saveSteps": 25, "maxGradientNorm": 1.0, "scheduler": "cosine", "warmupRatio": 0.03 }
+        },
+        "observedCoverage": {
+          "const": { "epochsCompleted": 1, "globalSteps": 237, "rowsSeen": 1896, "governedOutputAttestationCompleted": false }
+        },
+        "loss": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rawTerminalTrainLossDisplayed", "normalizedTrainObjective", "unattestedDisplayedQuotient", "bestDevelopmentLossObserved", "finalDevelopmentLossAttested", "finiteDisplayedValues", "gatePassed", "historicalAggregateDefectReintroduced"],
+          "properties": {
+            "rawTerminalTrainLossDisplayed": { "type": "number" },
+            "normalizedTrainObjective": { "type": "null" },
+            "unattestedDisplayedQuotient": { "type": "number" },
+            "bestDevelopmentLossObserved": { "type": "number" },
+            "finalDevelopmentLossAttested": { "type": "null" },
+            "finiteDisplayedValues": { "const": true },
+            "gatePassed": { "const": false },
+            "historicalAggregateDefectReintroduced": { "const": false }
+          }
+        },
+        "developmentHistory": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["step", "loss"],
+            "properties": {
+              "step": { "type": "integer", "minimum": 1 },
+              "loss": { "type": "number" }
+            }
+          }
+        },
+        "integrity": {
+          "const": { "frozenRecipeBound": true, "exactSampleOrderOutputAttested": false, "assistantOnlyLossOutputAttested": false, "sealedHoldoutRead": false, "adapterTensorIntegrityAttested": false }
+        },
+        "checkpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["latestStep", "allCheckpointInventorySha256", "allCheckpointFileCount", "allCheckpointTotalBytes", "latestCheckpointInventorySha256", "latestCheckpointFileCount", "latestCheckpointTotalBytes", "adapterTensorSha256", "adapterTensorSizeBytes", "optimizerStatePresent", "schedulerStatePresent", "rngStatePresent", "trainerStatePresent", "adapterTensorValidation"],
+          "properties": {
+            "latestStep": { "const": 237 },
+            "allCheckpointInventorySha256": { "$ref": "#/$defs/sha256" },
+            "allCheckpointFileCount": { "const": 22 },
+            "allCheckpointTotalBytes": { "type": "integer", "minimum": 1 },
+            "latestCheckpointInventorySha256": { "$ref": "#/$defs/sha256" },
+            "latestCheckpointFileCount": { "const": 11 },
+            "latestCheckpointTotalBytes": { "type": "integer", "minimum": 1 },
+            "adapterTensorSha256": { "$ref": "#/$defs/sha256" },
+            "adapterTensorSizeBytes": { "const": 48376416 },
+            "optimizerStatePresent": { "const": true },
+            "schedulerStatePresent": { "const": true },
+            "rngStatePresent": { "const": true },
+            "trainerStatePresent": { "const": true },
+            "adapterTensorValidation": { "const": "not-attested-after-loss-evidence-failure" }
+          }
+        },
+        "failure": {
+          "const": { "phase": "training-loss-evidence", "errorType": "RuntimeError", "message": "Development loss history contains duplicate evaluation steps.", "rootCause": "the completed step-237 epoch evaluation and the runner's explicit final development evaluation produced duplicate step-237 history entries" }
+        }
+      }
+    },
+    "panel": {
+      "const": { "status": "not-started", "reason": "pilot-loss-evidence-gate-failed", "originalDevelopmentRows": 300, "mitigationDevelopmentRows": 20, "metricsByLanguage": null, "metricsByCategory": null, "criticalAdjudication": null }
+    },
+    "gpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preTransferIdleGate", "preflight", "pilot", "postFailure", "unrelatedWorkloadStoppedOrModified"],
+      "properties": {
+        "preTransferIdleGate": { "$ref": "#/$defs/idleGate" },
+        "preflight": { "$ref": "#/$defs/runGpu" },
+        "pilot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prelaunchSampleCount", "prelaunchDurationSeconds", "immediateIdleGatePassed", "minimumFreeVramMiB", "peakUtilizationPercent", "peakTemperatureC", "maximumComputeProcessCount", "competingWorkloadObserved"],
+          "properties": {
+            "prelaunchSampleCount": { "const": 16 },
+            "prelaunchDurationSeconds": { "minimum": 30, "type": "integer" },
+            "immediateIdleGatePassed": { "const": true },
+            "minimumFreeVramMiB": { "type": "integer", "minimum": 0 },
+            "peakUtilizationPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "peakTemperatureC": { "type": "integer", "minimum": 0 },
+            "maximumComputeProcessCount": { "const": 1 },
+            "competingWorkloadObserved": { "const": false }
+          }
+        },
+        "postFailure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["freeVramMiB", "utilizationPercent", "temperatureC", "computeProcessCount", "safeRideScreensPresent", "safeRideContainersPresent"],
+          "properties": {
+            "freeVramMiB": { "minimum": 22000, "type": "integer" },
+            "utilizationPercent": { "const": 0 },
+            "temperatureC": { "type": "integer", "minimum": 0 },
+            "computeProcessCount": { "const": 0 },
+            "safeRideScreensPresent": { "const": false },
+            "safeRideContainersPresent": { "const": false }
+          }
+        },
+        "unrelatedWorkloadStoppedOrModified": { "const": false }
+      }
+    },
+    "decision": {
+      "const": { "strictDecision": "NO-GO", "readyForTwoFullCandidateTraining": false, "nextTechnicalCorrection": "prevent or canonically coalesce the redundant final development evaluation so step 237 has one loss entry, add duplicate-step regression coverage, rebind code and plan hashes, and obtain fresh pilot authorization", "reauthorizationRequired": true }
+    },
+    "privacy": {
+      "const": { "rawPromptsCommitted": false, "rawResponsesCommitted": false, "protectedIdsCommitted": false, "privatePathsCommitted": false, "modelWeightsCommitted": false, "credentialsCommitted": false, "sealedHoldoutRead": false }
+    },
+    "untouched": {
+      "const": { "unrelatedProcesses": true, "unrelatedContainers": true, "unrelatedServices": true, "fullCandidates": true, "selection": true, "promotion": true, "deployment": true, "publication": true, "sealedHoldout": true, "mainBranch": true, "awsTrainingOrDeployment": true, "githubActions": true }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "preflightHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostGpuSnapshotSha256", "launchReceiptSha256", "trainingManifestSha256", "sanitizedLogSha256", "a11ScreenLogSha256", "vpsMonitorLogSha256"],
+      "properties": {
+        "hostGpuSnapshotSha256": { "$ref": "#/$defs/sha256" },
+        "launchReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "trainingManifestSha256": { "$ref": "#/$defs/sha256" },
+        "sanitizedLogSha256": { "$ref": "#/$defs/sha256" },
+        "a11ScreenLogSha256": { "$ref": "#/$defs/sha256" },
+        "vpsMonitorLogSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "pilotHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostGpuSnapshotSha256", "failureReceiptSha256", "blockedTrainingManifestSha256", "sanitizedLogSha256", "a11ScreenLogSha256", "vpsMonitorLogSha256"],
+      "properties": {
+        "hostGpuSnapshotSha256": { "$ref": "#/$defs/sha256" },
+        "failureReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "blockedTrainingManifestSha256": { "$ref": "#/$defs/sha256" },
+        "sanitizedLogSha256": { "$ref": "#/$defs/sha256" },
+        "a11ScreenLogSha256": { "$ref": "#/$defs/sha256" },
+        "vpsMonitorLogSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "completedTiming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startedAt", "finishedAt", "containerWallSeconds", "trainerRuntimeSeconds"],
+      "properties": {
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": "string", "format": "date-time" },
+        "containerWallSeconds": { "type": "number", "minimum": 0 },
+        "trainerRuntimeSeconds": { "type": "number", "minimum": 0 }
+      }
+    },
+    "idleGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampleCount", "durationSeconds", "minimumFreeVramMiB", "peakUtilizationPercent", "maximumComputeProcessCount", "passed"],
+      "properties": {
+        "sampleCount": { "const": 16 },
+        "durationSeconds": { "minimum": 30, "type": "integer" },
+        "minimumFreeVramMiB": { "minimum": 22000, "type": "integer" },
+        "peakUtilizationPercent": { "maximum": 1, "type": "integer" },
+        "maximumComputeProcessCount": { "const": 0 },
+        "passed": { "const": true }
+      }
+    },
+    "runGpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["immediateIdleGatePassed", "minimumFreeVramMiB", "peakUtilizationPercent", "maximumComputeProcessCount", "competingWorkloadObserved"],
+      "properties": {
+        "immediateIdleGatePassed": { "const": true },
+        "minimumFreeVramMiB": { "type": "integer", "minimum": 0 },
+        "peakUtilizationPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maximumComputeProcessCount": { "const": 1 },
+        "competingWorkloadObserved": { "const": false }
+      }
+    }
+  }
+}

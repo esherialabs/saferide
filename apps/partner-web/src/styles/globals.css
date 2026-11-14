@@ -1,0 +1,614 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * SafeRide brand for the HURIA partner dashboard.
+ *
+ * Colours, type and shapes follow the SafeRide website (saferide.esheria.org,
+ * web/src/app/globals.css) and the app tokens (src/theme/tokens.ts): black
+ * ink on white paper, the wordmark's orange/blue/green/yellow highlights as
+ * accents, Mozilla Headline and Mozilla Text (self-hosted woff2, SIL OFL 1.1,
+ * see public/fonts/OFL.txt), 8-pt spacing, 16 px base text.
+ *
+ * Every colour is a token below, redefined for dark mode through
+ * prefers-color-scheme, with an in-memory manual override. All text pairs meet WCAG 2.2 AA (most reach AAA);
+ * borders that identify a control reach 3:1. Values are space-separated RGB
+ * so Tailwind can apply opacity.
+ */
+@layer base {
+  @font-face {
+    font-family: 'Mozilla Text';
+    src: url('/fonts/MozillaText-Regular.woff2') format('woff2');
+    font-display: swap;
+    font-style: normal;
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'Mozilla Text';
+    src: url('/fonts/MozillaText-Bold.woff2') format('woff2');
+    font-display: swap;
+    font-style: normal;
+    font-weight: 600 700;
+  }
+  @font-face {
+    font-family: 'Mozilla Headline';
+    src: url('/fonts/MozillaHeadline-SemiBold.woff2') format('woff2');
+    font-display: swap;
+    font-style: normal;
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Mozilla Headline';
+    src: url('/fonts/MozillaHeadline-Bold.woff2') format('woff2');
+    font-display: swap;
+    font-style: normal;
+    font-weight: 700;
+  }
+
+  :root {
+    color-scheme: light;
+    /* surfaces */
+    --c-canvas: 246 246 244;
+    --c-surface: 255 255 255;
+    --c-surface-2: 241 241 238;
+    --c-surface-3: 232 232 228;
+    /* text */
+    --c-ink: 22 22 22;
+    --c-ink-2: 64 64 62;
+    --c-ink-3: 92 92 88;
+    /* lines */
+    --c-line: 226 226 221;
+    --c-line-strong: 128 128 122;
+    /* actions */
+    --c-primary: 22 22 22;
+    --c-primary-hover: 56 56 54;
+    --c-on-primary: 255 255 255;
+    --c-danger: 180 35 24;
+    --c-danger-hover: 145 28 19;
+    --c-on-danger: 255 255 255;
+    --c-link: 11 87 160;
+    --c-focus: 11 99 206;
+    --c-selected: 22 22 22;
+    --c-on-selected: 255 255 255;
+    /* brand highlights (decorative fills, never text on light) */
+    --c-brand-orange: 248 133 57;
+    --c-brand-orange-strong: 240 108 19;
+    --c-brand-blue: 80 201 240;
+    --c-brand-green: 83 225 124;
+    --c-brand-yellow: 247 236 54;
+    /* tones: background / text / border */
+    --c-info-bg: 230 245 252;
+    --c-info-fg: 7 68 92;
+    --c-info-line: 47 151 194;
+    --c-success-bg: 228 247 234;
+    --c-success-fg: 20 83 45;
+    --c-success-line: 39 160 79;
+    --c-warning-bg: 253 248 214;
+    --c-warning-fg: 87 70 0;
+    --c-warning-line: 184 152 0;
+    --c-error-bg: 253 236 234;
+    --c-error-fg: 127 29 21;
+    --c-error-line: 200 50 38;
+    --c-orange-bg: 255 237 224;
+    --c-orange-fg: 122 50 0;
+    --c-orange-line: 224 102 20;
+    --c-neutral-bg: 238 238 235;
+    --c-neutral-fg: 51 51 49;
+    --c-neutral-line: 150 150 144;
+    --c-backdrop: 10 10 10;
+    --shadow-1: 0 1px 2px rgb(16 16 16 / 0.06), 0 1px 1px rgb(16 16 16 / 0.04);
+    --shadow-2: 0 4px 16px -4px rgb(16 16 16 / 0.12), 0 2px 4px -2px rgb(16 16 16 / 0.06);
+    --shadow-3: 0 24px 48px -12px rgb(16 16 16 / 0.28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --c-canvas: 14 14 15;
+      --c-surface: 24 24 26;
+      --c-surface-2: 32 32 35;
+      --c-surface-3: 44 44 48;
+      --c-ink: 244 244 242;
+      --c-ink-2: 208 208 204;
+      --c-ink-3: 178 178 173;
+      --c-line: 50 50 54;
+      --c-line-strong: 130 130 134;
+      --c-primary: 244 244 242;
+      --c-primary-hover: 214 214 210;
+      --c-on-primary: 18 18 18;
+      --c-danger: 252 129 116;
+      --c-danger-hover: 253 164 154;
+      --c-on-danger: 32 6 4;
+      --c-link: 125 200 248;
+      --c-focus: 125 200 248;
+      --c-selected: 244 244 242;
+      --c-on-selected: 18 18 18;
+      --c-info-bg: 12 45 58;
+      --c-info-fg: 170 226 247;
+      --c-info-line: 80 201 240;
+      --c-success-bg: 13 48 26;
+      --c-success-fg: 167 240 189;
+      --c-success-line: 83 225 124;
+      --c-warning-bg: 52 46 6;
+      --c-warning-fg: 247 236 140;
+      --c-warning-line: 220 206 40;
+      --c-error-bg: 64 20 17;
+      --c-error-fg: 254 202 196;
+      --c-error-line: 248 113 98;
+      --c-orange-bg: 64 32 10;
+      --c-orange-fg: 255 200 160;
+      --c-orange-line: 248 133 57;
+      --c-neutral-bg: 40 40 43;
+      --c-neutral-fg: 222 222 218;
+      --c-neutral-line: 130 130 134;
+      --c-backdrop: 0 0 0;
+      --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+      --shadow-2: 0 6px 20px -6px rgb(0 0 0 / 0.7);
+      --shadow-3: 0 24px 48px -12px rgb(0 0 0 / 0.85);
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .partner-logo-chip {
+      background: rgb(244 244 242);
+    }
+  }
+
+  :root[data-theme="dark"] {
+      color-scheme: dark;
+      --c-canvas: 14 14 15;
+      --c-surface: 24 24 26;
+      --c-surface-2: 32 32 35;
+      --c-surface-3: 44 44 48;
+      --c-ink: 244 244 242;
+      --c-ink-2: 208 208 204;
+      --c-ink-3: 178 178 173;
+      --c-line: 50 50 54;
+      --c-line-strong: 130 130 134;
+      --c-primary: 244 244 242;
+      --c-primary-hover: 214 214 210;
+      --c-on-primary: 18 18 18;
+      --c-danger: 252 129 116;
+      --c-danger-hover: 253 164 154;
+      --c-on-danger: 32 6 4;
+      --c-link: 125 200 248;
+      --c-focus: 125 200 248;
+      --c-selected: 244 244 242;
+      --c-on-selected: 18 18 18;
+      --c-info-bg: 12 45 58;
+      --c-info-fg: 170 226 247;
+      --c-info-line: 80 201 240;
+      --c-success-bg: 13 48 26;
+      --c-success-fg: 167 240 189;
+      --c-success-line: 83 225 124;
+      --c-warning-bg: 52 46 6;
+      --c-warning-fg: 247 236 140;
+      --c-warning-line: 220 206 40;
+      --c-error-bg: 64 20 17;
+      --c-error-fg: 254 202 196;
+      --c-error-line: 248 113 98;
+      --c-orange-bg: 64 32 10;
+      --c-orange-fg: 255 200 160;
+      --c-orange-line: 248 133 57;
+      --c-neutral-bg: 40 40 43;
+      --c-neutral-fg: 222 222 218;
+      --c-neutral-line: 130 130 134;
+      --c-backdrop: 0 0 0;
+      --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+      --shadow-2: 0 6px 20px -6px rgb(0 0 0 / 0.7);
+      --shadow-3: 0 24px 48px -12px rgb(0 0 0 / 0.85);
+    }
+
+  :root[data-theme="dark"] .partner-logo-chip { background: rgb(244 244 242); }
+
+  html {
+    @apply bg-canvas text-ink antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply min-h-screen bg-canvas font-sans text-base leading-relaxed text-ink;
+  }
+  ::selection {
+    background: rgb(var(--c-brand-yellow) / 0.6);
+    color: rgb(22 22 22);
+  }
+  :focus-visible {
+    outline: 3px solid rgb(var(--c-focus));
+    outline-offset: 2px;
+  }
+  [tabindex='-1']:focus {
+    outline: none;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-ink;
+    overflow-wrap: anywhere;
+  }
+  h1 {
+    @apply text-[1.75rem] font-bold leading-tight sm:text-[2rem];
+  }
+  h2 {
+    @apply text-xl font-semibold leading-snug;
+  }
+  h3 {
+    @apply text-base font-semibold;
+  }
+  p,
+  li,
+  dt,
+  dd {
+    overflow-wrap: break-word;
+  }
+  dialog {
+    @apply text-ink;
+  }
+  dialog::backdrop {
+    background: rgb(var(--c-backdrop) / 0.55);
+    backdrop-filter: blur(2px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only absolute left-4 top-4 z-50 inline-flex min-h-target items-center rounded-button bg-surface px-4 font-semibold text-ink shadow-2;
+  }
+
+  /* --- brand -------------------------------------------------------------- */
+  .brand-stripe {
+    @apply flex h-1 w-full;
+  }
+  .brand-stripe > span {
+    @apply h-full flex-1;
+  }
+  .brand-stripe > span:nth-child(1) {
+    background: rgb(var(--c-brand-orange));
+  }
+  .brand-stripe > span:nth-child(2) {
+    background: rgb(var(--c-brand-blue));
+  }
+  .brand-stripe > span:nth-child(3) {
+    background: rgb(var(--c-brand-green));
+  }
+  .brand-stripe > span:nth-child(4) {
+    background: rgb(var(--c-brand-yellow));
+  }
+  .brand-stripe > span:nth-child(5) {
+    background: rgb(var(--c-brand-orange-strong));
+  }
+
+  /* HURIA's PNG has black lettering: in dark mode it sits on a light chip.
+     The chip's padding is kept in light mode too so the lockup never shifts. */
+  .partner-logo {
+    @apply inline-flex shrink-0 items-center rounded-lg p-1;
+  }
+
+  /* --- header ------------------------------------------------------------- */
+  .nav-link {
+    @apply relative inline-flex min-h-target items-center gap-2 rounded-lg px-3 text-[0.9375rem] font-semibold text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink;
+  }
+  .nav-link svg {
+    @apply h-5 w-5;
+  }
+  .nav-link[aria-current='page'] {
+    @apply text-ink;
+  }
+  .nav-link[aria-current='page']::after {
+    @apply absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-ink;
+    content: '';
+  }
+  .avatar {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface-2 font-display text-sm font-bold text-ink;
+  }
+
+  /* --- surfaces ----------------------------------------------------------- */
+  .card {
+    @apply rounded-card border border-line bg-surface p-4 shadow-1 sm:p-6;
+  }
+  .card-header {
+    @apply flex items-center gap-3;
+  }
+  .page-header {
+    @apply flex flex-wrap items-end justify-between gap-4;
+  }
+
+  /* One style for every empty, withdrawn and not-found state. */
+  .empty-state {
+    @apply flex flex-col items-center gap-3 rounded-card border border-dashed border-line-strong/50 bg-surface px-6 py-12 text-center;
+  }
+  .empty-state-icon {
+    @apply mb-1 inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-ink-2;
+  }
+  .empty-state-icon svg {
+    @apply h-6 w-6;
+  }
+
+  /* One style for every loading placeholder (static under reduced motion). */
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-surface-3;
+  }
+  .card-icon {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink;
+  }
+  .eyebrow {
+    @apply text-sm font-semibold text-ink-3;
+  }
+  .meta {
+    @apply text-sm text-ink-3;
+  }
+
+  /* --- buttons and links -------------------------------------------------- */
+  .btn {
+    @apply inline-flex min-h-target min-w-target items-center justify-center gap-2 rounded-button border px-4 py-2 text-base font-semibold leading-tight transition-colors;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+  .btn svg {
+    @apply h-5 w-5 shrink-0;
+  }
+  .btn-primary {
+    @apply btn border-primary bg-primary text-on-primary hover:border-primary-hover hover:bg-primary-hover;
+  }
+  .btn-secondary {
+    @apply btn border-line-strong bg-surface text-ink hover:bg-surface-2;
+  }
+  .btn-quiet {
+    @apply btn border-transparent bg-transparent text-ink hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply btn border-danger bg-danger text-on-danger hover:border-danger-hover hover:bg-danger-hover;
+  }
+  .btn-link {
+    @apply inline-flex min-h-target min-w-target items-center gap-1.5 rounded-md font-semibold text-link underline decoration-2 underline-offset-4 hover:decoration-[3px];
+  }
+  .btn-link svg {
+    @apply h-5 w-5 shrink-0;
+  }
+
+  /* --- forms -------------------------------------------------------------- */
+  .input {
+    @apply block min-h-target w-full rounded-input border border-line-strong bg-surface px-3 py-2 text-base text-ink transition-colors;
+  }
+  .input:hover {
+    @apply border-ink-3;
+  }
+  .input:focus {
+    border-color: rgb(var(--c-focus));
+  }
+  .input[aria-invalid='true'] {
+    @apply border-2 border-error-line;
+  }
+  .label {
+    @apply block font-semibold text-ink;
+  }
+  .hint {
+    @apply mt-1 block text-sm text-ink-3;
+  }
+  .field-error {
+    @apply mt-1 block text-sm font-semibold text-error-fg;
+  }
+
+  /* --- segmented filter (radio inputs + label.pill) ------------------------ */
+  /* Phones: an even grid. From 640 px: one row of segments, sized to their
+     labels (all seven status filters fit on one line at 768 and 1024 px). */
+  .segmented {
+    @apply grid gap-1 rounded-[1.125rem] border border-line bg-surface-2 p-1 sm:inline-flex sm:max-w-full sm:flex-wrap;
+  }
+  .segmented > span {
+    @apply flex;
+  }
+  .segmented-2 {
+    @apply grid-cols-2;
+  }
+  .segmented-3 {
+    @apply grid-cols-3;
+  }
+  .pill {
+    @apply inline-flex min-h-target min-w-target flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-xl px-3 text-sm font-semibold text-ink-2 transition-colors hover:bg-surface hover:text-ink lg:px-4;
+  }
+  .pill-input:checked + .pill {
+    @apply bg-selected text-on-selected shadow-1;
+  }
+  .pill-input:focus-visible + .pill {
+    outline: 3px solid rgb(var(--c-focus));
+    outline-offset: 2px;
+  }
+
+  /* --- status chips: text plus a distinct shape, never colour alone ------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-sm font-semibold;
+  }
+  .chip-new {
+    @apply border-info-line/60 bg-info-bg text-info-fg;
+  }
+  .chip-acknowledged {
+    @apply border-success-line/60 bg-success-bg text-success-fg;
+  }
+  .chip-in_progress {
+    @apply border-warning-line/60 bg-warning-bg text-warning-fg;
+  }
+  .chip-referred_onward {
+    @apply border-orange-line/60 bg-orange-bg text-orange-fg;
+  }
+  .chip-closed {
+    @apply border-neutral-line/60 bg-neutral-bg text-neutral-fg;
+  }
+  .chip-withdrawn {
+    @apply border-dashed border-neutral-line bg-surface text-ink-2;
+  }
+
+  /* --- priority and attention: red always comes with an icon and words ---- */
+  .chip-urgent {
+    @apply border-error-line bg-error-bg text-error-fg;
+  }
+  .chip-urgent svg {
+    @apply h-4 w-4 shrink-0;
+  }
+  .chip-normal {
+    @apply border-neutral-line/60 bg-surface text-ink-2;
+  }
+  .needs-attention {
+    @apply inline-flex items-center gap-2 whitespace-nowrap text-sm font-bold text-error-fg;
+  }
+  .attention-dot {
+    @apply relative inline-flex h-3 w-3 shrink-0;
+  }
+  .attention-ping {
+    @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75;
+  }
+  .attention-core {
+    @apply relative inline-flex h-3 w-3 rounded-full bg-danger;
+  }
+  /* The red left edge of an urgent row or card. */
+  .row-urgent > td:first-child {
+    box-shadow: inset 4px 0 0 rgb(var(--c-danger));
+  }
+  @media (max-width: 639px) {
+    .row-urgent > td.cell-ref {
+      box-shadow: inset 4px 0 0 rgb(var(--c-danger));
+    }
+  }
+  .card-urgent {
+    @apply border-l-4 border-l-danger;
+  }
+  .count-badge {
+    @apply inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-danger px-1.5 font-display text-[0.8125rem] font-bold leading-none text-on-danger;
+  }
+  .attention-banner {
+    @apply border-b border-error-line/60 bg-error-bg text-error-fg;
+  }
+  .attention-banner .btn-link {
+    @apply text-error-fg;
+  }
+
+  /* --- onward-referral statuses (shape + words) --------------------------- */
+  .onward-planned {
+    @apply border-dashed border-neutral-line bg-surface text-ink-2;
+  }
+  .onward-made {
+    @apply border-info-line/60 bg-info-bg text-info-fg;
+  }
+  .onward-accepted {
+    @apply border-success-line/60 bg-success-bg text-success-fg;
+  }
+  .onward-declined {
+    @apply border-orange-line/60 bg-orange-bg text-orange-fg;
+  }
+  .onward-completed {
+    @apply border-success-line bg-surface text-success-fg;
+  }
+  .onward-cancelled {
+    @apply border-neutral-line/60 bg-neutral-bg text-neutral-fg;
+  }
+
+  /* --- at-a-glance counts -------------------------------------------------- */
+  .stat {
+    @apply flex min-w-0 flex-col gap-0.5 rounded-xl border border-line bg-surface px-4 py-3 shadow-1;
+  }
+  .stat-value {
+    @apply font-display text-2xl font-bold leading-none text-ink;
+  }
+  .stat-label {
+    @apply text-sm font-semibold text-ink-3;
+  }
+  .stat-alert {
+    @apply border-error-line/70 bg-error-bg;
+  }
+  .stat-alert .stat-value,
+  .stat-alert .stat-label {
+    @apply text-error-fg;
+  }
+
+  /* Choice cards (onward type, staff picker): a radio plus a full-width label. */
+  .choice {
+    @apply flex min-h-target items-center gap-3 rounded-xl border border-line px-3 transition-colors hover:bg-surface-2 has-[:checked]:border-ink has-[:checked]:bg-surface-2;
+  }
+  .choice > input {
+    @apply h-5 w-5 shrink-0 accent-[rgb(var(--c-ink))];
+  }
+  .choice > label {
+    @apply flex min-h-target flex-1 cursor-pointer items-center gap-3 py-2;
+  }
+
+  /* --- notices ------------------------------------------------------------ */
+  .notice {
+    @apply flex gap-3 rounded-xl border px-4 py-3;
+  }
+  .notice > svg {
+    @apply mt-0.5 h-5 w-5 shrink-0;
+  }
+  .notice-info {
+    @apply border-info-line/50 bg-info-bg text-info-fg;
+  }
+  .notice-success {
+    @apply border-success-line/50 bg-success-bg text-success-fg;
+  }
+  .notice-warning {
+    @apply border-warning-line/60 bg-warning-bg text-warning-fg;
+  }
+  .notice-error {
+    @apply border-error-line/60 bg-error-bg text-error-fg;
+  }
+  .notice .btn-secondary {
+    @apply text-ink;
+  }
+
+  /* --- table -------------------------------------------------------------- */
+  .data-table th {
+    @apply px-4 py-3 text-left text-sm font-semibold text-ink-3;
+  }
+  .data-table td {
+    @apply px-4 py-2 align-middle;
+  }
+  .data-table tbody tr {
+    @apply border-t border-line transition-colors hover:bg-surface-2;
+  }
+  .data-table tbody tr[data-href] {
+    @apply cursor-pointer;
+  }
+
+  /* --- definition rows ---------------------------------------------------- */
+  .kv-row {
+    @apply border-b border-line py-3 last:border-0 sm:grid sm:grid-cols-3 sm:gap-4;
+  }
+  .kv-row > dt {
+    @apply font-semibold text-ink-2;
+  }
+  .kv-row > dd {
+    @apply mt-1 whitespace-pre-wrap break-words text-ink sm:col-span-2 sm:mt-0;
+  }
+
+  /* Case actions: a sticky column on wide screens (scrolls on its own when
+     taller than the window); stacks under the case on phones and tablets. */
+  @media (min-width: 1024px) {
+    .case-actions {
+      position: sticky;
+      top: 5.75rem;
+      max-height: calc(100vh - 7rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      /* room for focus rings inside the scrolling column */
+      margin: -6px;
+      padding: 6px;
+    }
+  }
+
+  .spinner {
+    @apply h-5 w-5 shrink-0 animate-spin;
+  }
+}

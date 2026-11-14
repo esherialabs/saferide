@@ -7,6 +7,7 @@ import { Badge, Card, CardContent, FeatureHeader, type FeatureHeaderStat } from 
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { borders, radii, spacing, typography } from '../theme/tokens';
 import { getCatalogInfo } from '../lib/catalog';
+import { LEGAL_LINKS } from '../config/legalLinks';
 
 type CatalogRow = {
   label: string;
@@ -74,7 +75,7 @@ export default function AboutLegalScreen() {
       width: 42,
     },
     title: {
-      ...typography.titleSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
       flex: 1,
     },
@@ -87,7 +88,7 @@ export default function AboutLegalScreen() {
     },
     catalogRow: {
       alignItems: 'center',
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.privacyMuted,
       borderColor: colors.divider,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
@@ -97,14 +98,6 @@ export default function AboutLegalScreen() {
       overflow: 'hidden',
       paddingHorizontal: spacing.sm,
       position: 'relative',
-    },
-    cardAccentLeft: {
-      backgroundColor: colors.primary,
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
     },
     catalogCopy: {
       flex: 1,
@@ -179,11 +172,11 @@ export default function AboutLegalScreen() {
               SafeRide provides information and workflow support. It is not a lawyer, clinician, counsellor, emergency responder, or provider. For legal or medical guidance, contact a qualified professional or support organization.
             </Text>
             <View style={styles.linkRow}>
-              <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL('https://example.com/terms')}>
+              <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(LEGAL_LINKS.terms)}>
                 <Ionicons name="document-text-outline" size={15} color={colors.primary} />
                 <Text style={styles.linkText}>Terms</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL('https://example.com/privacy')}>
+              <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(LEGAL_LINKS.privacy)}>
                 <Ionicons name="shield-outline" size={15} color={colors.primary} />
                 <Text style={styles.linkText}>Privacy</Text>
               </TouchableOpacity>
@@ -202,7 +195,6 @@ export default function AboutLegalScreen() {
             <View style={styles.catalogGrid}>
               {catalogRows.map(row => (
                 <View key={row.label} style={styles.catalogRow}>
-                  <View pointerEvents="none" style={styles.cardAccentLeft} />
                   <Ionicons name={row.icon} size={17} color={colors.primary} />
                   <View style={styles.catalogCopy}>
                     <Text style={styles.catalogLabel}>{row.label}</Text>

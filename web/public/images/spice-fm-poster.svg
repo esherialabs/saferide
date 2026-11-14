@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="t">
+  <title id="t">Watch the clip on Facebook</title>
+  <rect width="1200" height="900" fill="#F7EC36"/>
+  <rect y="620" width="1200" height="280" fill="#53E17C"/>
+  <circle cx="600" cy="230" r="130" fill="#F88539" stroke="#0D1B12" stroke-width="12"/>
+  <circle cx="600" cy="230" r="80" fill="none" stroke="#0D1B12" stroke-width="10" stroke-dasharray="4 22" stroke-linecap="round"/>
+  <g font-family="Helvetica, Arial, sans-serif" fill="#0D1B12" font-weight="700" text-anchor="middle">
+    <text x="600" y="730" font-size="78" letter-spacing="-1">Watch the clip</text>
+    <text x="600" y="820" font-size="78" letter-spacing="-1">on Facebook</text>
+  </g>
+</svg>

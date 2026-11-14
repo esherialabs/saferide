@@ -77,7 +77,7 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(({
         return {
           ...baseStyle,
           backgroundColor: colors.surface,
-          borderColor: colors.divider,
+          borderColor: colors.input,
         };
     }
   };
@@ -152,6 +152,7 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(({
           style={[styles.input, inputStyle]}
           placeholderTextColor={colors.textTertiary}
           editable={!disabled}
+          accessibilityLabel={label}
           multiline
           scrollEnabled={resize !== 'none'}
           onFocus={handleFocus}

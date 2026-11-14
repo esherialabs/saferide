@@ -7,7 +7,7 @@ export const metadata = pageMetadata({
   title: 'Our Story: Why We Built SafeRide',
   absoluteTitle: true,
   description:
-    'Why Esheria built SafeRide: everyday transport risk in Nairobi, survivor-controlled design, and open, accountable technology.',
+    'Why Esheria built SafeRide, and how the work moved from Nairobi design into a supervised HURIA pilot in Mombasa.',
   path: '/story',
   image: INTERIOR_PAGES['story'].ogImage,
   imageAlt: INTERIOR_PAGES['story'].imageAlt,

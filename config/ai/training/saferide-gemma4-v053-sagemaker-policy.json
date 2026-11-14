@@ -1,0 +1,68 @@
+{
+  "schema": "com.saferide.ai.v05-sagemaker-policy",
+  "schemaVersion": 1,
+  "backend": "aws-sagemaker-training-job",
+  "region": "eu-central-1",
+  "instance": {
+    "type": "ml.g5.xlarge",
+    "count": 1,
+    "volumeSizeGb": 80,
+    "quotaCode": "L-B6D80D9C"
+  },
+  "storage": {
+    "serverSideEncryption": "AES256",
+    "bucketVersioningRequired": true,
+    "publicAccessBlockRequired": true,
+    "checkpointSyncRequired": true
+  },
+  "container": {
+    "python": "3.12",
+    "entrypoint": "scripts/saferide-gemma4-v05-sagemaker-entrypoint.py",
+    "requirements": "requirements-ai-smoke.txt",
+    "constraints": "constraints-ai-training.txt",
+    "networkDownloadAllowed": false
+  },
+  "security": {
+    "networkIsolation": true,
+    "interContainerTrafficEncryption": true,
+    "restrictedInputsForbidden": true,
+    "rawContentLoggingForbidden": true
+  },
+  "training": {
+    "baseModelId": "google/gemma-4-E2B-it",
+    "baseRevision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+    "pilot": {
+      "rows": 2088,
+      "seed": 419805,
+      "learningRates": [0.00001],
+      "epochs": 1
+    },
+    "candidate": {
+      "trainRows": 1832,
+      "devRows": 300,
+      "seeds": [419805, 419806],
+      "epochs": 1
+    },
+    "fixed": {
+      "maxSequenceLength": 1024,
+      "trainBatchSize": 1,
+      "evalBatchSize": 1,
+      "gradientAccumulationSteps": 8,
+      "loraRank": 8,
+      "loraAlpha": 16,
+      "loraDropout": 0.05,
+      "warmupRatio": 0.03,
+      "scheduler": "cosine",
+      "evalSteps": 25,
+      "saveSteps": 25,
+      "earlyStoppingPatience": 3,
+      "gradientCheckpointing": true
+    }
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "holdoutsAvailableToTraining": false,
+    "blindSuiteAvailableToTraining": false,
+    "reviewerIdentityIncluded": false
+  }
+}

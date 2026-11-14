@@ -35,6 +35,18 @@ count, publication policy, and SHA-256 ledger. The public `LICENSE` and `NOTICE`
 are substituted only into the clean snapshot; the restricted private
 repository remains all rights reserved.
 
+## Verification and publication procedure
+
+GitHub Actions is unavailable for the organisation, so the two required checks are
+run by `scripts/public-verify.mjs` on the maintainers' server (see
+`docs/open-source/local-verification.md`). A refresh is published in this order:
+merge the pending fixes privately; rebuild the snapshot from `main` (no
+`--allow-non-main`); run `npm run verify:public -- --snapshot <snapshot>`; commit the
+snapshot on a branch of the public repository and open a pull request with the
+evidence attached; get one approving review from someone other than the author; post
+the two statuses on the pull request head; merge with a merge commit; restore the
+branch protection; record the public commit in the private release docs.
+
 See `OPEN_SOURCE.md`, `CONTENT-LICENSE.md`, `MODEL-DATA-LICENSES.md`,
 `ASSET-LICENSES.md`, and `TRADEMARKS.md` for the complete rights boundary.
 

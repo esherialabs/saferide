@@ -54,7 +54,7 @@ describe('remote draft privacy gate', () => {
     expect(repository.upsertDraft).not.toHaveBeenCalled();
     expect(audit.auditEvent).toHaveBeenCalledWith({
       action: 'draft.remote_write', resourceClass: 'draft', requestId: 'request-1', outcome: 'denied',
-      policyVersion: 'privacy-controls.2026-07-30.2',
+      policyVersion: 'privacy-controls.2026-10-22.pilot.1',
     });
   });
 });

@@ -3,6 +3,7 @@ import { authClient } from '../lib/auth/authClient';
 import {
   confirmRemoteConsentWithdrawal,
   type ConsentLedgerEntry,
+  requiresRemoteWithdrawal,
   withdrawConsent as withdrawLocalConsent,
 } from '../utils/consentLedger';
 
@@ -23,11 +24,43 @@ async function requireOwnedApiToken(): Promise<void> {
   setAuthToken(token);
 }
 
+export type ServerConsentRecord = {
+  id: string;
+  purpose: string;
+  status: string;
+};
+
+/** GET /api/privacy/consents: the survivor's consent records held by the server. */
+export async function listServerConsents(): Promise<ServerConsentRecord[]> {
+  await requireOwnedApiToken();
+  const result = await request<{ consents?: Array<Record<string, unknown>> }>({ path: '/privacy/consents' });
+  return (result?.consents ?? [])
+    .filter(row => typeof row.id === 'string' && typeof row.purpose === 'string' && typeof row.status === 'string')
+    .map(row => ({ id: row.id as string, purpose: row.purpose as string, status: row.status as string }));
+}
+
+/** POST /api/privacy/consents/:id/withdraw. Idempotent on the server. */
+export async function withdrawServerConsent(consentId: string): Promise<void> {
+  await requireOwnedApiToken();
+  const result = await request<{ withdrawal?: { status?: string } }>({
+    path: `/privacy/consents/${encodeURIComponent(consentId)}/withdraw`,
+    method: 'POST',
+  });
+  if (result.withdrawal?.status !== 'withdrawn') {
+    throw new Error('Consent service returned an invalid withdrawal acknowledgement.');
+  }
+}
+
+/**
+ * Withdraws a consent for future processing. Server-held purposes
+ * (anonymous aggregate signals and partner sharing) are withdrawn on the
+ * server too; until that is confirmed the local record stays "pending".
+ */
 export async function withdrawConsentForFutureProcessing(
   consentId: string,
 ): Promise<{ consent: ConsentLedgerEntry; remote: 'not_applicable' | 'confirmed' }> {
   const local = await withdrawLocalConsent(consentId);
-  if (local.purpose !== 'anonymous_aggregate') {
+  if (!requiresRemoteWithdrawal(local.purpose)) {
     return { consent: local, remote: 'not_applicable' };
   }
   if (local.remoteWithdrawalStatus === 'confirmed') {
@@ -35,14 +68,7 @@ export async function withdrawConsentForFutureProcessing(
   }
 
   try {
-    await requireOwnedApiToken();
-    const result = await request<{ withdrawal?: { status?: string } }>({
-      path: `/privacy/consents/${encodeURIComponent(consentId)}/withdraw`,
-      method: 'POST',
-    });
-    if (result.withdrawal?.status !== 'withdrawn') {
-      throw new Error('Consent service returned an invalid withdrawal acknowledgement.');
-    }
+    await withdrawServerConsent(consentId);
     const confirmed = await confirmRemoteConsentWithdrawal(consentId);
     return { consent: confirmed, remote: 'confirmed' };
   } catch (error) {

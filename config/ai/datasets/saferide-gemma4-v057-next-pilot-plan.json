@@ -1,0 +1,173 @@
+{
+  "schema": "com.saferide.ai.v057-next-pilot-plan",
+  "schemaVersion": 1,
+  "planId": "saferide-v057-next-pilot-f16c071a0bad06f5",
+  "issue": "ESH-4198",
+  "status": "vps-validated-gpu-pilot-pending",
+  "datasetId": "saferide-synthetic-guidance-v0.5.7",
+  "sourceCommit": "c2d8afc6f392b90c81ebbbef3856406ccc299902",
+  "historicalDecision": {
+    "decision": "NO-GO",
+    "v054ResultSha256": "c5f6c3d6943202955d323327d80f98c019734cd495e8e21c7997569af5e4211d",
+    "v055ResultSha256": "e667553a2d2664e33ff94d2906cafd26b338bece14459084a72ad4a52e9e84f0",
+    "v056ResultSha256": "c55bf04bca6f614030aa09eaa36a31d7dd4a3f9152c1fb0341c212380cdf4ba3",
+    "rewritten": false
+  },
+  "dataset": {
+    "manifestId": "saferide-v057-mitigation-51d60d088c8ca852",
+    "frozenManifestSha256": "f16c071a0bad06f5b425db9e2feb899c958497fcc0d0e7a59b02316e60a8e6d5",
+    "frozenDatasetBuilderSha256": "31ac8dc0e1d97f89afaf48a7597c068cd8c88840bc767a8abed989b6680d7a9a",
+    "weightedTrainSha256": "795a11581895487825067c6d518d636e9091f768d285dd99f6cd49d1af170766",
+    "uniqueTrainSha256": "8e9dd7892bcacfc636282d3bfd2fe7e222216f9daa443ee21ce5e268b776edb1",
+    "newMitigationTrainSha256": "9dd1b91a5cb14c06cb52e1418dfd71f0da3aeb86108d0266d1265194a307b3c5",
+    "trainingRecipeSha256": "27fc238c2086f75b0159dd599c9ddcea9aafa87db4a45b91c4c13459bc7f32f3",
+    "datasetAuditSha256": "d65b7ef2fde0746ac288e378651cc8fe3ac32ce81d110b04d4a1981ec8c0ba55",
+    "semanticReportSha256": "93f6731ffacb6eae961eebe02f1c55140fe9806f614ab547206ce8215510cc62",
+    "tokenizationReportSha256": "907c8b36422f498a9fde4bbab529a88600de0962753fa8d9715518ebe4fa4fc1",
+    "registerSha256": "b4e7f2483cc00b42d782a0e740f11ea7f43269dc8531ab093f7e95863579c876",
+    "sampleOrderSha256": "c902922f16eb37cfed5e897a5922b08e3cfa973db27fb745ca752a26a0fbc76c",
+    "sourceV056FrozenManifestSha256": "9900b4d55eef76d5dcc2deead3a5586695f08aaaea38ebbe6783ee5f23138dc0",
+    "sourceV056CombinedTrainSha256": "02688c26f0a89f070350f8c92d4b7937750beff2f6fae1d977b0d60f5011c2d7",
+    "sourceV056NewMitigationTrainSha256": "54f311799a13e4d6d894a8e43447710b84cd8fff0461645760243b1b155b3b54",
+    "uniqueRows": 72,
+    "weightedExamples": 104,
+    "newRows": 16,
+    "newFamilies": 8
+  },
+  "fixedSuites": {
+    "originalDevelopment": {
+      "rows": 300,
+      "sha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+      "mutated": false,
+      "usedForTraining": false
+    },
+    "mitigationDevelopment": {
+      "rows": 20,
+      "sha256": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd",
+      "mutated": false,
+      "usedForTraining": false
+    },
+    "sealedHoldout": {
+      "sha256": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4",
+      "readDuringRemediation": false,
+      "usedForTraining": false
+    }
+  },
+  "recipe": {
+    "initialization": "immutable-v0.5.6-adapter",
+    "initialAdapterTensorSha256": "6894f08954364b6a883bf39642d113de0fa7c17670811d41ab35bc22e5cb61c4",
+    "initialAdapterTensorSizeBytes": 48376416,
+    "initialAdapterInventorySha256": "7f5715a366c323bbf6da67f8e1ed5c219d697af83ab3a126c52b1366561656f1",
+    "initialAdapterFileCount": 6,
+    "initialAdapterTotalBytes": 80584074,
+    "seed": 419805,
+    "epochs": 1,
+    "learningRate": 0.000005,
+    "scheduler": "cosine",
+    "warmupRatio": 0.03,
+    "trainBatchSize": 1,
+    "evaluationBatchSize": 1,
+    "gradientAccumulationSteps": 8,
+    "effectiveBatchSize": 8,
+    "maxGradientNorm": 1.0,
+    "loggingSteps": 1,
+    "evaluationSteps": 13,
+    "saveSteps": 13,
+    "maximumSequenceLength": 1024,
+    "optimizerSteps": 13,
+    "weightedExamples": 104,
+    "assistantOnlyLoss": true,
+    "lora": {
+      "rank": 8,
+      "alpha": 16,
+      "dropout": 0.05,
+      "targetModuleCount": 205
+    },
+    "replayMultipliers": {
+      "v054": 1,
+      "v056": 1,
+      "v057": 3
+    },
+    "selectionMetric": "minimum-finite-development-assistant-token-loss",
+    "singlePilotOnly": true,
+    "retryAllowed": false
+  },
+  "generation": {
+    "maxNewTokens": 192,
+    "terminatorIds": [1, 106, 50],
+    "terminatorSource": "pinned-model-generation-config",
+    "zeroTruncationRequired": true
+  },
+  "runtime": {
+    "baseModel": {
+      "modelId": "google/gemma-4-E2B-it",
+      "revision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+      "fileCount": 9,
+      "totalBytes": 10278846140,
+      "files": [
+        {"path": ".gitattributes", "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930", "sizeBytes": 1570},
+        {"path": "README.md", "sha256": "be82a1570493c695dd2da37dcf80f2c3fca7e7d5bdf25eacebb0acef0c3a3758", "sizeBytes": 26744},
+        {"path": "chat_template.jinja", "sha256": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082", "sizeBytes": 17336},
+        {"path": "config.json", "sha256": "1b28f3d2c3100f6c594754b81107428bd7b822a7f48272ca681dae9d2ec38330", "sizeBytes": 4954},
+        {"path": "generation_config.json", "sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de", "sizeBytes": 208},
+        {"path": "model.safetensors", "sha256": "2db5482b20d746879bb3ef79b5203e9075a2e2b98f54ec7c2f281c1477ddc550", "sizeBytes": 10246621918},
+        {"path": "processor_config.json", "sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c", "sizeBytes": 1689},
+        {"path": "tokenizer.json", "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f", "sizeBytes": 32169626},
+        {"path": "tokenizer_config.json", "sha256": "90c3a3ba5bf53818383a58e1a776cbcacd2a038d4812eaa373e1522f2d06f3df", "sizeBytes": 2095}
+      ]
+    },
+    "image": {
+      "archiveSha256": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf",
+      "archiveSizeBytes": 3350200320,
+      "runtimeManifestDigest": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca",
+      "runtimeConfigDigest": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87",
+      "platform": "linux/amd64",
+      "launcherSourceCommit": "26a83d00b37d3aa089088aff5fdd7c1f07ecba6c",
+      "title": "SafeRide Gemma 4 E2B v0.5-series SageMaker trainer"
+    }
+  },
+  "codeBindings": [
+    {"path": "constraints-ai-training.txt", "sha256": "cc72b90a33ba85dec6f2a3dd8cec14947e2fab403013bd6548bef06f2be547c2"},
+    {"path": "requirements-ai-smoke.txt", "sha256": "f1ae68fc00c930250c14903c34a5580aa016eab5eccac6b116958f74776370b2"},
+    {"path": "config/ai/datasets/saferide-gemma4-v057-mitigation-plan.json", "sha256": "c25c9324bdaea400e0d5a72974ebc938c1d3552ab4aceea9f1081330d325eb80"},
+    {"path": "docs/qa/saferide-gemma4-v057-private-adjudication-2026-08-09.json", "sha256": "ccad955cc6654a003eedcb554faa15b1b872087fa30878bbcae59a4ba73770bd"},
+    {"path": "schemas/ai-v057-private-adjudication.schema.json", "sha256": "a2405216affc81445d1dcb1e7b24b4c03211940023cbac81198fbb1625ba991c"},
+    {"path": "schemas/ai-v057-mitigation-plan.schema.json", "sha256": "9d0b04f42eee78365298ba87fe3d88bb38c2a43e0f4c781b283ead3e172eb647"},
+    {"path": "schemas/ai-v057-next-pilot-plan.schema.json", "sha256": "f532b5434c992b0e366273662834144d9d20ffc93601f1bb532f0bc185ec5bef"},
+    {"path": "schemas/ai-v057-pilot-panel-summary.schema.json", "sha256": "c1fa44a4e22f7a78570bd377a6ae30f0050a97364ba3e9d98e1d1c3997bd5f4a"},
+    {"path": "schemas/ai-v057-final-targeted-result.schema.json", "sha256": "2a9341c90ee375cf57e1b0c3f9cda6e7c2b9ae3234ae47747697ea9eaf7d3ad9"},
+    {"path": "scripts/saferide-gemma4-finetune-runner.py", "sha256": "71bee51c9760fd08492436ab5138e4f63b9f889fcaecb7a3677bda8805768ffe"},
+    {"path": "scripts/saferide-gemma4-v05-development-panel.py", "sha256": "2800ffaf9b8f00132fc7b292c7e151602f74cde755c38cbf3f4ecbda3305d186"},
+    {"path": "scripts/saferide-gemma4-v051-development-panel.py", "sha256": "51b1a18eaacd66ae29d8d0826871f922c1517a18e8af28134fa14f943ec127c8"},
+    {"path": "scripts/saferide-gemma4-v052-diagnose.py", "sha256": "872632822ec7b42b3df1011562dcfe6ba5ac1d3c6a2c9b5e943b0849c44a6992"},
+    {"path": "scripts/saferide-gemma4-v053-dataset.py", "sha256": "a8fdc1f753b0376099e7dcfa6bd9555e25f69952cfd0c957ca2ad92da74ceab7"},
+    {"path": "scripts/saferide-gemma4-v053-pilot-panel.py", "sha256": "a34fd64bd4d90a68b705ed8d235e5df79793bb119b3126cc234a47607e1c464b"},
+    {"path": "scripts/saferide-gemma4-v053-portable-launcher.py", "sha256": "6de9d79b474a274d8f36d50d30b58063bb724bdb70c517ba9779e308fe9001ca"},
+    {"path": "scripts/saferide-gemma4-v054-dataset.py", "sha256": "810cdb17d8f24a7f8f16a277f760783dcd54527cb9ee965a401d34160e702b50"},
+    {"path": "scripts/saferide-gemma4-v054-remediation.py", "sha256": "b075113900c1ffad8be05dcba5b9feaeed11ea31a157a936424edc301f2e7f4c"},
+    {"path": "scripts/saferide-gemma4-v055-remediation.py", "sha256": "e8ae090b510d59c9346f5162f323d27dedbc5708f8e04959b0f2653e47402b63"},
+    {"path": "scripts/saferide-gemma4-v056-dataset.py", "sha256": "3a72ec0798392e8e6ead00e822cd5aef3f145211393d161597eed85c9a0a5e75"},
+    {"path": "scripts/saferide-gemma4-v056-gpu-launcher.py", "sha256": "a2807779cbd1a239e73862ab1cb269772d49434029a26d18e42ddfdf0c7f980b"},
+    {"path": "scripts/saferide-gemma4-v056-pilot-panel.py", "sha256": "1c9769985a3093615dccbc28df7b916bd552ee18ac77a4c0311f04e7c84f3b53"},
+    {"path": "scripts/saferide-gemma4-v056-remediation.py", "sha256": "eb6be2b576b67e731a132a50b668d6844b8694c50017e55be1bb67eaa59206b7"},
+    {"path": "scripts/saferide-gemma4-v057-dataset.py", "sha256": "31ac8dc0e1d97f89afaf48a7597c068cd8c88840bc767a8abed989b6680d7a9a"},
+    {"path": "scripts/saferide-gemma4-v057-remediation.py", "sha256": "d9b5d94949416a55abc2868b7fb2966ef9f0db778a2eb4d99c4c9c09a8704321"},
+    {"path": "scripts/saferide-gemma4-v057-training.py", "sha256": "4a9470505fb2ef6907f1736fc3690ce594209e0ae0342a87b42f115b9d85b7aa"},
+    {"path": "scripts/saferide-gemma4-v057-finetune-runner.py", "sha256": "4c1687aaa4bb902eeb93fd5887b3c6d921fd7994e30f258e67ec19b2c5bc3ed3"},
+    {"path": "scripts/saferide-gemma4-v057-pilot-panel.py", "sha256": "5d3411afe305e69d612bc3411ecdfcd5b52accfed6b63722bea31d7e01ce0485"},
+    {"path": "scripts/saferide-gemma4-v057-gpu-launcher.py", "sha256": "6a4f7d620b8be862a5516e6364078685b32daedcbc276169c82f04214cb55d94"},
+    {"path": "scripts/saferide-gemma4-v057-next-pilot-check.mjs", "sha256": "66ad5e7da72fcf442dbc3abf2955a95855cf5d593a0294a3a0d19a002c16eede"}
+  ],
+  "scope": {
+    "vpsValidationComplete": true,
+    "gpuExecutionPerformed": false,
+    "trainingPerformed": false,
+    "modelDownloadsPerformed": false,
+    "deploymentPerformed": false,
+    "publicationPerformed": false,
+    "modelFixedClaimed": false,
+    "fullCandidateAuthorized": false,
+    "promotionAuthorized": false
+  },
+  "strictDecision": "NO-GO-PENDING-ONE-GPU-PILOT"
+}

@@ -11,6 +11,9 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultPolicyPath = path.join(repoRoot, 'config/ai/training/saferide-gemma4-v05-sagemaker-policy.json');
+const v051PolicyPath = path.join(repoRoot, 'config/ai/training/saferide-gemma4-v051-sagemaker-policy.json');
+const v052PolicyPath = path.join(repoRoot, 'config/ai/training/saferide-gemma4-v052-sagemaker-policy.json');
+const v053PolicyPath = path.join(repoRoot, 'config/ai/training/saferide-gemma4-v053-sagemaker-policy.json');
 const policySchemaPath = path.join(repoRoot, 'schemas/ai-v05-sagemaker-policy.schema.json');
 const inputSchemaPath = path.join(repoRoot, 'schemas/ai-v05-sagemaker-input-manifest.schema.json');
 const launchSchemaPath = path.join(repoRoot, 'schemas/ai-v05-sagemaker-launch-plan.schema.json');
@@ -21,6 +24,27 @@ const expectedModelFiles = [
   '.gitattributes', 'README.md', 'chat_template.jinja', 'config.json', 'generation_config.json',
   'model.safetensors', 'processor_config.json', 'tokenizer.json', 'tokenizer_config.json',
 ];
+
+function datasetVersion(datasetId) {
+  if (datasetId.endsWith('0.5.3')) return 'v053';
+  if (datasetId.endsWith('0.5.2')) return 'v052';
+  if (datasetId.endsWith('0.5.1')) return 'v051';
+  return 'v05';
+}
+
+function expectedTrainRows(datasetId) {
+  if (datasetId.endsWith('0.5.3')) return 1832;
+  if (datasetId.endsWith('0.5.2')) return 1768;
+  if (datasetId.endsWith('0.5.1')) return 1720;
+  return 1600;
+}
+
+function datasetTag(datasetId) {
+  if (datasetId.endsWith('0.5.3')) return 'v0.5.3';
+  if (datasetId.endsWith('0.5.2')) return 'v0.5.2';
+  if (datasetId.endsWith('0.5.1')) return 'v0.5.1';
+  return 'v0.5';
+}
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -88,9 +112,13 @@ function assertValid(label, errors) {
 
 export function validateSageMakerPolicy(policy) {
   const errors = schemaFindings('policy', validatePolicySchema, policy);
-  if (policy.training?.pilot?.learningRates?.join(',') !== '0.00001,0.00002') errors.push('policy pilot learning-rate order must remain 1e-5 then 2e-5');
-  if (policy.training?.candidate?.trainRows !== 1600 || policy.training?.candidate?.devRows !== 300) errors.push('policy must train on 1,600 rows and evaluate on 300 development rows');
+  const trainRows = policy.training?.candidate?.trainRows;
+  const expectedPilotRates = trainRows === 1832 ? '0.00001' : trainRows === 1768 ? '0.00002' : '0.00001,0.00002';
+  const expectedQuotaCodes = { 'ml.g5.xlarge': 'L-B6D80D9C' };
+  if (policy.training?.pilot?.learningRates?.join(',') !== expectedPilotRates) errors.push('policy pilot learning-rate recipe differs from its governed dataset version');
+  if (![1600, 1720, 1768, 1832].includes(trainRows) || policy.training?.candidate?.devRows !== 300) errors.push('policy must bind a governed v0.5-series train count and evaluate on 300 development rows');
   if (policy.instance?.count !== 1) errors.push('single-GPU deterministic training requires exactly one instance');
+  if (policy.instance?.quotaCode !== expectedQuotaCodes[policy.instance?.type]) errors.push('policy quota code must identify the governed SageMaker training-job quota for the instance type');
   return errors;
 }
 
@@ -169,6 +197,12 @@ export function buildLaunchPlan({
 }) {
   assertValid('SageMaker policy', validateSageMakerPolicy(policy));
   assertValid('SageMaker input manifest', validateInputManifest(inputManifest));
+  const requiredTrainRows = expectedTrainRows(inputManifest.datasetId);
+  if (policy.training?.candidate?.trainRows !== requiredTrainRows) throw new Error(`SageMaker policy train-row count must be ${requiredTrainRows} for the staged dataset`);
+  if (inputManifest.datasetId.endsWith('0.5.2') && runKind === 'candidate') throw new Error('v0.5.2 full candidate submission is not authorized');
+  if (inputManifest.datasetId.endsWith('0.5.2') && runKind === 'pilot' && Number(learningRate) !== 2e-5) throw new Error('v0.5.2 pilot must use the frozen 2e-5 learning rate');
+  if (inputManifest.datasetId.endsWith('0.5.3') && runKind === 'candidate') throw new Error('v0.5.3 full candidate submission is not authorized');
+  if (inputManifest.datasetId.endsWith('0.5.3') && runKind === 'pilot' && Number(learningRate) !== 1e-5) throw new Error('v0.5.3 pilot must use the frozen 1e-5 learning rate');
   if (datasetSourceCommit !== inputManifest.sourceCommit || !commitPattern.test(datasetSourceCommit)) throw new Error('dataset source commit must equal the staged input source commit');
   if (!commitPattern.test(launcherSourceCommit)) throw new Error('launcher source commit must be an immutable 40-character Git commit');
   if (!shaPattern.test(inputManifestSha256) || fileSha256(inputManifestPath) !== inputManifestSha256) throw new Error('input-manifest file hash is missing or stale');
@@ -180,7 +214,7 @@ export function buildLaunchPlan({
   const plan = {
     schema: 'com.saferide.ai.v05-sagemaker-launch-plan',
     schemaVersion: 1,
-    launchId: `saferide-v05-sagemaker-launch-${runId.replace(/^saferide-v05-/, '')}`,
+    launchId: `saferide-${datasetVersion(inputManifest.datasetId)}-sagemaker-launch-${runId.replace(/^saferide-v05(?:1|2|3)?-/, '')}`,
     createdAt,
     launcherSourceCommit,
     datasetSourceCommit,
@@ -228,12 +262,13 @@ export function buildLaunchPlan({
   return plan;
 }
 
-export function buildTrainingJobSpec(plan, inputManifest, inputManifestSha256) {
+export function buildTrainingJobSpec(plan, inputManifest, inputManifestSha256, policy = readJson(defaultPolicyPath)) {
   assertValid('SageMaker launch plan', schemaFindings('launchPlan', validateLaunchSchema, plan));
   assertValid('SageMaker input manifest', validateInputManifest(inputManifest));
   if (plan.inputManifest.sha256 !== inputManifestSha256) throw new Error('launch plan input-manifest hash is stale');
   if (plan.datasetSourceCommit !== inputManifest.sourceCommit) throw new Error('launch plan dataset source commit is stale');
-  const policy = readJson(defaultPolicyPath);
+  const requiredTrainRows = expectedTrainRows(inputManifest.datasetId);
+  if (policy.training?.candidate?.trainRows !== requiredTrainRows) throw new Error(`SageMaker policy train-row count must be ${requiredTrainRows} for the staged dataset`);
   const fixed = policy.training.fixed;
   const hyperParameters = {
     'run-kind': plan.runKind,
@@ -298,7 +333,7 @@ export function buildTrainingJobSpec(plan, inputManifest, inputManifestSha256) {
     Tags: [
       { Key: 'Project', Value: 'SafeRide' },
       { Key: 'Issue', Value: 'ESH-4198' },
-      { Key: 'Dataset', Value: 'v0.5' },
+      { Key: 'Dataset', Value: datasetTag(plan.datasetId) },
       { Key: 'RunKind', Value: plan.runKind },
       { Key: 'DataClassification', Value: 'ControlledTrainingInput' },
     ],
@@ -410,6 +445,9 @@ export function remotePreflight({ profile, plan, inputManifest, policy }) {
 function contractCheck() {
   const policy = readJson(defaultPolicyPath);
   assertValid('SageMaker policy', validateSageMakerPolicy(policy));
+  assertValid('SageMaker v0.5.1 policy', validateSageMakerPolicy(readJson(v051PolicyPath)));
+  assertValid('SageMaker v0.5.2 policy', validateSageMakerPolicy(readJson(v052PolicyPath)));
+  assertValid('SageMaker v0.5.3 policy', validateSageMakerPolicy(readJson(v053PolicyPath)));
   const requiredFiles = [
     'scripts/saferide-gemma4-v05-sagemaker-entrypoint.py',
     'scripts/saferide-gemma4-v05-sagemaker-stage.py',
@@ -436,8 +474,8 @@ function usage() {
     'Usage:',
     '  node scripts/saferide-gemma4-v05-sagemaker.mjs contract-check',
     '  node scripts/saferide-gemma4-v05-sagemaker.mjs verify-inputs --manifest <json> [--archive <tar.gz>] [--model-root <dir>]',
-    '  node scripts/saferide-gemma4-v05-sagemaker.mjs build-plan --manifest <json> --manifest-s3-uri <s3> --manifest-version-id <id> --dataset-source-commit <sha> --launcher-source-commit <sha> --run-kind <kind> --run-id <id> --seed <n> --learning-rate <n> --role-arn <arn> --image-uri <uri> --image-digest <sha> --output-s3-uri <s3> --checkpoint-s3-uri <s3> --output <json>',
-    '  node scripts/saferide-gemma4-v05-sagemaker.mjs build-job-spec --plan <json> --manifest <json> --output <json>',
+    '  node scripts/saferide-gemma4-v05-sagemaker.mjs build-plan --policy <json> --manifest <json> --manifest-s3-uri <s3> --manifest-version-id <id> --dataset-source-commit <sha> --launcher-source-commit <sha> --run-kind <kind> --run-id <id> --seed <n> --learning-rate <n> --role-arn <arn> --image-uri <uri> --image-digest <sha> --output-s3-uri <s3> --checkpoint-s3-uri <s3> --output <json>',
+    '  node scripts/saferide-gemma4-v05-sagemaker.mjs build-job-spec --policy <json> --plan <json> --manifest <json> --output <json>',
     '  node scripts/saferide-gemma4-v05-sagemaker.mjs verify-remote --plan <json> --manifest <json> --profile <name>',
     '  node scripts/saferide-gemma4-v05-sagemaker.mjs submit --plan <json> --manifest <json> --job-spec <json> --profile <name>',
   ].join('\n');
@@ -463,7 +501,7 @@ function main() {
     const manifestPath = path.resolve(required(options, 'manifest'));
     const manifest = readJson(manifestPath);
     const plan = buildLaunchPlan({
-      policy: readJson(defaultPolicyPath),
+      policy: readJson(path.resolve(options.policy ?? defaultPolicyPath)),
       inputManifest: manifest,
       inputManifestPath: manifestPath,
       inputManifestSha256: fileSha256(manifestPath),
@@ -492,7 +530,7 @@ function main() {
     const plan = readJson(path.resolve(required(options, 'plan')));
     const manifestPath = path.resolve(required(options, 'manifest'));
     const manifest = readJson(manifestPath);
-    const spec = buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath));
+    const spec = buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath), readJson(path.resolve(options.policy ?? defaultPolicyPath)));
     const output = path.resolve(required(options, 'output'));
     writePrivateJson(output, spec);
     console.log(`SageMaker training-job specification written (sha256=${fileSha256(output)}).`);
@@ -502,7 +540,7 @@ function main() {
     const plan = readJson(path.resolve(required(options, 'plan')));
     const manifest = readJson(path.resolve(required(options, 'manifest')));
     const profile = required(options, 'profile');
-    const result = remotePreflight({ profile, plan, inputManifest: manifest, policy: readJson(defaultPolicyPath) });
+    const result = remotePreflight({ profile, plan, inputManifest: manifest, policy: readJson(path.resolve(options.policy ?? defaultPolicyPath)) });
     console.log(`SageMaker remote preflight PASS (${result.remoteObjectsVerified} immutable S3 objects, image digest, quota, role, and run ID).`);
     if (command === 'verify-remote') return 0;
     const specPath = path.resolve(required(options, 'job-spec'));

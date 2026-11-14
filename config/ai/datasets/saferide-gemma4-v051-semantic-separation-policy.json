@@ -1,0 +1,91 @@
+{
+  "schema": "com.saferide.ai.v051-semantic-separation-policy",
+  "schemaVersion": 1,
+  "policyId": "esh-4198-v051-prompt-only-semantic-separation-2026-08-04",
+  "issue": "ESH-4198",
+  "effectiveDate": "2026-08-04",
+  "status": "active-prospective",
+  "historicalEvidence": {
+    "reportSha256": "fd277cdb16ad3e3543d50bcc28e91a1be1b0180145c1701b92ebd55c7f76a6a6",
+    "sourceEmbeddingsSha256": "fdcf609f020a95801895da6dbb9195748f246d159aa2e64e22dcb05b9e4a5979",
+    "representation": "non-system-full-dialogue",
+    "evaluatedPairCount": 459600,
+    "flaggedPairCount": 31,
+    "status": "blocked",
+    "immutable": true,
+    "eligibilityUse": "diagnostic-only"
+  },
+  "bindings": {
+    "governanceAmendmentSha256": "29e32c8c53900c53cbe1c214dd355b71562cdf51cdcbfba8806ed267fba7ab4d",
+    "historicalCandidateManifestSha256": "0f9ea98bd6a196d0b8a4f466b360eadccc3882963d94543e7f395ca18eb9d4ec"
+  },
+  "method": {
+    "modelId": "sentence-transformers/LaBSE",
+    "immutableRevision": "836121a0533e5664b21c7aacc5d22951f2b8b25b",
+    "distanceMetric": "cosine-similarity",
+    "threshold": 0.92,
+    "maximumTokens": 256,
+    "truncationAllowed": false,
+    "provider": "CPUExecutionProvider"
+  },
+  "blockingRepresentation": {
+    "id": "normalized-user-turns-only-v1",
+    "includedRoles": ["user"],
+    "excludedRoles": ["system", "assistant"],
+    "normalization": {
+      "unicode": "NFKC",
+      "lineEndings": "LF",
+      "whitespace": "collapse-unicode-to-ascii-space",
+      "trim": true,
+      "case": "preserve"
+    },
+    "turnSeparator": "LF",
+    "sourceOrdering": "v05-core-global-row-id-ascending-then-blind-prompt-id-ascending"
+  },
+  "blockingScope": {
+    "sourceRows": 2840,
+    "mitigationRows": 160,
+    "sourceComparisonPairs": 454400,
+    "crossSplitPairs": 5200,
+    "evaluatedPairCount": 459600,
+    "unresolvedPairsMaximum": 0
+  },
+  "bilingualSiblingControl": {
+    "requiredFamilyCount": 80,
+    "requiredLanguages": ["en", "sw"],
+    "sameFamilyMustRemainInOneSplit": true,
+    "sameSplitSiblingIsLeakage": false,
+    "crossSplitFamilyExemptionAllowed": false
+  },
+  "fullDialogueDiagnostic": {
+    "representation": "non-system-user-and-assistant-turns",
+    "blocking": false,
+    "historicalFlaggedPairCountMustReconcile": 31
+  },
+  "assistantTargetControls": [
+    "exact-and-normalized-duplicate-rejection",
+    "ngram-and-lexical-duplication-limits",
+    "response-template-and-cluster-share-limits",
+    "safety-and-usefulness-screening",
+    "no-new-facts-screening",
+    "response-diversity-screening"
+  ],
+  "remediation": {
+    "maximumTargetedRounds": 2,
+    "roundSeeds": { "1": 419852, "2": 419853 },
+    "unit": "complete-bilingual-family",
+    "matchedProtectedContentMayBeProvidedToGenerator": false,
+    "matchedProtectedIdentifiersMayBeProvidedToGenerator": false,
+    "repeatedCollisionAction": "replace-with-fresh-scenario-in-same-track-and-variant",
+    "thresholdMayBeLowered": false,
+    "supersededEvidenceMustBePreserved": true
+  },
+  "privacy": {
+    "sanitizedSummaryContainsRawText": false,
+    "sanitizedSummaryContainsRowIdentifiers": false,
+    "remediationContainsProtectedSourceIdentifiers": false,
+    "remediationContainsPrompts": false,
+    "remediationContainsEmbeddings": false,
+    "protectedContentLoggingAllowed": false
+  }
+}

@@ -13,6 +13,8 @@ export type {
 } from './Card';
 export { FeatureHeader } from './FeatureHeader';
 export type { FeatureHeaderProps, FeatureHeaderStat } from './FeatureHeader';
+export { JourneyCard } from './JourneyCard';
+export type { JourneyCardProps } from './JourneyCard';
 export { FormSection, Section, SectionHeader } from './Section';
 export type { FormSectionProps, SectionHeaderProps, SectionProps } from './Section';
 export { ListRow } from './ListRow';
@@ -30,6 +32,8 @@ export type { SwitchProps } from './Switch';
 export { Badge, CountBadge, StatePill, StatusBadge } from './Badge';
 export type { BadgeProps, StatePillProps } from './Badge';
 export { Chip } from './Chip';
+export { ChoiceCard } from './ChoiceCard';
+export type { ChoiceCardProps } from './ChoiceCard';
 export type { ChipProps } from './Chip';
 export { ProgressStepper } from './ProgressStepper';
 export type { ProgressStep, ProgressStepperProps, StepStatus } from './ProgressStepper';
