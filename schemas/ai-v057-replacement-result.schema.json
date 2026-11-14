@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-replacement-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt", "bindings", "preservedEvidence", "screens", "pilot", "panel", "gpu", "operations", "validation", "decision", "privacy", "untouched"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-replacement-result"},
+    "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"},
+    "branch": {"const": "codex/esh-4198-v051-mitigation"},
+    "pullRequest": {"const": 205},
+    "status": {"enum": ["ready-for-two-full-candidate-training", "no-go-replacement-pilot-failed", "no-go-panel-gates-failed"]},
+    "createdAt": {"type": "string"},
+    "bindings": {"type": "object", "minProperties": 20, "additionalProperties": {"type": ["string", "integer"]}},
+    "preservedEvidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["v054ResultSha256", "v055ResultSha256", "v056ResultSha256", "invalidV057AttemptResultSha256", "invalidV057AttemptHandoffSha256", "rewritten"],
+      "properties": {
+        "v054ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "v055ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "v056ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "invalidV057AttemptResultSha256": {"const": "1afa5ddf1de5153f8431119ca231bec86ed90152e30c455abbf36a668f1e3c90"},
+        "invalidV057AttemptHandoffSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "rewritten": {"const": false}
+      }
+    },
+    "screens": {"type": "object", "additionalProperties": {"type": "string"}},
+    "pilot": {"type": "object", "additionalProperties": true, "required": ["status", "valid", "runId", "attempt", "retryAllowed", "timing", "recipe", "coverage", "loss", "lineage", "artifacts", "receipts", "privacy"]},
+    "panel": {"type": ["object", "null"], "additionalProperties": true},
+    "gpu": {"type": "object", "additionalProperties": true},
+    "operations": {"type": "object", "additionalProperties": true},
+    "validation": {"type": "object", "additionalProperties": true},
+    "decision": {
+      "type": "object", "additionalProperties": true,
+      "required": ["strictDecision", "reasonCodes", "readyForTwoFullCandidateTraining", "fullCandidateTrainingStarted", "nextAuthorizedAction"]
+    },
+    "privacy": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "untouched": {"type": "object", "additionalProperties": {"type": "boolean"}}
+  }
+}

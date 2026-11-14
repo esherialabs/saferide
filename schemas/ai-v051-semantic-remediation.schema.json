@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-semantic-remediation.schema.json",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["candidateId", "candidateHash", "family", "language", "split", "track", "collisionType", "similarityScore"],
+    "properties": {
+      "candidateId": { "type": "string", "minLength": 1 },
+      "candidateHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+      "family": { "type": "string", "minLength": 1 },
+      "language": { "enum": ["en", "sw"] },
+      "split": { "enum": ["train", "mitigation-dev", "mitigation-holdout"] },
+      "track": { "enum": ["agency-preserving-deescalation", "hidden-instruction-nondisclosure"] },
+      "collisionType": { "enum": ["full-dialogue-assistant-response-diagnostic", "prompt-source-blocking", "prompt-cross-split-blocking", "prompt-only-source-blocking", "prompt-only-cross-split-blocking"] },
+      "similarityScore": { "type": "number", "minimum": -1, "maximum": 1 }
+    }
+  }
+}

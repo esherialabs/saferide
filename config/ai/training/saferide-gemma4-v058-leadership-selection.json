@@ -1,0 +1,185 @@
+{
+  "schema": "com.saferide.ai.v058-leadership-selection",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "pullRequest": 205,
+  "decisionId": "ESH-4198-v058-original-419806-selection-20260809-01",
+  "decidedAt": "2026-08-09T20:53:39Z",
+  "authority": "explicit-user-leadership-decision",
+  "status": "selected-original-with-transparent-exception",
+  "startingCommit": "e4c5f549d12d97138e4368955061c0b7081b6fe4",
+  "branch": "codex/esh-4198-v051-mitigation",
+  "baseBranch": "origin/feat/app-local-infra-phase-1",
+  "selected": {
+    "version": "v0.5.8",
+    "lineage": "immutable-original-full-candidate",
+    "seed": 419806,
+    "runId": "saferide-v058-candidate-s419806-20260809c",
+    "metadataSha256": "5334c8f274570bf18743b76869c90adfcbfb62c9bffaf90d5adf87a5712ef823",
+    "adapterInventorySha256": "37987476374abb7a2f1cbc8158067bd5a0a9e43b495ac076a1378d30a4e22b72",
+    "adapterTensorSha256": "1f8631d41dd3e16a62b1a95a7676c7585655ea97d100719ce0908902fb9e80aa",
+    "adapterFileCount": 6,
+    "adapterSizeBytes": 80584065,
+    "checkpointInventorySha256": "80672cc240530157034e1ea5e5d5abcd1af691aec89cafd93b141a94edb8e479",
+    "bestCheckpoint": "checkpoint-249",
+    "sampleOrderSha256": "9f5212d3150c91027f98de1921af0a6e542e6f5234c747b2ae8d5c4590f549ef",
+    "optimizerSteps": 249,
+    "epochs": 1,
+    "continuationSelected": false,
+    "adapterFiles": [
+      {"path": "README.md", "sha256": "e7f982a2b19def9029ec2966c8977cfd723e0d76783679bb6a93094d3988a3f2", "sizeBytes": 6224},
+      {"path": "adapter_config.json", "sha256": "574ba8ba8a6f8173ee1d660796d31eaf45d172e3d3b6affd650f94e0e40a1e3c", "sizeBytes": 11751},
+      {"path": "adapter_model.safetensors", "sha256": "1f8631d41dd3e16a62b1a95a7676c7585655ea97d100719ce0908902fb9e80aa", "sizeBytes": 48376416},
+      {"path": "chat_template.jinja", "sha256": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082", "sizeBytes": 17336},
+      {"path": "tokenizer.json", "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f", "sizeBytes": 32169626},
+      {"path": "tokenizer_config.json", "sha256": "a649af5e5f6c0b830dd2d65b25ef41e670ecb0431c711b0ab7bffa29756001b0", "sizeBytes": 2712}
+    ]
+  },
+  "developmentException": {
+    "transparent": true,
+    "exceptionId": "ESH-4198-v058-original-419806-development-exception-20260809-01",
+    "scope": "development-completion-truncation-and-terminator-only",
+    "rowCount": 320,
+    "completed": 319,
+    "truncated": 1,
+    "errors": 0,
+    "criticalFailures": 0,
+    "modelTerminatorStops": 319,
+    "minimumHardUsefulness": 2.0,
+    "allHardUsefulnessCategoriesPassed": true,
+    "noncriticalTruncation": true,
+    "historicalStrictStatusRemainsBlocked": true,
+    "historicalReportsRewritten": false,
+    "waivedDevelopmentGates": [
+      "coverage-incomplete",
+      "truncation-nonzero",
+      "model-terminator-coverage-incomplete"
+    ],
+    "notWaived": [
+      "critical-finding-nonzero",
+      "execution-error-nonzero",
+      "hard-usefulness-below-inclusive-2.0-floor"
+    ]
+  },
+  "developmentExceptionReceipt": {
+    "path": "config/ai/training/saferide-gemma4-v058-development-exception.json",
+    "sha256": "ba542d9d5852cb7dd1ead44a779eb7f295f14bc6ee8e0f68b71ad69a2bfa64b6",
+    "separate": true,
+    "transparent": true
+  },
+  "modelBinding": {
+    "modelId": "google/gemma-4-E2B-it",
+    "revision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+    "inventorySha256": "ff7ebf6346e08ddc6c9901686b1a007ff383995a2bf15182feef5c1dbcb1d25b",
+    "tensorSha256": "2db5482b20d746879bb3ef79b5203e9075a2e2b98f54ec7c2f281c1477ddc550",
+    "fileCount": 9,
+    "totalBytes": 10278846140,
+    "imageArchiveSha256": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf",
+    "imageArchiveSizeBytes": 3350200320,
+    "imageConfigDigest": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87"
+  },
+  "datasetBinding": {
+    "datasetId": "saferide-synthetic-guidance-v0.5.8",
+    "candidatePlanSha256": "504df04be4f98ad75f22da8577f203923149348a8acbe93e41cdc0c1753f28bb",
+    "frozenManifestSha256": "0ad58d367f1ef1b6e46d57a741aef75f573734d024f9e4dc9318bbda281df272",
+    "a11InputManifestSha256": "a32e49e7000dc8e0576a8987a38f8b2b58a67d9ffa17f03e967d67b91a59a115",
+    "a11TrainingArchiveSha256": "913b08085604139cf8af13bfab86694e571e869404af96b3e79eb23755d8ecc3",
+    "combinedUniqueTrainSha256": "669835b5f680b2198cf06d8c23a02d2e9aba2acba816c6283a0cdbbf8586a15e",
+    "weightedTrainSha256": "b6fd044f9e7854d358200288b195787fc9ed6e8eea52925eea9aa0d48783689e",
+    "uniqueRows": 1904,
+    "weightedExamples": 1992,
+    "developmentRowsIncluded": 0,
+    "holdoutRowsIncluded": 0
+  },
+  "panelBinding": {
+    "originalDevelopmentSha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+    "mitigationDevelopmentSha256": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd",
+    "summarySha256": "c2d062d09de6ab6c3fd8d456f4f2a418e60e7ea74d1e79d70021937077564518",
+    "executionSha256": "42f6ccb3867d15dd7f1542c0ea04e8721e67d9858a6849f3420c14495e1e4ce8",
+    "replaySha256": "11989b91648a7530bae85f66151f09615755a8fda51fa8e2377e95673a371036",
+    "originalBundleSha256": "6442c23f17b33bd3110791f4b404d716ead533ca20de991debe8a86994a4d343",
+    "mitigationBundleSha256": "727c872e561b8557efd5f3091a16a5f22e97bff749eac11cbab95c3c7e5fd33a",
+    "implementationSha256": "b969bb171fc50088685c686e0102be611ea1a3ecd13b8c3a7f3aba911b8afba1",
+    "rubricPolicySha256": "062b9805a7cb92ab53381f5058707a50669ba38f4b08265288777712c74ab69a"
+  },
+  "reportBinding": {
+    "developmentResultJsonSha256": "11342c22a8c4a9837f9818f9c94e46f2a569b65397113cf5c5641e063be18730",
+    "developmentResultMarkdownSha256": "c2ac97e83b51857786ddf62ae58e68923d876a1f64dd34a07d49cbdca2f2d78e",
+    "continuationResultJsonSha256": "60090df38fa64ff73c4cf3e6cc82fb0ce2f92a0c70bd30e95e5901627dfe4155",
+    "continuationResultMarkdownSha256": "dad08d57deddb95a6e731e5346ecc261ee5ad352b26d6f84a4bb14d0a0a3fdbd",
+    "globalUsefulnessResultJsonSha256": "9ca0ce21f19747cbd435c78393a631a3f78e23b03e7192e580bdf2b3c5032b16",
+    "globalUsefulnessResultMarkdownSha256": "08b90b441af3de9f1ab1f1352b5c6fa7db97badccdc34728da5082a684cb1737",
+    "historicalReportCount": 52,
+    "historicalReportInventorySha256": "1c06ea6edb61e639ae96a91ac204c503205e629b5126d165088477630db9b795"
+  },
+  "continuationQuarantine": {
+    "required": true,
+    "runId": "saferide-v058-kiswahili-s419806-20260809c",
+    "metadataSha256": "a425185c91781e0d3cbe7390b4212202b469f4db3b18cb0da3b3f20b840b727d",
+    "adapterInventorySha256": "53de39901dd315f3ba49dcbcbfd1e742704df882c9be22af60fff907d9c1b7a1",
+    "adapterTensorSha256": "9b98cce8f541e65498705cba46a566297869fb6a5a76cd8dd566143f541032da",
+    "checkpointInventorySha256": "3480360134478a455c2183417936229974f8dfe92cf0f924bb8301e4fee887f9",
+    "selectionEligible": false,
+    "promotionEligible": false,
+    "deleteControlledEvidence": false
+  },
+  "sealedHoldoutBinding": {
+    "suiteId": "mitigation-holdout",
+    "sha256": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4",
+    "sizeBytes": 68930,
+    "rowCount": 20,
+    "rowInventorySha256": "ec8aa855b14f3f160b1fd7ff4cbed14b0fbf076bf0c3806f4a5eec0bc857bd6d",
+    "frozenManifestSha256": "b499a74cb4e8346b291462cee7a3a45d9be0afedaf17d6c0ae39a7b51f665ffd",
+    "splitManifestSha256": "6c95b0d8c95f57f9db058cf0fa6af326a3bce495fe4f8a0132443538a6a92b63",
+    "lineageHoldoutReadsBeforeDecision": 0,
+    "a11CopiesBeforeDecision": 0,
+    "priorOneTimeReceipts": 0,
+    "priorGenerationBundles": 0
+  },
+  "holdoutAuthorization": {
+    "authorized": true,
+    "maximumControlledRuns": 1,
+    "selectedLineageOnly": true,
+    "pinnedOciRequired": true,
+    "acceptance": {
+      "criticalFailuresMaximum": 0,
+      "executionErrorsMaximum": 0
+    },
+    "reportedNotGated": [
+      "truncation",
+      "terminator",
+      "language",
+      "usefulness",
+      "safety",
+      "category"
+    ],
+    "protectedV05QualityHoldoutAuthorized": false,
+    "protectedV05SafetyHoldoutAuthorized": false
+  },
+  "codeBinding": {
+    "leadershipReleaseScriptSha256": "a5196f430c88397d1f24f1d27d95d0ac4ea3ca509706f03eda5d6896efc8b217",
+    "holdoutLauncherSha256": "67467ef545167eed354845576a9a0d6b6d9c250ccf87515333714c88b19b2084",
+    "v057PanelDependencySha256": "de85038995e20d32dc6dd2adbb205aea43f6535719a880e29dc9e23eaeebeb01"
+  },
+  "downstream": {
+    "freezeOnlyIfHoldoutAccepted": true,
+    "privateHuggingFacePackageAuthorized": true,
+    "huggingFaceAuthenticationAuthorized": false,
+    "huggingFaceUploadAuthorized": false,
+    "mobileExportAuthorized": false,
+    "deploymentAuthorized": false,
+    "publicationAuthorized": false,
+    "githubActionsAuthorized": false,
+    "awsAuthorized": false,
+    "mainTouchAuthorized": false
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "rawRowsIncluded": false,
+    "rawOutputsIncluded": false,
+    "rowIdentifiersIncluded": false,
+    "privatePathsIncluded": false,
+    "identitiesIncluded": false,
+    "credentialsIncluded": false
+  }
+}

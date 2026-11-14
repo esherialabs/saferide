@@ -4,16 +4,18 @@
   "title": "SafeRide content-free tuned artifact QA diagnostic",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schemaVersion", "manifestId", "artifactSha256", "runtimeState", "artifactValidated", "realRuntimeLoaded", "deviceClass", "timings", "result", "capturedAt"],
+  "required": ["schema", "schemaVersion", "manifestId", "artifactSha256", "phase", "runtimeState", "artifactValidated", "realRuntimeLoaded", "backend", "deviceClass", "timings", "throughput", "result", "capturedAt"],
   "properties": {
     "schema": { "const": "com.saferide.tuned-artifact-qa-diagnostic" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "manifestId": { "type": "string", "minLength": 1 },
     "artifactSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "phase": { "enum": ["load", "readiness-probe", "generation"] },
     "runtimeState": { "enum": ["unavailable", "idle", "prepared", "loaded", "generating", "error"] },
     "artifactValidated": { "type": "boolean" },
     "realRuntimeLoaded": { "type": "boolean" },
-    "deviceClass": { "enum": ["android-2-3gb", "android-4gb", "android-6-8gb", "android-unknown"] },
+    "backend": { "enum": ["gpu", "cpu", "npu", "mock", "unknown", null] },
+    "deviceClass": { "enum": ["android-2-3gb", "android-4gb", "android-6-8gb", "android-8gb-plus", "android-unknown"] },
     "timings": {
       "type": "object",
       "additionalProperties": false,
@@ -22,6 +24,15 @@
         "loadMs": { "$ref": "#/$defs/nullableNonNegative" },
         "firstTokenMs": { "$ref": "#/$defs/nullableNonNegative" },
         "totalGenerationMs": { "$ref": "#/$defs/nullableNonNegative" }
+      }
+    },
+    "throughput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["estimatedOutputTokens", "estimatedTokensPerSecond"],
+      "properties": {
+        "estimatedOutputTokens": { "$ref": "#/$defs/nullableNonNegative" },
+        "estimatedTokensPerSecond": { "$ref": "#/$defs/nullableNonNegative" }
       }
     },
     "result": {

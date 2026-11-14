@@ -1,0 +1,97 @@
+{
+  "schema": "com.saferide.ai.v055-mitigation-plan",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "status": "authorized-final-targeted-remediation",
+  "datasetId": "saferide-synthetic-guidance-v0.5.5",
+  "sourceDatasetId": "saferide-synthetic-guidance-v0.5.4",
+  "authoringSeed": 419856,
+  "pilotSeed": 419805,
+  "rowCounts": {
+    "newTrainingRows": 32,
+    "newBilingualFamilies": 16,
+    "combinedUniqueTrainingRows": 1896,
+    "weightedTrainingExamples": 1992,
+    "originalDevelopmentRows": 300,
+    "mitigationDevelopmentRows": 20
+  },
+  "distribution": {
+    "languages": {"en": 16, "sw": 16},
+    "tracks": {
+      "agency-preserving-deescalation": 16,
+      "hidden-instruction-nondisclosure": 8,
+      "concise-medical-boundary": 8
+    },
+    "variants": {
+      "agency-alternative": 4,
+      "coercion": 4,
+      "confrontation": 6,
+      "retaliation": 2,
+      "direct-extraction": 4,
+      "role-play-extraction": 4,
+      "medical-concise": 8
+    }
+  },
+  "weighting": {
+    "policy": "deterministic-explicit-sample-order",
+    "sourceV054Multiplier": 1,
+    "newV055Multiplier": 4,
+    "globalEpochs": 1,
+    "sampleOrderSeed": 419856,
+    "focusedRowShare": 0.064257
+  },
+  "trainingRecipe": {
+    "learningRate": 0.00001,
+    "scheduler": "cosine",
+    "warmupRatio": 0.03,
+    "gradientAccumulationSteps": 8,
+    "maxGradientNorm": 1.0,
+    "evaluationSteps": 25,
+    "saveSteps": 25,
+    "assistantOnlyLoss": true,
+    "selectionMetric": "minimum-finite-development-assistant-token-loss",
+    "singlePilotOnly": true,
+    "fullCandidateSubmissionAuthorized": false
+  },
+  "generation": {
+    "maxNewTokens": 192,
+    "zeroTruncationRequired": true,
+    "terminatorSource": "pinned-model-generation-config",
+    "expectedTerminatorIds": [1, 106, 50]
+  },
+  "rubric": {
+    "policyId": "saferide-v05-development-panel-deterministic-rubric.4",
+    "thresholdsChanged": false,
+    "coercionContextCorrection": "narrow-same-sentence-negation-or-exposure-risk-warning",
+    "structuredInstructionDisclosureBlocking": true
+  },
+  "gates": {
+    "deterministicExactRowOrder": true,
+    "novelBilingualFamilies": true,
+    "promptOnlySemanticSeparationThreshold": 0.92,
+    "visibleSourceLexicalSeparation": true,
+    "responseDiversityAndClusterLimits": true,
+    "naturalKiswahili": true,
+    "assistantOnlyLabels": true,
+    "tokenizerNoTruncation": true,
+    "zeroPanelTruncation": true,
+    "zeroCriticalFindings": true,
+    "finiteLossAndResumeContinuity": true,
+    "truthfulBestAndFinalLoss": true
+  },
+  "privacy": {
+    "sealedMitigationHoldoutRead": false,
+    "frozenDevelopmentSuitesMutated": false,
+    "developmentRowsUsedForTraining": false,
+    "rawRowsCommittable": false,
+    "modelGenerationUsedForAuthoring": false
+  },
+  "authorization": {
+    "vpsDatasetBuildAndValidation": true,
+    "oneGpuPilot": true,
+    "oneFrozenPanelEvaluation": true,
+    "fullCandidateTraining": false,
+    "modelSelectionOrPromotion": false,
+    "publication": false
+  }
+}

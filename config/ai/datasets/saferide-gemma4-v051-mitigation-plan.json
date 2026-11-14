@@ -1,0 +1,155 @@
+{
+  "schema": "com.saferide.ai.v051-mitigation-plan",
+  "schemaVersion": 1,
+  "planId": "saferide-gemma4-v051-mitigation-plan-2026-08-04.1",
+  "datasetId": "saferide-synthetic-guidance-v0.5.1",
+  "sourceDatasetId": "saferide-synthetic-guidance-v0.5.0",
+  "issue": "ESH-4198",
+  "status": "authoring-approved-review-required",
+  "seeds": {
+    "authoring": 419851,
+    "allocation": 419805
+  },
+  "bindings": {
+    "adjudicationSummarySha256": "0523f1e7a4eff6fe2cd6dceda46a2ff8005eeb696c0355f89bb8fd62579e9482",
+    "sourceDatasetManifestSha256": "9d42b4d871c8d382c76e8fe71733e4e6ccf7138228fbcd0b5ab2ce8a96374801",
+    "sourceSplitManifestSha256": "13687893edc155146fcfafdc0deedf32930f8e1d2d36b58ecaa9330561710e0e",
+    "sourceRegisterSha256": "37ddc7503309c62a1a303acad859f4296c84c9d42c790ba6b622de89315fc20f",
+    "sourceTrainSha256": "dd8b09648f4af001202787309ad8aefc5f23d67d028b6d5c655cd7b0fbec1f6f",
+    "sourceDevelopmentSha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+    "sourceQualityHoldoutSha256": "7d94d8d76d108a0c17c1eef086e4391a25995f02c66a6c74b93c40d9f6658b29",
+    "sourceSafetyHoldoutSha256": "3849f45aecd40f97b87f467f4d8092209e5f5a0b76587454660c82f8bb925152",
+    "sourceBlindSuiteSha256": "583436fb7033fdb1fc2b064f35c496012433013c44fe9b4a7b5e846074b0f416"
+  },
+  "systemPrompt": {
+    "path": "config/ai/safe-assistant-system-prompt.v0.5.1.candidate.json",
+    "promptId": "saferide-on-device-assistant-v0.5.1",
+    "textSha256": "8c7b9e8939e86f947dd5f90b0128d1188657b021d62367f0decbeab0e161647f"
+  },
+  "baseModel": {
+    "modelId": "google/gemma-4-E2B-it",
+    "immutableRevision": "70af34e20bd4b7a91f0de6b22675850c43922a03"
+  },
+  "totals": {
+    "families": 80,
+    "rows": 160,
+    "rowsPerLanguage": 80
+  },
+  "splits": [
+    {
+      "name": "train",
+      "families": 60,
+      "rows": 120,
+      "rowsPerLanguage": 60,
+      "agencyFamilies": 36,
+      "nondisclosureFamilies": 24,
+      "optimizerAccess": "weight-updates-after-all-gates"
+    },
+    {
+      "name": "mitigation-dev",
+      "families": 10,
+      "rows": 20,
+      "rowsPerLanguage": 10,
+      "agencyFamilies": 6,
+      "nondisclosureFamilies": 4,
+      "optimizerAccess": "never"
+    },
+    {
+      "name": "mitigation-holdout",
+      "families": 10,
+      "rows": 20,
+      "rowsPerLanguage": 10,
+      "agencyFamilies": 6,
+      "nondisclosureFamilies": 4,
+      "optimizerAccess": "never-sealed"
+    }
+  ],
+  "tracks": [
+    {
+      "name": "agency-preserving-deescalation",
+      "families": 48,
+      "rows": 96,
+      "share": 0.6,
+      "variants": [
+        "coercion",
+        "confrontation",
+        "retaliation",
+        "agency-alternative"
+      ],
+      "familiesPerVariant": 12
+    },
+    {
+      "name": "hidden-instruction-nondisclosure",
+      "families": 32,
+      "rows": 64,
+      "share": 0.4,
+      "variants": [
+        "direct-extraction",
+        "indirect-extraction",
+        "role-play-extraction",
+        "non-repeating-refusal"
+      ],
+      "familiesPerVariant": 8
+    }
+  ],
+  "conversationForms": {
+    "single-turnFamilies": 48,
+    "multi-turnFamilies": 32,
+    "perSplit": {
+      "train": { "single-turn": 36, "multi-turn": 24 },
+      "mitigation-dev": { "single-turn": 6, "multi-turn": 4 },
+      "mitigation-holdout": { "single-turn": 6, "multi-turn": 4 }
+    }
+  },
+  "review": {
+    "requiredRoles": [
+      "english-language",
+      "kiswahili-language",
+      "product-safeguarding",
+      "technical-ml"
+    ],
+    "rowApprovalsRequired": 3,
+    "distinctHumansRequired": true,
+    "autoApprovalAllowed": false
+  },
+  "gates": {
+    "exactDuplicateMaximum": 0,
+    "normalizedDuplicateMaximum": 0,
+    "ngramSize": 3,
+    "ngramJaccardThreshold": 0.8,
+    "lexicalSimilarityThreshold": 0.92,
+    "externalEmbeddingThreshold": 0.92,
+    "externalEmbeddingModelId": "sentence-transformers/LaBSE",
+    "externalEmbeddingRevision": "836121a0533e5664b21c7aacc5d22951f2b8b25b",
+    "maximumSequenceLength": 1024,
+    "maximumTruncatedRows": 0,
+    "assistantOnlyLabelsRequired": true,
+    "minimumUsefulnessScore": 3,
+    "criticalFailuresMaximum": 0,
+    "generationErrorsMaximum": 0,
+    "developmentUsefulnessMinimum": 2.7,
+    "developmentOverRefusalMaximum": 0.1
+  },
+  "training": {
+    "sourceTrainRows": 1600,
+    "mitigationTrainRows": 120,
+    "combinedTrainRows": 1720,
+    "pilotRows": 320,
+    "pilotLearningRates": [0.00001, 0.00002],
+    "candidateSeeds": [419805, 419806],
+    "epochs": 1,
+    "objective": "assistant-only-next-token-loss",
+    "loraRank": 8,
+    "loraAlpha": 16,
+    "loraDropout": 0.05,
+    "promotionAllowed": false
+  },
+  "privacy": {
+    "rawRowsCommitted": false,
+    "reviewerIdentitiesCommitted": false,
+    "sourceHoldoutsOpenedDuringAuthoring": false,
+    "sourceBlindSuiteOpenedDuringAuthoring": false,
+    "mitigationHoldoutAllowedDuringSelection": false,
+    "rawContentLoggingAllowed": false
+  }
+}

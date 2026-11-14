@@ -1,0 +1,137 @@
+{
+  "schema": "com.saferide.ai.v056-next-pilot-plan",
+  "schemaVersion": 1,
+  "planId": "saferide-v056-next-pilot-9900b4d55eef76d5",
+  "issue": "ESH-4198",
+  "status": "vps-validated-gpu-pilot-pending",
+  "datasetId": "saferide-synthetic-guidance-v0.5.6",
+  "sourceCommit": "91f9873564001052e365a86670531484dd08db43",
+  "historicalDecision": {
+    "decision": "NO-GO",
+    "immutableResultSha256": "e667553a2d2664e33ff94d2906cafd26b338bece14459084a72ad4a52e9e84f0",
+    "rewritten": false
+  },
+  "dataset": {
+    "frozenManifestSha256": "9900b4d55eef76d5dcc2deead3a5586695f08aaaea38ebbe6783ee5f23138dc0",
+    "combinedTrainSha256": "02688c26f0a89f070350f8c92d4b7937750beff2f6fae1d977b0d60f5011c2d7",
+    "newMitigationTrainSha256": "54f311799a13e4d6d894a8e43447710b84cd8fff0461645760243b1b155b3b54",
+    "trainingRecipeSha256": "2fd5651b112c43b1f4ca4e3aedfd05fef4ab62f05343a85abd3268b02201318e",
+    "datasetAuditSha256": "bab269617c5752eeac6c7d5f0b1c02d401fecd8dff7586c032a17e8d17ca33c2",
+    "semanticReportSha256": "728782556a05d81ed7f19cc3b11f16b56f2c067c66b56bc49b925efee0727883",
+    "tokenizationReportSha256": "cff5f768a9d520ce5728e4497500aff91b55ded6a1ad95ffbdf128156e1997a7",
+    "registerSha256": "33dfbd301064e0bbe2fa6df94de129437dc110b4adcc094a1e8c7a61edc496ce",
+    "uniqueRows": 1888,
+    "weightedExamples": 1944,
+    "newRows": 24,
+    "newFamilies": 12
+  },
+  "fixedSuites": {
+    "originalDevelopment": {
+      "rows": 300,
+      "sha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+      "mutated": false,
+      "usedForTraining": false
+    },
+    "mitigationDevelopment": {
+      "rows": 20,
+      "sha256": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd",
+      "mutated": false,
+      "usedForTraining": false
+    },
+    "sealedHoldout": {
+      "sha256": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4",
+      "readDuringRemediation": false,
+      "usedForTraining": false
+    }
+  },
+  "recipe": {
+    "seed": 419805,
+    "epochs": 1,
+    "learningRate": 0.00002,
+    "scheduler": "cosine",
+    "warmupRatio": 0.03,
+    "gradientAccumulationSteps": 8,
+    "maxGradientNorm": 1.0,
+    "evaluationSteps": 25,
+    "saveSteps": 25,
+    "assistantOnlyLoss": true,
+    "newRowMultiplier": 2,
+    "selectionMetric": "minimum-finite-development-assistant-token-loss"
+  },
+  "generation": {
+    "maxNewTokens": 192,
+    "terminatorIds": [1, 106, 50],
+    "terminatorSource": "pinned-model-generation-config",
+    "zeroTruncationRequired": true
+  },
+  "runtime": {
+    "authoritativeRecovery": {
+      "awsRecoverySha256": "a975776eb3a00099579cd35811bb74cf69d7f084b368073cf2b9f71a18fd01a8",
+      "historicalResultSha256": "df42e46e1b4ef73402ab7356bea23df001bba44f64ad9cd08756ee41ae271dd4"
+    },
+    "baseModel": {
+      "modelId": "google/gemma-4-E2B-it",
+      "revision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+      "fileCount": 9,
+      "totalBytes": 10278846140,
+      "files": [
+        {"path": ".gitattributes", "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930", "sizeBytes": 1570},
+        {"path": "README.md", "sha256": "be82a1570493c695dd2da37dcf80f2c3fca7e7d5bdf25eacebb0acef0c3a3758", "sizeBytes": 26744},
+        {"path": "chat_template.jinja", "sha256": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082", "sizeBytes": 17336},
+        {"path": "config.json", "sha256": "1b28f3d2c3100f6c594754b81107428bd7b822a7f48272ca681dae9d2ec38330", "sizeBytes": 4954},
+        {"path": "generation_config.json", "sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de", "sizeBytes": 208},
+        {"path": "model.safetensors", "sha256": "2db5482b20d746879bb3ef79b5203e9075a2e2b98f54ec7c2f281c1477ddc550", "sizeBytes": 10246621918},
+        {"path": "processor_config.json", "sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c", "sizeBytes": 1689},
+        {"path": "tokenizer.json", "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f", "sizeBytes": 32169626},
+        {"path": "tokenizer_config.json", "sha256": "90c3a3ba5bf53818383a58e1a776cbcacd2a038d4812eaa373e1522f2d06f3df", "sizeBytes": 2095}
+      ]
+    },
+    "image": {
+      "archiveSha256": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf",
+      "archiveSizeBytes": 3350200320,
+      "runtimeManifestDigest": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca",
+      "runtimeConfigDigest": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87",
+      "platform": "linux/amd64",
+      "launcherSourceCommit": "26a83d00b37d3aa089088aff5fdd7c1f07ecba6c",
+      "title": "SafeRide Gemma 4 E2B v0.5-series SageMaker trainer"
+    }
+  },
+  "codeBindings": [
+    {"path": "constraints-ai-training.txt", "sha256": "cc72b90a33ba85dec6f2a3dd8cec14947e2fab403013bd6548bef06f2be547c2"},
+    {"path": "requirements-ai-smoke.txt", "sha256": "f1ae68fc00c930250c14903c34a5580aa016eab5eccac6b116958f74776370b2"},
+    {"path": "config/ai/datasets/saferide-gemma4-v056-mitigation-plan.json", "sha256": "12838865c6fa8e76f45506f1fc3f51535b98064b75a17e7466b32f449e5347b1"},
+    {"path": "docs/qa/saferide-gemma4-v056-panel-diagnosis-2026-08-09.json", "sha256": "9adb1b41ea8847e70d3a9bc3235dbd85d65ffd9bad31c85c0cffbf2fa344b96d"},
+    {"path": "schemas/ai-training-run.schema.json", "sha256": "0b9d8a368f013ef8d28d4612b88de2de0ee01f85c56107115fc05fad2b811b9a"},
+    {"path": "schemas/ai-v056-next-pilot-evidence.schema.json", "sha256": "fe09a22353e581da83246e7a72b7313c1a387432999327234745c4f97e3cf2c6"},
+    {"path": "schemas/ai-v056-next-pilot-plan.schema.json", "sha256": "7d131926977a7319881f177e84d455acea66721f183a68b7237bf1797e3e456d"},
+    {"path": "schemas/ai-v056-pilot-panel-summary.schema.json", "sha256": "e5ef3aa29f4d508c24f27817b14ce12d91b019367eec825579f5dfb17425bf75"},
+    {"path": "scripts/saferide-ai-training-run-check.mjs", "sha256": "eb6164170c55e72e20ab83295e1ee0aeb28e1b7aacf7d2cab8dd9e82bbb4b0c3"},
+    {"path": "scripts/saferide-gemma4-finetune-runner.py", "sha256": "71bee51c9760fd08492436ab5138e4f63b9f889fcaecb7a3677bda8805768ffe"},
+    {"path": "scripts/saferide-gemma4-v05-development-panel.py", "sha256": "2800ffaf9b8f00132fc7b292c7e151602f74cde755c38cbf3f4ecbda3305d186"},
+    {"path": "scripts/saferide-gemma4-v051-development-panel.py", "sha256": "51b1a18eaacd66ae29d8d0826871f922c1517a18e8af28134fa14f943ec127c8"},
+    {"path": "scripts/saferide-gemma4-v052-diagnose.py", "sha256": "872632822ec7b42b3df1011562dcfe6ba5ac1d3c6a2c9b5e943b0849c44a6992"},
+    {"path": "scripts/saferide-gemma4-v053-pilot-panel.py", "sha256": "a34fd64bd4d90a68b705ed8d235e5df79793bb119b3126cc234a47607e1c464b"},
+    {"path": "scripts/saferide-gemma4-v053-portable-launcher.py", "sha256": "6de9d79b474a274d8f36d50d30b58063bb724bdb70c517ba9779e308fe9001ca"},
+    {"path": "scripts/saferide-gemma4-v054-dataset.py", "sha256": "810cdb17d8f24a7f8f16a277f760783dcd54527cb9ee965a401d34160e702b50"},
+    {"path": "scripts/saferide-gemma4-v054-remediation.py", "sha256": "b075113900c1ffad8be05dcba5b9feaeed11ea31a157a936424edc301f2e7f4c"},
+    {"path": "scripts/saferide-gemma4-v055-remediation.py", "sha256": "e8ae090b510d59c9346f5162f323d27dedbc5708f8e04959b0f2653e47402b63"},
+    {"path": "scripts/saferide-gemma4-v056-dataset.py", "sha256": "3a72ec0798392e8e6ead00e822cd5aef3f145211393d161597eed85c9a0a5e75"},
+    {"path": "scripts/saferide-gemma4-v056-gpu-launcher.py", "sha256": "a2807779cbd1a239e73862ab1cb269772d49434029a26d18e42ddfdf0c7f980b"},
+    {"path": "scripts/saferide-gemma4-v056-next-pilot-check.mjs", "sha256": "ece453f6f566e4ceffa070094dbd2c2e50cedf66b28dbeeade99d1e0ab3c6e7c"},
+    {"path": "scripts/saferide-gemma4-v056-pilot-panel.py", "sha256": "1c9769985a3093615dccbc28df7b916bd552ee18ac77a4c0311f04e7c84f3b53"},
+    {"path": "scripts/saferide-gemma4-v056-remediation.py", "sha256": "eb6be2b576b67e731a132a50b668d6844b8694c50017e55be1bb67eaa59206b7"},
+    {"path": "scripts/saferide-gemma4-v056-training.py", "sha256": "ed2c86ad1a44f966ec53434478ed91a9d1d1bf59c5aa1b3917d9bc461e1dd955"}
+  ],
+  "scope": {
+    "vpsValidationComplete": true,
+    "gpuExecutionPerformed": false,
+    "trainingPerformed": false,
+    "modelDownloadsPerformed": false,
+    "deploymentPerformed": false,
+    "publicationPerformed": false,
+    "modelFixedClaimed": false,
+    "fullCandidateAuthorized": false,
+    "promotionAuthorized": false
+  },
+  "strictDecision": "NO-GO-PENDING-FUTURE-GPU-PILOT"
+}

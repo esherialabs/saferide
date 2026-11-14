@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v054-reuse-conflict.schema.json",
+  "title": "SafeRide v0.5.4 invalid reuse attestation evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "status", "createdAt", "preservedEvidence", "conflict", "invalidAttestationBehavior", "correction", "privacy", "strictDecision", "promotionEligible"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v054-reuse-conflict" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "status": { "const": "reuse-invalidated-fresh-pilot-authorized" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "preservedEvidence": { "type": "object" },
+    "conflict": {
+      "type": "object",
+      "required": ["checkpointStep", "persisted", "independentReplayRaw", "lossEquivalent", "epochEquivalent", "metricInventoryEquivalent", "operationalMetricsEquivalent", "sameStepEntriesEquivalent"],
+      "properties": {
+        "checkpointStep": { "const": 237 },
+        "persisted": { "type": "object" },
+        "independentReplayRaw": { "type": "object" },
+        "lossEquivalent": { "const": true },
+        "epochEquivalent": { "const": false },
+        "metricInventoryEquivalent": { "const": false },
+        "operationalMetricsEquivalent": { "const": false },
+        "sameStepEntriesEquivalent": { "const": false }
+      }
+    },
+    "invalidAttestationBehavior": { "type": "object" },
+    "correction": { "type": "object" },
+    "privacy": { "type": "object" },
+    "strictDecision": { "const": "NO-GO-PENDING-FRESH-PILOT" },
+    "promotionEligible": { "const": false }
+  }
+}

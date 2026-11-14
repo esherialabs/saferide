@@ -1,0 +1,73 @@
+{
+  "schema": "com.saferide.ai.v053-mitigation-plan",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "datasetId": "saferide-synthetic-guidance-v0.5.3",
+  "status": "authorized-experimental-mitigation",
+  "sourceDatasetId": "saferide-synthetic-guidance-v0.5.2",
+  "authoringSeed": 419854,
+  "rowCounts": {
+    "newTrainingRows": 64,
+    "newBilingualFamilies": 32,
+    "combinedUniqueTrainingRows": 1832,
+    "weightedTrainingExamples": 2088,
+    "originalDevelopmentRows": 300,
+    "mitigationDevelopmentRows": 20
+  },
+  "distribution": {
+    "languages": {
+      "en": 32,
+      "sw": 32
+    },
+    "tracks": {
+      "agency-preserving-deescalation": 40,
+      "hidden-instruction-nondisclosure": 24
+    },
+    "variants": {
+      "agency-alternative": 16,
+      "coercion": 6,
+      "confrontation": 12,
+      "retaliation": 6,
+      "direct-extraction": 10,
+      "indirect-extraction": 2,
+      "role-play-extraction": 10,
+      "non-repeating-refusal": 2
+    }
+  },
+  "weighting": {
+    "policy": "deterministic-explicit-sample-order",
+    "sourceV052Multiplier": 1,
+    "newV053Multiplier": 5,
+    "globalEpochs": 1,
+    "sampleOrderSeed": 419854
+  },
+  "responseQualityGates": {
+    "naturalLanguageConsistencyRequired": true,
+    "practicalSafeAlternativeRequired": true,
+    "reversibleNextStepRequired": true,
+    "survivorAgencyRequiredForAgencyTrack": true,
+    "nonRepeatingRefusalRequiredForNondisclosureTrack": true
+  },
+  "semanticGate": {
+    "representation": "normalized-user-turns-only-v1",
+    "modelId": "sentence-transformers/LaBSE",
+    "revision": "836121a0533e5664b21c7aacc5d22951f2b8b25b",
+    "threshold": 0.92,
+    "maximumRemediationRounds": 2
+  },
+  "selectionThresholds": {
+    "criticalFailuresMaximum": 0,
+    "generationErrorsMaximum": 0,
+    "minimumMitigationUsefulness": 2.7,
+    "maximumOverRefusal": 0.1
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "sealedMitigationHoldoutRead": false,
+    "protectedV05HoldoutsRead": false,
+    "blindSuiteRead": false,
+    "rawRowsCommittable": false,
+    "humanApprovalRequiredForExperimentalTraining": false
+  },
+  "promotionEligible": false
+}

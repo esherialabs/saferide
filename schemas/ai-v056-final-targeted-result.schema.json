@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v056-final-targeted-result.schema.json",
+  "title": "SafeRide v0.5.6 final targeted result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "issue",
+    "branch",
+    "pullRequest",
+    "status",
+    "createdAt",
+    "bindings",
+    "preservedEvidence",
+    "screens",
+    "preflight",
+    "pilot",
+    "panel",
+    "gpu",
+    "operations",
+    "validation",
+    "decision",
+    "privacy",
+    "untouched"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v056-final-targeted-result" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "branch": { "const": "codex/esh-4198-v051-mitigation" },
+    "pullRequest": { "const": 205 },
+    "status": { "const": "no-go-panel-gates-failed" },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "bindings": {
+      "type": "object",
+      "required": [
+        "humanReferencedHead",
+        "observedContinuationHead",
+        "datasetSourceCommit",
+        "executionCommit",
+        "planSha256",
+        "sourceV054FrozenManifestSha256",
+        "frozenManifestSha256",
+        "combinedTrainingSha256",
+        "trainingRecipeSha256",
+        "sampleOrderSha256",
+        "originalDevelopmentSha256",
+        "mitigationDevelopmentSha256",
+        "sealedHoldoutSha256",
+        "panelInputManifestSha256",
+        "modelRevision",
+        "runtimeArchiveSha256",
+        "runtimeManifestDigest",
+        "runtimeConfigDigest"
+      ],
+      "properties": {
+        "humanReferencedHead": { "$ref": "#/$defs/commit" },
+        "observedContinuationHead": { "$ref": "#/$defs/commit" },
+        "datasetSourceCommit": { "$ref": "#/$defs/commit" },
+        "executionCommit": { "$ref": "#/$defs/commit" },
+        "planSha256": { "$ref": "#/$defs/sha256" },
+        "sourceV054FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+        "frozenManifestSha256": { "$ref": "#/$defs/sha256" },
+        "combinedTrainingSha256": { "$ref": "#/$defs/sha256" },
+        "trainingRecipeSha256": { "$ref": "#/$defs/sha256" },
+        "sampleOrderSha256": { "$ref": "#/$defs/sha256" },
+        "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+        "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+        "sealedHoldoutSha256": { "$ref": "#/$defs/sha256" },
+        "panelInputManifestSha256": { "$ref": "#/$defs/sha256" },
+        "modelRevision": { "$ref": "#/$defs/commit" },
+        "runtimeArchiveSha256": { "$ref": "#/$defs/sha256" },
+        "runtimeManifestDigest": { "$ref": "#/$defs/sha256" },
+        "runtimeConfigDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "preservedEvidence": {
+      "type": "object",
+      "required": [
+        "failedPreflightResultSha256",
+        "failedPilotResultSha256",
+        "invalidReusePanelResultSha256",
+        "reuseConflictEvidenceSha256",
+        "freshV054NoGoResultSha256",
+        "v055FinalNoGoResultSha256",
+        "rewritten"
+      ],
+      "properties": {
+        "failedPreflightResultSha256": { "$ref": "#/$defs/sha256" },
+        "failedPilotResultSha256": { "$ref": "#/$defs/sha256" },
+        "invalidReusePanelResultSha256": { "$ref": "#/$defs/sha256" },
+        "reuseConflictEvidenceSha256": { "$ref": "#/$defs/sha256" },
+        "freshV054NoGoResultSha256": { "$ref": "#/$defs/sha256" },
+        "v055FinalNoGoResultSha256": { "$ref": "#/$defs/sha256" },
+        "rewritten": { "const": false }
+      }
+    },
+    "screens": {
+      "type": "object",
+      "required": ["vpsPreflight", "a11Preflight", "vpsPilot", "a11Pilot", "vpsPanel", "a11Panel"],
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "preflight": {
+      "type": "object",
+      "required": ["status", "rerunForV056", "runId", "timing", "coverage", "loss", "adapter", "checkpoint", "integrity", "hashes"]
+    },
+    "pilot": {
+      "type": "object",
+      "required": ["status", "runId", "timing", "coverage", "recipe", "loss", "adapter", "checkpoints", "recovery", "hashes", "terminatorIds"]
+    },
+    "panel": {
+      "type": "object",
+      "required": [
+        "status",
+        "runId",
+        "timing",
+        "executionPolicy",
+        "coverage",
+        "combined",
+        "suites",
+        "metricsByLanguage",
+        "metricsByCategory",
+        "criticalAdjudication",
+        "truncationAdjudication",
+        "eligibility",
+        "verificationFailure",
+        "hashes",
+        "terminatorIds"
+      ],
+      "properties": {
+        "status": { "const": "blocked" },
+        "suites": { "type": "array", "minItems": 2, "maxItems": 2 },
+        "metricsByLanguage": { "type": "array", "minItems": 2, "maxItems": 2 },
+        "metricsByCategory": { "type": "array", "minItems": 12, "maxItems": 12 },
+        "eligibility": {
+          "type": "object",
+          "required": ["eligible", "reasons"],
+          "properties": {
+            "eligible": { "const": false },
+            "reasons": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+          }
+        },
+        "terminatorIds": { "const": [1, 106, 50] }
+      }
+    },
+    "gpu": {
+      "type": "object",
+      "required": ["preTransfer", "pilot", "panel", "postRun", "contentionObserved", "unrelatedWorkloadStoppedOrModified"],
+      "properties": {
+        "contentionObserved": { "const": false },
+        "unrelatedWorkloadStoppedOrModified": { "const": false }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "required": ["freshPilotRuns", "panelGenerationCount", "panelGenerationRerun", "awsArtifactRetrievalUsed", "paidComputeUsed"],
+      "properties": {
+        "freshPilotRuns": { "const": 1 },
+        "panelGenerationCount": { "const": 1 },
+        "panelGenerationRerun": { "const": false },
+        "awsArtifactRetrievalUsed": { "const": false },
+        "paidComputeUsed": { "const": false }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["status", "evidenceSchemasPassed", "secretScanPassed", "diffCheckPassed"]
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strictDecision", "readyForTwoFullCandidateTraining", "failedGates", "passedGates", "nextTechnicalCorrection", "reauthorizationRequired"],
+      "properties": {
+        "strictDecision": { "const": "NO-GO" },
+        "readyForTwoFullCandidateTraining": { "const": false },
+        "failedGates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "passedGates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "nextTechnicalCorrection": { "type": "string", "minLength": 1 },
+        "reauthorizationRequired": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sealedHoldoutRead", "rawPromptsOrResponsesIncluded", "protectedRowIdsIncluded", "privateHostPathsIncluded", "modelWeightsIncluded", "credentialsIncluded"],
+      "properties": {
+        "sealedHoldoutRead": { "const": false },
+        "rawPromptsOrResponsesIncluded": { "const": false },
+        "protectedRowIdsIncluded": { "const": false },
+        "privateHostPathsIncluded": { "const": false },
+        "modelWeightsIncluded": { "const": false },
+        "credentialsIncluded": { "const": false }
+      }
+    },
+    "untouched": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unrelatedA11Services", "fullCandidates", "sealedHoldout", "selectionOrPromotion", "deployment", "publication", "mainBranch", "githubActions", "sagemakerTraining", "mobileChanges"],
+      "properties": {
+        "unrelatedA11Services": { "const": true },
+        "fullCandidates": { "const": true },
+        "sealedHoldout": { "const": true },
+        "selectionOrPromotion": { "const": true },
+        "deployment": { "const": true },
+        "publication": { "const": true },
+        "mainBranch": { "const": true },
+        "githubActions": { "const": true },
+        "sagemakerTraining": { "const": true },
+        "mobileChanges": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+  }
+}

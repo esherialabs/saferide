@@ -1,0 +1,14 @@
+{
+  "schema": "com.saferide.ai.artifact-file-inventory",
+  "schemaVersion": 1,
+  "artifactId": "esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm",
+  "immutableRevision": "e91ea27c3134fe21fc5bc995141675756e2c4a21",
+  "fileManifestSha256": "42b70852648264471f470ac4d84448c8d56890175ce1e75b7a74ae2e0fe8c290",
+  "files": [
+    {
+      "path": "saferide-gemma4-e2b-v058-original-419806-runtime-compatible.litertlm",
+      "sha256": "8b73fd844464f220955eeedc474c30f39e621458c7a6b092de5afa2c3d027fcd",
+      "sizeBytes": 5071837136
+    }
+  ]
+}

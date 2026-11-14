@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-exact-artifact-preflight-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt", "bindings", "rawMetadataAudit", "preflight", "authorization", "decision", "privacy", "untouched"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-exact-artifact-preflight-result"},
+    "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"},
+    "branch": {"const": "codex/esh-4198-v051-mitigation"},
+    "pullRequest": {"const": 205},
+    "status": {"const": "passed-zero-output"},
+    "createdAt": {"type": "string", "minLength": 20},
+    "bindings": {
+      "type": "object",
+      "minProperties": 20,
+      "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{40}$|^[a-f0-9]{64}$"},
+      "required": ["startingCommit", "correctionCommit", "pendingPlanSha256", "codeInventorySha256", "baseModelManifestSha256", "baseModelTensorSha256", "generationConfigSha256", "tokenizerConfigSha256", "chatTemplateSha256", "imageArchiveSha256", "runtimeManifestDigest", "runtimeConfigDigest", "panelImplementationSha256", "pilotMetadataSha256", "pilotAdapterTensorSha256", "pilotAdapterInventorySha256", "privateBindingsSha256", "hostGpuSnapshotSha256", "preflightSummarySha256", "launchReceiptSha256", "sanitizedContainerLogSha256", "sanitizedScreenLogSha256"]
+    },
+    "rawMetadataAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["equivalentExactSnapshotCopies", "uniqueMetadataShapes", "exactNineFileNamesSizesAndNonTensorHashes", "config", "generationConfig", "tokenizerConfig", "optionalMetadataAssumptionsRemoved"],
+      "properties": {
+        "equivalentExactSnapshotCopies": {"type": "integer", "minimum": 1},
+        "uniqueMetadataShapes": {"const": 1},
+        "exactNineFileNamesSizesAndNonTensorHashes": {"const": true},
+        "config": {"type": "object", "additionalProperties": true},
+        "generationConfig": {"type": "object", "additionalProperties": true},
+        "tokenizerConfig": {"type": "object", "additionalProperties": true},
+        "optionalMetadataAssumptionsRemoved": {"const": ["config._name_or_path", "tokenizer_config.eos_token_id"]}
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["screen", "runId", "startedAt", "finishedAt", "containerWallSeconds", "idleGate", "runtimeMonitor", "effectiveRuntime", "coverage", "finalState"],
+      "properties": {
+        "screen": {"const": "sr-v057-final-preflight-20260809"},
+        "runId": {"const": "saferide-v057-panel-s419805-final-preflight-20260809"},
+        "startedAt": {"type": "string"},
+        "finishedAt": {"type": "string"},
+        "containerWallSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "idleGate": {"$ref": "#/$defs/idleGate"},
+        "runtimeMonitor": {"type": "object", "additionalProperties": true},
+        "effectiveRuntime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tokenizerEosTokenId", "padTokenId", "paddingSide", "terminatorIds", "chatTemplateSha256", "tokenizerLoaded", "modelLoaded", "adapterLoaded", "unloadedCleanly"],
+          "properties": {
+            "tokenizerEosTokenId": {"const": 1}, "padTokenId": {"const": 0},
+            "paddingSide": {"const": "left"}, "terminatorIds": {"const": [1, 106, 50]},
+            "chatTemplateSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "tokenizerLoaded": {"const": true}, "modelLoaded": {"const": true},
+            "adapterLoaded": {"const": true}, "unloadedCleanly": {"const": true}
+          }
+        },
+        "coverage": {
+          "const": {"panelRowsRead": 0, "modelCompletionsEmitted": 0, "generationCalls": 0, "sealedHoldoutRowsRead": 0}
+        },
+        "finalState": {
+          "type": "object", "additionalProperties": true,
+          "required": ["freeVramMiB", "utilizationPercent", "computeProcessCount", "safeRideLockFree", "screenClosed", "containerAbsent"]
+        }
+      }
+    },
+    "authorization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["referenceSha256", "authorizedAt", "boundDuringPreflight", "consumedByPreflight", "eligibleForOneUnchangedPanelAfterPreflight"],
+      "properties": {
+        "referenceSha256": {"const": "e2f33ca74b89461a2b74837782bf9096cbd8fd716f3ae6d0112d7fe0d9091775"},
+        "authorizedAt": {"const": "2026-08-09T08:14:56Z"},
+        "boundDuringPreflight": {"const": false}, "consumedByPreflight": {"const": false},
+        "eligibleForOneUnchangedPanelAfterPreflight": {"const": true}
+      }
+    },
+    "decision": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "privacy": {"type": "object", "additionalProperties": {"const": false}},
+    "untouched": {"type": "object", "additionalProperties": {"const": true}}
+  },
+  "$defs": {
+    "idleGate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["passed", "sampleCount", "durationSeconds", "minimumFreeVramMiB", "peakUtilizationPercent", "maximumComputeProcessCount"],
+      "properties": {
+        "passed": {"const": true}, "sampleCount": {"const": 16}, "durationSeconds": {"minimum": 30},
+        "minimumFreeVramMiB": {"minimum": 22000}, "peakUtilizationPercent": {"maximum": 1},
+        "maximumComputeProcessCount": {"const": 0}
+      }
+    }
+  }
+}

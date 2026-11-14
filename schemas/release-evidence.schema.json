@@ -32,7 +32,7 @@
     "releaseId": { "type": "string", "pattern": "^saferide-unicef-" },
     "state": { "enum": ["blocked", "candidate", "release-ready", "revoked"] },
     "classification": { "const": "public-safe-metadata" },
-    "targetBranch": { "const": "feat/app-local-infra-phase-1" },
+    "targetBranch": { "enum": ["main", "feat/app-local-infra-phase-1"] },
     "sourceCommit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
     "releaseTag": { "type": ["string", "null"], "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9.-]+)?$" },
     "versions": {

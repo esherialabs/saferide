@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v055-next-pilot-evidence.schema.json",
+  "title": "SafeRide v0.5.5 next-pilot evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "status", "planSha256", "training", "panel", "privacy", "strictDecision", "promotionEligible"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v055-next-pilot-evidence" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "status": { "enum": ["pending-gpu-only", "complete"] },
+    "planSha256": { "$ref": "#/$defs/sha256" },
+    "training": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["manifestSha256", "globalSteps", "rowsSeen", "rawTrainerAccumulatedLoss", "meanTrainingObjectiveLoss", "bestDevelopmentLoss", "finalDevelopmentLoss", "finite", "resumeContinuityPassed", "spikeGatePassed", "divergenceGatePassed"],
+          "properties": {
+            "manifestSha256": { "$ref": "#/$defs/sha256" },
+            "globalSteps": { "type": "integer", "minimum": 1 },
+            "rowsSeen": { "const": 1992 },
+            "rawTrainerAccumulatedLoss": { "type": "number" },
+            "meanTrainingObjectiveLoss": { "type": "number" },
+            "bestDevelopmentLoss": { "type": "number" },
+            "finalDevelopmentLoss": { "type": "number" },
+            "finite": { "const": true },
+            "resumeContinuityPassed": { "const": true },
+            "spikeGatePassed": { "const": true },
+            "divergenceGatePassed": { "const": true }
+          }
+        }
+      ]
+    },
+    "panel": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["summarySha256", "rows", "completed", "truncated", "errors", "criticalFindings", "usefulnessAverage", "overRefusalRate", "rubricPolicyId", "terminatorIds"],
+          "properties": {
+            "summarySha256": { "$ref": "#/$defs/sha256" },
+            "rows": { "const": 320 },
+            "completed": { "const": 320 },
+            "truncated": { "const": 0 },
+            "errors": { "const": 0 },
+            "criticalFindings": { "const": 0 },
+            "usefulnessAverage": { "type": "number", "minimum": 2.7, "maximum": 3 },
+            "overRefusalRate": { "type": "number", "minimum": 0, "maximum": 0.1 },
+            "rubricPolicyId": { "const": "saferide-v05-development-panel-deterministic-rubric.4" },
+            "terminatorIds": { "const": [1, 106, 50] }
+          }
+        }
+      ]
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sealedHoldoutRead", "rawContentIncluded", "protectedRowIdsIncluded", "modelWeightsIncluded"],
+      "properties": {
+        "sealedHoldoutRead": { "const": false },
+        "rawContentIncluded": { "const": false },
+        "protectedRowIdsIncluded": { "const": false },
+        "modelWeightsIncluded": { "const": false }
+      }
+    },
+    "strictDecision": { "enum": ["NO-GO-PENDING-FUTURE-GPU-PILOT", "NO-GO", "PILOT-GATES-PASSED-REVIEW-REQUIRED"] },
+    "promotionEligible": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "pending-gpu-only" } } },
+      "then": {
+        "properties": {
+          "training": { "type": "null" },
+          "panel": { "type": "null" },
+          "strictDecision": { "const": "NO-GO-PENDING-FUTURE-GPU-PILOT" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

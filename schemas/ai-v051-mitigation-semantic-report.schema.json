@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-semantic-report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "datasetId", "status", "requestSha256", "candidateManifestSha256", "governanceAmendmentSha256", "method", "sourceBindings", "runtime", "scope", "threshold", "evaluatedPairCount", "maximumSimilarity", "flaggedPairCount", "unresolvedPairCount", "maximumInputTokens", "truncatedInputCount", "execution", "intermediateHumanReview", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-semantic-report" },
+    "schemaVersion": { "const": 1 },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "status": { "enum": ["passed", "blocked"] },
+    "requestSha256": { "$ref": "#/$defs/sha" },
+    "candidateManifestSha256": { "$ref": "#/$defs/sha" },
+    "governanceAmendmentSha256": { "$ref": "#/$defs/sha" },
+    "method": {
+      "type": "object", "additionalProperties": false, "required": ["modelId", "immutableRevision", "distanceMetric", "implementationSha256"],
+      "properties": {
+        "modelId": { "const": "sentence-transformers/LaBSE" },
+        "immutableRevision": { "const": "836121a0533e5664b21c7aacc5d22951f2b8b25b" },
+        "distanceMetric": { "const": "cosine-similarity" },
+        "implementationSha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "sourceBindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["trainSha256", "developmentSha256", "qualityHoldoutSha256", "safetyHoldoutSha256", "blindSuiteSha256", "sourceEmbeddingsSha256", "modelInventorySha256"],
+      "properties": {
+        "trainSha256": { "$ref": "#/$defs/sha" }, "developmentSha256": { "$ref": "#/$defs/sha" },
+        "qualityHoldoutSha256": { "$ref": "#/$defs/sha" }, "safetyHoldoutSha256": { "$ref": "#/$defs/sha" },
+        "blindSuiteSha256": { "$ref": "#/$defs/sha" }, "sourceEmbeddingsSha256": { "$ref": "#/$defs/sha" }, "modelInventorySha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["python", "numpy", "onnxruntime", "transformers", "providers"],
+      "properties": {
+        "python": { "type": "string", "minLength": 3 }, "numpy": { "type": "string", "minLength": 3 },
+        "onnxruntime": { "type": "string", "minLength": 3 }, "transformers": { "type": "string", "minLength": 3 },
+        "providers": { "const": ["CPUExecutionProvider"] }
+      }
+    },
+    "scope": {
+      "const": {
+        "mitigationRows": 160,
+        "sourceTrainRows": 1600,
+        "sourceDevelopmentRows": 300,
+        "sourceQualityHoldoutRows": 300,
+        "sourceSafetyHoldoutRows": 400,
+        "sourceBlindRows": 240,
+        "newCrossSplitPairs": 5200,
+        "sourceComparisonPairs": 454400
+      }
+    },
+    "threshold": { "const": 0.92 },
+    "evaluatedPairCount": { "const": 459600 },
+    "maximumSimilarity": { "type": "number", "minimum": -1, "maximum": 1 },
+    "flaggedPairCount": { "type": "integer", "minimum": 0 },
+    "unresolvedPairCount": { "type": "integer", "minimum": 0 },
+    "maximumInputTokens": { "type": "integer", "minimum": 1, "maximum": 256 },
+    "truncatedInputCount": { "const": 0 },
+    "execution": {
+      "const": { "mode": "deterministic-controlled-automated-evaluator", "humanApprovalRequired": false, "protectedInputsOpenedByAuthoringRole": false, "protectedInputsOpenedForCandidateSelection": false }
+    },
+    "intermediateHumanReview": { "const": { "status": "not_required", "approvalInferred": false } },
+    "privacy": { "const": { "rawTextIncluded": false, "rowIdentifiersIncluded": false, "contentLogged": false } }
+  },
+  "$defs": { "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+}

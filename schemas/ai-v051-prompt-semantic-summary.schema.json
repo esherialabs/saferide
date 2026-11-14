@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-prompt-semantic-summary.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "datasetId", "status", "policySha256", "requestSha256", "candidateManifestSha256", "governanceAmendmentSha256", "historicalEvidence", "method", "sourceBindings", "runtime", "scope", "threshold", "blockingResult", "diagnosticReconciliation", "currentFullDialogueDiagnostic", "bilingualSiblingControl", "tokenization", "remediation", "execution", "intermediateHumanReview", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-prompt-semantic-summary" },
+    "schemaVersion": { "const": 2 },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "status": { "enum": ["passed", "blocked"] },
+    "policySha256": { "$ref": "#/$defs/sha" },
+    "requestSha256": { "$ref": "#/$defs/sha" },
+    "candidateManifestSha256": { "$ref": "#/$defs/sha" },
+    "governanceAmendmentSha256": { "$ref": "#/$defs/sha" },
+    "historicalEvidence": { "type": "object" },
+    "method": { "type": "object" },
+    "sourceBindings": { "type": "object" },
+    "runtime": { "type": "object" },
+    "scope": { "const": { "mitigationRows": 160, "sourceRows": 2840, "sourceComparisonPairs": 454400, "newCrossSplitPairs": 5200, "evaluatedPairCount": 459600 } },
+    "threshold": { "const": 0.92 },
+    "blockingResult": {
+      "type": "object", "additionalProperties": false, "required": ["representation", "maximumSimilarity", "flaggedPairCount", "unresolvedPairCount"],
+      "properties": { "representation": { "const": "normalized-user-turns-only-v1" }, "maximumSimilarity": { "type": "number", "minimum": -1, "maximum": 1 }, "flaggedPairCount": { "type": "integer", "minimum": 0 }, "unresolvedPairCount": { "type": "integer", "minimum": 0 } }
+    },
+    "diagnosticReconciliation": {
+      "type": "object", "additionalProperties": false, "required": ["representation", "blocking", "historicalEvaluatedPairCount", "historicalMaximumSimilarity", "historicalFlaggedPairCount", "reproducedFlaggedPairCount", "assistantResponseSimilarityOnlyCount", "genuinePromptCollisionWithinHistoricalCount", "promptOnlyCollisionCount", "reconciled"],
+      "properties": { "representation": { "const": "non-system-user-and-assistant-turns" }, "blocking": { "const": false }, "historicalEvaluatedPairCount": { "const": 459600 }, "historicalMaximumSimilarity": { "type": "number" }, "historicalFlaggedPairCount": { "const": 31 }, "reproducedFlaggedPairCount": { "const": 31 }, "assistantResponseSimilarityOnlyCount": { "type": "integer", "minimum": 0, "maximum": 31 }, "genuinePromptCollisionWithinHistoricalCount": { "type": "integer", "minimum": 0, "maximum": 31 }, "promptOnlyCollisionCount": { "type": "integer", "minimum": 0 }, "reconciled": { "const": true } }
+    },
+    "currentFullDialogueDiagnostic": {
+      "type": "object", "additionalProperties": false, "required": ["representation", "blocking", "evaluatedPairCount", "maximumSimilarity", "flaggedPairCount"],
+      "properties": { "representation": { "const": "non-system-user-and-assistant-turns" }, "blocking": { "const": false }, "evaluatedPairCount": { "const": 459600 }, "maximumSimilarity": { "type": "number", "minimum": -1, "maximum": 1 }, "flaggedPairCount": { "type": "integer", "minimum": 0 } }
+    },
+    "bilingualSiblingControl": { "const": { "familyCount": 80, "sameSplitSiblingPairCount": 80, "crossSplitFamilyCount": 0, "crossSplitExemptionCount": 0 } },
+    "tokenization": { "type": "object" },
+    "remediation": { "type": "object" },
+    "execution": { "type": "object" },
+    "intermediateHumanReview": { "const": { "status": "not_required", "approvalInferred": false } },
+    "privacy": { "const": { "rawTextIncluded": false, "protectedSourceIdentifiersIncluded": false, "candidateIdentifiersIncluded": false, "embeddingsIncluded": false, "contentLogged": false } }
+  },
+  "$defs": { "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+}

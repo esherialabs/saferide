@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v054-next-pilot-plan.schema.json",
+  "title": "SafeRide v0.5.4 targeted next-pilot plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "planId", "issue", "status", "datasetId", "sourceCommit", "historicalDecision", "dataset", "fixedSuites", "recipe", "generation", "runtime", "codeBindings", "scope", "strictDecision"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v054-next-pilot-plan" },
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "pattern": "^saferide-v054-next-pilot-[a-f0-9]{16}$" },
+    "issue": { "const": "ESH-4198" },
+    "status": { "const": "vps-validated-gpu-pilot-pending" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.4" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "historicalDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decision", "immutableResultSha256", "rewritten"],
+      "properties": {
+        "decision": { "const": "NO-GO" },
+        "immutableResultSha256": { "$ref": "#/$defs/sha256" },
+        "rewritten": { "const": false }
+      }
+    },
+    "dataset": {
+      "type": "object", "additionalProperties": false,
+      "required": ["frozenManifestSha256", "combinedTrainSha256", "newMitigationTrainSha256", "trainingRecipeSha256", "datasetAuditSha256", "semanticReportSha256", "tokenizationReportSha256", "registerSha256", "uniqueRows", "weightedExamples", "newRows", "newFamilies"],
+      "properties": {
+        "frozenManifestSha256": { "$ref": "#/$defs/sha256" },
+        "combinedTrainSha256": { "$ref": "#/$defs/sha256" },
+        "newMitigationTrainSha256": { "$ref": "#/$defs/sha256" },
+        "trainingRecipeSha256": { "$ref": "#/$defs/sha256" },
+        "datasetAuditSha256": { "$ref": "#/$defs/sha256" },
+        "semanticReportSha256": { "$ref": "#/$defs/sha256" },
+        "tokenizationReportSha256": { "$ref": "#/$defs/sha256" },
+        "registerSha256": { "$ref": "#/$defs/sha256" },
+        "uniqueRows": { "const": 1864 },
+        "weightedExamples": { "const": 1896 },
+        "newRows": { "const": 32 },
+        "newFamilies": { "const": 16 }
+      }
+    },
+    "fixedSuites": {
+      "type": "object", "additionalProperties": false,
+      "required": ["originalDevelopment", "mitigationDevelopment", "sealedHoldout"],
+      "properties": {
+        "originalDevelopment": { "$ref": "#/$defs/fixedSuite" },
+        "mitigationDevelopment": { "$ref": "#/$defs/fixedSuite" },
+        "sealedHoldout": {
+          "type": "object", "additionalProperties": false,
+          "required": ["sha256", "readDuringRemediation", "usedForTraining"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "readDuringRemediation": { "const": false },
+            "usedForTraining": { "const": false }
+          }
+        }
+      }
+    },
+    "recipe": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seed", "epochs", "learningRate", "scheduler", "warmupRatio", "gradientAccumulationSteps", "maxGradientNorm", "evaluationSteps", "saveSteps", "assistantOnlyLoss", "newRowMultiplier", "selectionMetric"],
+      "properties": {
+        "seed": { "const": 419805 },
+        "epochs": { "const": 1 },
+        "learningRate": { "const": 0.00002 },
+        "scheduler": { "const": "cosine" },
+        "warmupRatio": { "const": 0.03 },
+        "gradientAccumulationSteps": { "const": 8 },
+        "maxGradientNorm": { "const": 1.0 },
+        "evaluationSteps": { "const": 25 },
+        "saveSteps": { "const": 25 },
+        "assistantOnlyLoss": { "const": true },
+        "newRowMultiplier": { "const": 2 },
+        "selectionMetric": { "const": "minimum-finite-development-assistant-token-loss" }
+      }
+    },
+    "generation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxNewTokens", "terminatorIds", "terminatorSource", "zeroTruncationRequired"],
+      "properties": {
+        "maxNewTokens": { "const": 192 },
+        "terminatorIds": { "const": [1, 106, 50] },
+        "terminatorSource": { "const": "pinned-model-generation-config" },
+        "zeroTruncationRequired": { "const": true }
+      }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authoritativeRecovery", "baseModel", "image"],
+      "properties": {
+        "authoritativeRecovery": {
+          "type": "object", "additionalProperties": false,
+          "required": ["awsRecoverySha256", "historicalResultSha256"],
+          "properties": {
+            "awsRecoverySha256": { "const": "a975776eb3a00099579cd35811bb74cf69d7f084b368073cf2b9f71a18fd01a8" },
+            "historicalResultSha256": { "const": "df42e46e1b4ef73402ab7356bea23df001bba44f64ad9cd08756ee41ae271dd4" }
+          }
+        },
+        "baseModel": {
+          "type": "object", "additionalProperties": false,
+          "required": ["modelId", "revision", "fileCount", "totalBytes", "files"],
+          "properties": {
+            "modelId": { "const": "google/gemma-4-E2B-it" },
+            "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+            "fileCount": { "const": 9 },
+            "totalBytes": { "const": 10278846140 },
+            "files": {
+              "type": "array", "minItems": 9, "maxItems": 9,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["path", "sha256", "sizeBytes"],
+                "properties": {
+                  "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                  "sha256": { "$ref": "#/$defs/sha256" },
+                  "sizeBytes": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "image": {
+          "type": "object", "additionalProperties": false,
+          "required": ["archiveSha256", "archiveSizeBytes", "runtimeManifestDigest", "runtimeConfigDigest", "platform", "launcherSourceCommit", "title"],
+          "properties": {
+            "archiveSha256": { "const": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf" },
+            "archiveSizeBytes": { "const": 3350200320 },
+            "runtimeManifestDigest": { "const": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca" },
+            "runtimeConfigDigest": { "const": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87" },
+            "platform": { "const": "linux/amd64" },
+            "launcherSourceCommit": { "const": "26a83d00b37d3aa089088aff5fdd7c1f07ecba6c" },
+            "title": { "const": "SafeRide Gemma 4 E2B v0.5-series SageMaker trainer" }
+          }
+        }
+      }
+    },
+    "codeBindings": {
+      "type": "array", "minItems": 4, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^(?:(?:scripts|config|schemas)/[A-Za-z0-9._/-]+|constraints-ai-training\\.txt|requirements-ai-smoke\\.txt)$" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["vpsValidationComplete", "gpuExecutionPerformed", "trainingPerformed", "modelDownloadsPerformed", "deploymentPerformed", "publicationPerformed", "modelFixedClaimed", "fullCandidateAuthorized", "promotionAuthorized"],
+      "properties": {
+        "vpsValidationComplete": { "const": true },
+        "gpuExecutionPerformed": { "const": false },
+        "trainingPerformed": { "const": false },
+        "modelDownloadsPerformed": { "const": false },
+        "deploymentPerformed": { "const": false },
+        "publicationPerformed": { "const": false },
+        "modelFixedClaimed": { "const": false },
+        "fullCandidateAuthorized": { "const": false },
+        "promotionAuthorized": { "const": false }
+      }
+    },
+    "strictDecision": { "const": "NO-GO-PENDING-FUTURE-GPU-PILOT" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "fixedSuite": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "sha256", "mutated", "usedForTraining"],
+      "properties": {
+        "rows": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mutated": { "const": false },
+        "usedForTraining": { "const": false }
+      }
+    }
+  }
+}

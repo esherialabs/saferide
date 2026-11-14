@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v053-weekend-result.schema.json",
+  "title": "SafeRide v0.5.3 content-free weekend execution result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "issue",
+    "status",
+    "decision",
+    "recordedAt",
+    "historicalEvidence",
+    "authorization",
+    "artifactLineage",
+    "preflight",
+    "pilot",
+    "panel",
+    "gpuObservations",
+    "privacy",
+    "limitations"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v053-weekend-result" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "status": { "const": "recorded" },
+    "decision": { "const": "no-go" },
+    "recordedAt": { "$ref": "#/$defs/dateTime" },
+    "historicalEvidence": { "$ref": "#/$defs/historicalEvidence" },
+    "authorization": { "$ref": "#/$defs/authorization" },
+    "artifactLineage": { "$ref": "#/$defs/artifactLineage" },
+    "preflight": { "$ref": "#/$defs/runResult" },
+    "pilot": { "$ref": "#/$defs/runResult" },
+    "panel": { "$ref": "#/$defs/panelResult" },
+    "gpuObservations": { "$ref": "#/$defs/gpuObservations" },
+    "privacy": { "$ref": "#/$defs/privacy" },
+    "limitations": { "$ref": "#/$defs/limitations" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "nonEmpty": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmpty" }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "containsHostPaths",
+        "containsCredentials",
+        "containsRawPrompts",
+        "containsRawResponses",
+        "containsProtectedContent",
+        "containsRowIds",
+        "containsWeights"
+      ],
+      "properties": {
+        "containsHostPaths": { "const": false },
+        "containsCredentials": { "const": false },
+        "containsRawPrompts": { "const": false },
+        "containsRawResponses": { "const": false },
+        "containsProtectedContent": { "const": false },
+        "containsRowIds": { "const": false },
+        "containsWeights": { "const": false }
+      }
+    },
+    "historicalFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^docs/qa/saferide-gemma4-v053-[a-z0-9-]+\\.blocked\\.json$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "historicalEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "blockedEvidencePreserved", "blockedFiles"],
+      "properties": {
+        "commit": { "$ref": "#/$defs/commit" },
+        "blockedEvidencePreserved": { "const": true },
+        "blockedFiles": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/historicalFile" }
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "referenceSha256",
+        "authorizedAt",
+        "paidJobStarted",
+        "fullCandidateTrainingAuthorized",
+        "selectionAuthorized",
+        "promotionAuthorized",
+        "deploymentAuthorized",
+        "publicationAuthorized",
+        "sealedHoldoutOpened",
+        "humanApprovalRequested"
+      ],
+      "properties": {
+        "referenceSha256": { "$ref": "#/$defs/sha256" },
+        "authorizedAt": { "$ref": "#/$defs/dateTime" },
+        "paidJobStarted": { "const": false },
+        "fullCandidateTrainingAuthorized": { "const": false },
+        "selectionAuthorized": { "const": false },
+        "promotionAuthorized": { "const": false },
+        "deploymentAuthorized": { "const": false },
+        "publicationAuthorized": { "const": false },
+        "sealedHoldoutOpened": { "const": false },
+        "humanApprovalRequested": { "const": false }
+      }
+    },
+    "versionedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "sizeBytes", "historicalVersionId"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "maxLength": 100 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sizeBytes": { "type": "integer", "minimum": 1 },
+        "historicalVersionId": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "artifactLineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "createdAt",
+        "sourceEvidence",
+        "awsRecovery",
+        "image",
+        "model",
+        "dataset",
+        "transfer",
+        "gates"
+      ],
+      "properties": {
+        "status": { "const": "recovered-and-verified" },
+        "createdAt": { "$ref": "#/$defs/dateTime" },
+        "sourceEvidence": {
+          "type": "object",
+          "required": ["artifactRecoveryManifestSha256", "ociRecoveryLineageSha256", "awsArtifactRecoverySha256", "awsEcrRecoveryLineageSha256", "priorWeekendResultSha256", "inputManifestSha256"]
+        },
+        "awsRecovery": {
+          "type": "object",
+          "required": ["authorizationStatus", "accountIdSha256", "inventorySucceeded", "exactVersionRetrievalSucceeded", "paidJobStarted"]
+        },
+        "image": {
+          "type": "object",
+          "required": [
+            "historicalPlanSha256",
+            "historicalIndexDigest",
+            "historicalIndexSizeBytes",
+            "authoritativeArchiveSha256",
+            "authoritativeArchiveSizeBytes",
+            "authoritativeArchiveBlobCount",
+            "authoritativeArchiveBlobBytes",
+            "authoritativeTagDigestVerified",
+            "authoritativeDescriptorGraphVerified",
+            "executionPlanSha256",
+            "runtimeManifestDigest",
+            "runtimeConfigDigest",
+            "platform",
+            "archiveSha256",
+            "archiveSizeBytes",
+            "archiveBlobCount",
+            "transportArchiveSha256",
+            "transportArchiveSizeBytes",
+            "localRepositoryDigestVerified",
+            "localImageConfigIdVerified",
+            "liveEcrVerification"
+          ]
+        },
+        "model": {
+          "type": "object",
+          "required": [
+            "modelId",
+            "revision",
+            "recoverySource",
+            "historicalS3BindingsRetained",
+            "liveS3HeadVerified",
+            "liveS3VersionRetrievalVerified",
+            "byteIdenticalToExecutedSnapshot",
+            "fileCount",
+            "totalBytes",
+            "files",
+            "allHashesAndSizesVerified"
+          ],
+          "properties": {
+            "modelId": { "const": "google/gemma-4-E2B-it" },
+            "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+            "recoverySource": { "const": "exact-versioned-s3-objects" },
+            "historicalS3BindingsRetained": { "const": true },
+            "liveS3HeadVerified": { "const": true },
+            "liveS3VersionRetrievalVerified": { "const": true },
+            "byteIdenticalToExecutedSnapshot": { "const": true },
+            "fileCount": { "const": 9 },
+            "totalBytes": { "const": 10278846140 },
+            "files": {
+              "type": "array",
+              "minItems": 9,
+              "maxItems": 9,
+              "items": { "$ref": "#/$defs/versionedFile" }
+            },
+            "allHashesAndSizesVerified": { "const": true }
+          }
+        },
+        "dataset": {
+          "type": "object",
+          "required": [
+            "datasetId",
+            "sourceCommit",
+            "archiveSha256",
+            "archiveSizeBytes",
+            "historicalVersionId",
+            "packageManifestSha256",
+            "immutableGatesPassed",
+            "liveS3HeadVerified",
+            "liveS3VersionRetrievalVerified",
+            "byteIdenticalToExecutedArchive"
+          ]
+        },
+        "transfer": {
+          "type": "object",
+          "required": ["ledgerSha256", "fileCount", "privateModesVerified", "independentA11RehashPassed"]
+        },
+        "gates": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed"],
+            "properties": {
+              "name": { "enum": ["dataset", "semantic", "tokenizer", "safety", "leakage", "integrity", "image", "evidence"] },
+              "passed": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    "runResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "runKind",
+        "runId",
+        "sourceHashes",
+        "timing",
+        "coverage",
+        "loss",
+        "order",
+        "tensorIntegrity",
+        "recovery",
+        "checkpointAdapter",
+        "isolation",
+        "sealedHoldoutRowsRead"
+      ],
+      "properties": {
+        "status": { "const": "passed" },
+        "runKind": { "enum": ["preflight", "pilot"] },
+        "runId": { "type": "string", "pattern": "^saferide-v053-(preflight|pilot)-[a-z0-9-]+$" },
+        "sourceHashes": { "type": "object", "minProperties": 3 },
+        "timing": {
+          "type": "object",
+          "required": ["startedAt", "finishedAt", "wallSeconds", "trainerRuntimeSeconds"]
+        },
+        "coverage": {
+          "type": "object",
+          "required": ["rowsSeen", "uniqueRows", "epochsCompleted", "globalSteps"]
+        },
+        "loss": {
+          "type": "object",
+          "required": ["finalTrainLoss", "bestDevelopmentLoss", "historyPointCount", "historySha256", "allValuesFinite"]
+        },
+        "order": {
+          "type": "object",
+          "required": ["sampleCount", "sampleOrderSha256", "exactOrderVerified"]
+        },
+        "tensorIntegrity": {
+          "type": "object",
+          "required": ["tensorCount", "elementCount", "nonFiniteTensorCount", "passed"]
+        },
+        "recovery": { "type": "object" },
+        "checkpointAdapter": { "type": "object" },
+        "isolation": {
+          "type": "object",
+          "required": ["networkMode", "readOnlyInputs", "readOnlyRootFilesystem", "separateWritableOutputs", "cpuLimit", "memoryLimitGiB"]
+        },
+        "sealedHoldoutRowsRead": { "const": 0 }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["rowCount", "completed", "truncated", "executionErrors", "criticalFailures", "usefulnessAverage", "overRefusalRate"]
+    },
+    "panelResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "runId",
+        "createdAt",
+        "bindings",
+        "suites",
+        "combined",
+        "gates",
+        "byLanguage",
+        "bySuiteLanguage",
+        "byCategory",
+        "criticalFindings",
+        "sealedHoldoutOpened",
+        "humanReviewClaimed"
+      ],
+      "properties": {
+        "status": { "const": "completed-no-go" },
+        "runId": { "$ref": "#/$defs/nonEmpty" },
+        "createdAt": { "type": "string", "minLength": 20 },
+        "bindings": { "type": "object", "minProperties": 6 },
+        "suites": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/metrics" }
+        },
+        "combined": { "$ref": "#/$defs/metrics" },
+        "gates": {
+          "type": "object",
+          "required": [
+            "criticalFailuresMaximum",
+            "executionErrorsMaximum",
+            "truncationsMaximum",
+            "usefulnessMinimum",
+            "overRefusalMaximum",
+            "allPassed",
+            "reasons"
+          ]
+        },
+        "byLanguage": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/metrics" } },
+        "bySuiteLanguage": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/metrics" } },
+        "byCategory": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "$ref": "#/$defs/metrics" } },
+        "criticalFindings": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+        "sealedHoldoutOpened": { "const": false },
+        "humanReviewClaimed": { "const": false }
+      }
+    },
+    "gpuObservations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "pilot", "panel", "finalState"],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "required": ["sampleDurationSeconds", "deviceIndex", "totalVramMiB", "minimumFreeVramMiB", "peakUtilizationPercent", "activeComputeProcessCount", "gatePassed"]
+        },
+        "pilot": { "type": "object", "required": ["competingWorkloadObserved", "onlySafeRideStopped", "peakTemperatureC", "minimumObservedFreeVramMiB"] },
+        "panel": { "type": "object", "required": ["competingWorkloadObserved", "peakTemperatureC", "minimumObservedFreeVramMiB"] },
+        "finalState": { "type": "object", "required": ["capturedAt", "safeRideScreenActive", "safeRideContainerCount", "safeRideLockFree", "freeVramMiB", "utilizationPercent", "temperatureC"] }
+      }
+    }
+  }
+}

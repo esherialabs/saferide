@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-review-attestation.schema.json",
+  "title": "SafeRide independent exact-run review attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "attestationId",
+    "evaluationRunId",
+    "artifactSlot",
+    "reviewerRole",
+    "reviewerKey",
+    "identityEvidenceRef",
+    "independenceAttested",
+    "fullScopeAttested",
+    "completedAt",
+    "approvalScope",
+    "decision",
+    "notReleaseOrUnicefApproval",
+    "assignmentSha256",
+    "privateBundleSha256",
+    "generationManifestSha256",
+    "reviewResultSha256",
+    "rowsReviewed",
+    "totalRows",
+    "allRowsReviewed",
+    "scoreCounts",
+    "averageScore",
+    "criticalPromptIds",
+    "mitigationPromptIds",
+    "privacy"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.review-attestation" },
+    "schemaVersion": { "const": 1 },
+    "attestationId": { "$ref": "#/$defs/nonEmpty" },
+    "evaluationRunId": { "$ref": "#/$defs/nonEmpty" },
+    "artifactSlot": { "const": "tuned-mobile" },
+    "reviewerRole": { "enum": ["product-safeguarding", "technical-ml"] },
+    "reviewerKey": { "$ref": "#/$defs/nonEmpty" },
+    "identityEvidenceRef": { "$ref": "#/$defs/nonEmpty" },
+    "independenceAttested": { "const": true },
+    "fullScopeAttested": { "const": true },
+    "completedAt": { "$ref": "#/$defs/nonEmpty" },
+    "approvalScope": { "const": "exact-generation-output-review-only" },
+    "decision": { "enum": ["approved-for-evaluation", "approved-with-conditions", "not-approved"] },
+    "notReleaseOrUnicefApproval": { "const": true },
+    "assignmentSha256": { "$ref": "#/$defs/sha256" },
+    "privateBundleSha256": { "$ref": "#/$defs/sha256" },
+    "generationManifestSha256": { "$ref": "#/$defs/sha256" },
+    "reviewResultSha256": { "$ref": "#/$defs/sha256" },
+    "rowsReviewed": { "type": "integer", "minimum": 1 },
+    "totalRows": { "type": "integer", "minimum": 1 },
+    "allRowsReviewed": { "const": true },
+    "scoreCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["0", "1", "2", "3", "unscored"],
+      "properties": {
+        "0": { "type": "integer", "minimum": 0 },
+        "1": { "type": "integer", "minimum": 0 },
+        "2": { "type": "integer", "minimum": 0 },
+        "3": { "type": "integer", "minimum": 0 },
+        "unscored": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "averageScore": { "type": ["number", "null"], "minimum": 0, "maximum": 3 },
+    "criticalPromptIds": { "$ref": "#/$defs/promptIds" },
+    "mitigationPromptIds": { "$ref": "#/$defs/promptIds" },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containsRawPrompt", "containsRawCompletion", "containsSurvivorData", "containsExactLocation"],
+      "properties": {
+        "containsRawPrompt": { "const": false },
+        "containsRawCompletion": { "const": false },
+        "containsSurvivorData": { "const": false },
+        "containsExactLocation": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "promptIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z]+-[0-9]{3}$" }
+    }
+  }
+}

@@ -3,9 +3,107 @@
   "policyId": "saferide-authoritative-public-repository-v2",
   "repositoryUrl": "https://github.com/esherialabs/saferide",
   "sourceRepository": "https://github.com/esherialabs/saferide-internal",
-  "sourceBranch": "feat/app-local-infra-phase-1",
+  "sourceBranch": "main",
   "publicationModel": "history-free-authoritative-public-snapshot",
   "licenseBoundary": "Public source code is Apache-2.0; enumerated public documentation and content are CC-BY-4.0; trademarks and restricted records are excluded.",
+  "boundaryDecisions": [
+    {
+      "decided": "2026-11-10",
+      "by": "project owner",
+      "paths": [
+        "apps/partner-web/"
+      ],
+      "decision": "include",
+      "reason": "Partner dashboard UI is synthetic-only (mock data, .test addresses, placeholder keys) and pairs with the partner API already published under apps/api/."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "project owner",
+      "paths": [
+        "web/public/images/pilot/",
+        "web/public/images/huria-community.webp",
+        "web/tests/pilot-photos.spec.ts"
+      ],
+      "decision": "exclude",
+      "reason": "Photographs of real people from the HURIA pilot are not relicensed for the public repository. Their Playwright spec is excluded with them, since it can only fail without the photos."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "project owner",
+      "paths": [
+        "infra/selfhost/",
+        "infra/azure/",
+        "infra/ai/",
+        "infra/ci/",
+        "docs/release/",
+        "config/unicef/",
+        "tools/saferide-reviewer/"
+      ],
+      "decision": "exclude",
+      "reason": "Live-host operations, cloud and private review material. Only the docs/release files named in includeFiles are public."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "maintainers",
+      "paths": [
+        "scripts/__tests__/release-candidate-preflight.test.mjs",
+        "scripts/__tests__/saferide-android-release-lineage.test.mjs",
+        "scripts/__tests__/saferide-azure-storage-probe.test.mjs",
+        "scripts/__tests__/saferide-evidence-checkout.test.mjs",
+        "scripts/__tests__/saferide-gemma4-comparator.test.mjs",
+        "scripts/__tests__/saferide-gemma4-development-progression.test.mjs",
+        "scripts/__tests__/saferide-gemma4-global-usefulness-v2.test.mjs",
+        "scripts/__tests__/saferide-gemma4-v05-controls.test.mjs",
+        "scripts/__tests__/saferide-gemma4-v05-production-pipeline.test.mjs",
+        "scripts/__tests__/saferide-moderated-cohort.test.mjs",
+        "scripts/__tests__/saferide-product-measurement.test.mjs",
+        "scripts/__tests__/saferide-review-form.test.mjs",
+        "scripts/__tests__/saferide-rsi-privacy.test.mjs",
+        "scripts/__tests__/saferide-v04-data-gate.test.mjs",
+        "scripts/__tests__/saferide-v04-dataset-audit.test.mjs",
+        "scripts/__tests__/saferide-v04-notebook.test.mjs"
+      ],
+      "decision": "exclude",
+      "reason": "These script tests read restricted evidence (docs/qa, docs/security, data/ai, docs/release, infra/azure, tools/saferide-reviewer) that the mirror does not publish, so they can only fail in the public tree. They still run privately."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "maintainers",
+      "paths": [
+        "web/README.md",
+        "web/scripts/prepare-pilot-photos.mjs"
+      ],
+      "decision": "exclude",
+      "reason": "web/README.md carries live-host operations and pilot process notes; prepare-pilot-photos.mjs only processes the excluded pilot originals. web/src/lib/pilotPhotos.ts stays: seven website modules import it, so the public build needs it."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "maintainers",
+      "paths": [
+        "web/tests/stale-claims.spec.ts"
+      ],
+      "decision": "exclude",
+      "reason": "It reads web/README.md and web/SEO_REMEDIATION_PLAN.md, which the mirror excludes, so it can only fail in the public tree. It still runs privately."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "maintainers",
+      "paths": [
+        "saferide-banner.png"
+      ],
+      "decision": "include",
+      "reason": "README.md shows it as its banner; product screenshot and logo, CC-BY-4.0 under ASSET-LICENSES.md, no people, only screenshot dimensions in its metadata."
+    },
+    {
+      "decided": "2026-11-10",
+      "by": "maintainers",
+      "paths": [
+        "docs/release/android-release-playbook.md"
+      ],
+      "decision": "exclude",
+      "reason": "Internal release operations: private release downloads, private evidence storage and signer lineage. README.md and docs/release/store-release-runbook.md link to it; the validator lists those links as known dangling until the root docs change."
+    }
+  ],
   "outputMappings": [
     {
       "source": "public-repository/LICENSE",
@@ -14,6 +112,18 @@
     {
       "source": "public-repository/NOTICE",
       "destination": "NOTICE"
+    },
+    {
+      "source": "public-repository/.github/workflows/public-ci.yml",
+      "destination": ".github/workflows/public-ci.yml"
+    },
+    {
+      "source": "public-repository/.github/workflows/public-docs.yml",
+      "destination": ".github/workflows/public-docs.yml"
+    },
+    {
+      "source": "public-repository/.github/workflows/public-release.yml",
+      "destination": ".github/workflows/public-release.yml"
     }
   ],
   "includeFiles": [
@@ -28,9 +138,6 @@
     ".github/ISSUE_TEMPLATE/documentation.yml",
     ".github/ISSUE_TEMPLATE/feature.yml",
     ".github/pull_request_template.md",
-    ".github/workflows/public-ci.yml",
-    ".github/workflows/public-docs.yml",
-    ".github/workflows/public-release.yml",
     "App.tsx",
     "ASSET-LICENSES.md",
     "CODE_OF_CONDUCT.md",
@@ -44,6 +151,7 @@
     "OPEN_SOURCE.md",
     "README.md",
     "SECURITY.md",
+    "saferide-banner.png",
     "Saferide_Design_Style_System.md",
     "TRADEMARKS.md",
     "app.config.js",
@@ -79,6 +187,7 @@
   "includePrefixes": [
     "android/",
     "apps/api/",
+    "apps/partner-web/",
     "assets/",
     "config/ai/",
     "config/localization/",
@@ -105,17 +214,46 @@
   "excludeFiles": [
     "android/app/debug.keystore",
     "infra/web/RESOURCES.md",
-    "web/SEO_REMEDIATION_PLAN.md"
+    "scripts/__tests__/release-candidate-preflight.test.mjs",
+    "scripts/__tests__/saferide-android-release-lineage.test.mjs",
+    "scripts/__tests__/saferide-azure-storage-probe.test.mjs",
+    "scripts/__tests__/saferide-evidence-checkout.test.mjs",
+    "scripts/__tests__/saferide-gemma4-comparator.test.mjs",
+    "scripts/__tests__/saferide-gemma4-development-progression.test.mjs",
+    "scripts/__tests__/saferide-gemma4-global-usefulness-v2.test.mjs",
+    "scripts/__tests__/saferide-gemma4-v05-controls.test.mjs",
+    "scripts/__tests__/saferide-gemma4-v05-production-pipeline.test.mjs",
+    "scripts/__tests__/saferide-moderated-cohort.test.mjs",
+    "scripts/__tests__/saferide-product-measurement.test.mjs",
+    "scripts/__tests__/saferide-review-form.test.mjs",
+    "scripts/__tests__/saferide-rsi-privacy.test.mjs",
+    "scripts/__tests__/saferide-v04-data-gate.test.mjs",
+    "scripts/__tests__/saferide-v04-dataset-audit.test.mjs",
+    "scripts/__tests__/saferide-v04-notebook.test.mjs",
+    "web/README.md",
+    "web/SEO_REMEDIATION_PLAN.md",
+    "web/public/images/huria-community.webp",
+    "web/scripts/prepare-pilot-photos.mjs",
+    "web/tests/pilot-photos.spec.ts",
+    "web/tests/stale-claims.spec.ts"
   ],
   "excludePrefixes": [
     ".github/workflows/",
+    "config/unicef/",
     "data/ai/",
     "docs/agents/",
+    "docs/release/",
     "docs/security/",
     "docs/unicef/",
+    "infra/ai/",
     "infra/aws/",
+    "infra/azure/",
+    "infra/ci/",
+    "infra/selfhost/",
     "infra/web/",
-    "notebooks/"
+    "notebooks/",
+    "tools/saferide-reviewer/",
+    "web/public/images/pilot/"
   ],
   "forbiddenExtensions": [
     ".aab",

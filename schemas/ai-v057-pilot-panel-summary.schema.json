@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-pilot-panel-summary.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "status", "createdAt", "datasetId", "pilot", "provenance", "generation", "suiteResults", "combined", "byLanguage", "byCategory", "byVariant", "integrity", "criticalAdjudication", "eligibility", "privacy", "promotionEligible", "fullCandidateSubmissionAuthorized"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-pilot-panel-summary"}, "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"}, "status": {"enum": ["passed", "blocked"]}, "createdAt": {"type": "string"},
+    "datasetId": {"const": "saferide-synthetic-guidance-v0.5.7"},
+    "pilot": {"type": "object", "additionalProperties": true}, "provenance": {"type": "object", "additionalProperties": true},
+    "generation": {"type": "object", "additionalProperties": true, "required": ["decoding", "generationBatchSize", "maximumNewTokens", "terminatorIds", "modelTerminatorStops"]},
+    "suiteResults": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/metric"}},
+    "combined": {"$ref": "#/$defs/metric"}, "byLanguage": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/metric"}},
+    "byCategory": {"type": "array", "minItems": 12, "maxItems": 12, "items": {"$ref": "#/$defs/metric"}},
+    "byVariant": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/metric"}},
+    "integrity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rowsEvaluated", "languageMatchRows", "languageConsistencyPassed", "systemPromptDisclosureFindings", "disclosureResistancePassed", "allCategoryLanguageVariantGatesPassed"],
+      "properties": {
+        "rowsEvaluated": {"const": 320}, "languageMatchRows": {"type": "integer", "minimum": 0, "maximum": 320},
+        "languageConsistencyPassed": {"type": "boolean"}, "systemPromptDisclosureFindings": {"type": "integer", "minimum": 0},
+        "disclosureResistancePassed": {"type": "boolean"},
+        "allCategoryLanguageVariantGatesPassed": {"type": "boolean"}
+      }
+    },
+    "criticalAdjudication": {"type": "object", "additionalProperties": false, "required": ["total", "signals"], "properties": {"total": {"type": "integer", "minimum": 0}, "signals": {"type": "array"}}},
+    "eligibility": {"type": "object", "additionalProperties": false, "required": ["eligible", "reasons"], "properties": {"eligible": {"type": "boolean"}, "reasons": {"type": "array", "items": {"type": "string"}}}},
+    "privacy": {"type": "object", "additionalProperties": false, "required": ["summaryContainsRawPrompts", "summaryContainsRawCompletions", "sealedHoldoutRead", "developmentTextCommitted", "baseOutputsRegenerated"], "properties": {"summaryContainsRawPrompts": {"const": false}, "summaryContainsRawCompletions": {"const": false}, "sealedHoldoutRead": {"const": false}, "developmentTextCommitted": {"const": false}, "baseOutputsRegenerated": {"const": false}}},
+    "promotionEligible": {"const": false}, "fullCandidateSubmissionAuthorized": {"const": false}
+  },
+  "$defs": {
+    "metric": {
+      "type": "object", "additionalProperties": true,
+      "required": ["rowCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage", "modelTerminatorStops"],
+      "properties": {
+        "rowCount": {"type": "integer", "minimum": 1}, "completed": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "integer", "minimum": 0}, "errors": {"type": "integer", "minimum": 0},
+        "criticalFailures": {"type": "integer", "minimum": 0}, "overRefusalRate": {"type": "number", "minimum": 0, "maximum": 1},
+        "usefulnessAverage": {"type": "number", "minimum": 0, "maximum": 3}, "modelTerminatorStops": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

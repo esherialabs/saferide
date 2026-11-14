@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v053-pilot-panel-summary.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "summaryId", "createdAt", "issue", "status", "datasetId", "baseModel", "candidate", "provenance", "generation", "executionPolicy", "suiteResults", "eligibility", "selectionPolicy", "privacy", "promotionEligible", "fullCandidateSubmissionAuthorized"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v053-pilot-panel-summary" },
+    "schemaVersion": { "const": 1 },
+    "summaryId": { "type": "string", "pattern": "^saferide-v053-pilot-panel-[a-f0-9]{12}-[a-f0-9]{12}-seed-419805$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "issue": { "const": "ESH-4198" },
+    "status": { "enum": ["passed", "blocked"] },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.3" },
+    "baseModel": {
+      "type": "object", "additionalProperties": false, "required": ["modelId", "revision"],
+      "properties": {
+        "modelId": { "const": "google/gemma-4-E2B-it" },
+        "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" }
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seed", "runId", "runKind", "manifestSha256", "bestCheckpoint", "developmentAssistantTokenLoss", "adapterInventorySha256", "finiteTensorGate"],
+      "properties": {
+        "seed": { "const": 419805 },
+        "runId": { "type": "string", "minLength": 8 },
+        "runKind": { "const": "pilot" },
+        "manifestSha256": { "$ref": "#/$defs/sha256" },
+        "bestCheckpoint": { "type": "string", "minLength": 3 },
+        "developmentAssistantTokenLoss": { "type": "number", "minimum": 0 },
+        "adapterInventorySha256": { "$ref": "#/$defs/sha256" },
+        "finiteTensorGate": { "$ref": "ai-v053-pilot-panel-input.schema.json#/$defs/finiteTensorGate" }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["panelInputSha256", "sourceCommit", "imageDigest", "jobNameSha256", "scoringPolicySha256", "baseComparatorDiagnosisSha256"],
+      "properties": {
+        "panelInputSha256": { "$ref": "#/$defs/sha256" },
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "imageDigest": { "$ref": "#/$defs/sha256" },
+        "jobNameSha256": { "$ref": "#/$defs/sha256" },
+        "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+        "baseComparatorDiagnosisSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "generation": { "$ref": "ai-v051-development-panel-input.schema.json#/$defs/generation" },
+    "executionPolicy": { "$ref": "ai-v053-pilot-panel-input.schema.json#/$defs/executionPolicy" },
+    "suiteResults": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "prefixItems": [
+        { "$ref": "#/$defs/originalResult" },
+        { "$ref": "#/$defs/mitigationResult" }
+      ],
+      "items": false
+    },
+    "eligibility": { "$ref": "#/$defs/eligibility" },
+    "selectionPolicy": { "$ref": "ai-v051-development-panel-input.schema.json#/$defs/selectionPolicy" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["summaryContainsRawPrompts", "summaryContainsRawCompletions", "mitigationHoldoutRead", "protectedV05RowsRead", "blindPromptsRead", "baseOutputsRegenerated", "humanReviewClaimed", "classification"],
+      "properties": {
+        "summaryContainsRawPrompts": { "const": false },
+        "summaryContainsRawCompletions": { "const": false },
+        "mitigationHoldoutRead": { "const": false },
+        "protectedV05RowsRead": { "const": false },
+        "blindPromptsRead": { "const": false },
+        "baseOutputsRegenerated": { "const": false },
+        "humanReviewClaimed": { "const": false },
+        "classification": { "const": "controlled-content-free" }
+      }
+    },
+    "promotionEligible": { "const": false },
+    "fullCandidateSubmissionAuthorized": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "coverage": {
+      "type": "object", "additionalProperties": false, "required": ["rowCount", "completed", "truncated", "errors"],
+      "properties": {
+        "rowCount": { "enum": [20, 300] },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 300 },
+        "truncated": { "type": "integer", "minimum": 0, "maximum": 300 },
+        "errors": { "type": "integer", "minimum": 0, "maximum": 300 }
+      }
+    },
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["criticalFailures", "overRefusalRate", "usefulnessAverage", "baseCriticalFailures", "baseOverRefusalRate", "baseUsefulnessAverage"],
+      "properties": {
+        "criticalFailures": { "type": "integer", "minimum": 0 },
+        "overRefusalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usefulnessAverage": { "type": "number", "minimum": 0, "maximum": 3 },
+        "baseCriticalFailures": { "type": "integer", "minimum": 0 },
+        "baseOverRefusalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "baseUsefulnessAverage": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "eligibility": {
+      "type": "object", "additionalProperties": false, "required": ["eligible", "reasons"],
+      "properties": {
+        "eligible": { "type": "boolean" },
+        "reasons": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 3 } }
+      }
+    },
+    "rawArtifacts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["classification", "candidateBundleSha256", "baseBundleSha256", "baseOutputsRegenerated"],
+      "properties": {
+        "classification": { "const": "controlled-synthetic-raw" },
+        "candidateBundleSha256": { "$ref": "#/$defs/sha256" },
+        "baseBundleSha256": { "$ref": "#/$defs/sha256" },
+        "baseOutputsRegenerated": { "const": false }
+      }
+    },
+    "suiteResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["suiteId", "requiredCount", "dataSha256", "rowInventorySha256", "coverage", "metrics", "rawArtifacts", "eligibility"],
+      "properties": {
+        "suiteId": { "enum": ["original-development", "mitigation-development"] },
+        "requiredCount": { "enum": [20, 300] },
+        "dataSha256": { "$ref": "#/$defs/sha256" },
+        "rowInventorySha256": { "$ref": "#/$defs/sha256" },
+        "coverage": {
+          "type": "object", "additionalProperties": false, "required": ["candidate", "base"],
+          "properties": { "candidate": { "$ref": "#/$defs/coverage" }, "base": { "$ref": "#/$defs/coverage" } }
+        },
+        "metrics": { "$ref": "#/$defs/metrics" },
+        "rawArtifacts": { "$ref": "#/$defs/rawArtifacts" },
+        "eligibility": { "$ref": "#/$defs/eligibility" }
+      }
+    },
+    "originalResult": { "allOf": [{ "$ref": "#/$defs/suiteResult" }, { "properties": { "suiteId": { "const": "original-development" }, "requiredCount": { "const": 300 } } }] },
+    "mitigationResult": { "allOf": [{ "$ref": "#/$defs/suiteResult" }, { "properties": { "suiteId": { "const": "mitigation-development" }, "requiredCount": { "const": 20 } } }] }
+  }
+}

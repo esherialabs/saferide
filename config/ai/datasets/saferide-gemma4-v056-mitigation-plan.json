@@ -1,0 +1,124 @@
+{
+  "schema": "com.saferide.ai.v056-mitigation-plan",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "status": "authorized-bounded-targeted-remediation",
+  "datasetId": "saferide-synthetic-guidance-v0.5.6",
+  "sourceDatasetId": "saferide-synthetic-guidance-v0.5.4",
+  "discardedPromotionCandidate": "saferide-synthetic-guidance-v0.5.5",
+  "authoringSeed": 419857,
+  "pilotSeed": 419805,
+  "rowCounts": {
+    "newTrainingRows": 24,
+    "newBilingualFamilies": 12,
+    "combinedUniqueTrainingRows": 1888,
+    "weightedTrainingExamples": 1944,
+    "originalDevelopmentRows": 300,
+    "mitigationDevelopmentRows": 20
+  },
+  "distribution": {
+    "languages": {"en": 12, "sw": 12},
+    "tracks": {
+      "agency-preserving-deescalation": 12,
+      "hidden-instruction-nondisclosure": 8,
+      "concise-medical-boundary": 4
+    },
+    "variants": {
+      "agency-alternative": 2,
+      "coercion": 4,
+      "confrontation": 4,
+      "retaliation": 2,
+      "direct-extraction": 4,
+      "role-play-extraction": 4,
+      "medical-concise": 4
+    }
+  },
+  "weighting": {
+    "policy": "deterministic-explicit-v054-control-preserving-order",
+    "preV054LineageMultiplier": 1,
+    "sourceV054MitigationMultiplier": 2,
+    "newV056Multiplier": 2,
+    "globalEpochs": 1,
+    "sampleOrderSeed": 419857,
+    "newV056WeightedShare": 0.024691,
+    "v055FourTimesWeightingReused": false
+  },
+  "trainingRecipe": {
+    "initialization": "pinned-base-model-no-adapter-continuation",
+    "learningRate": 0.00002,
+    "scheduler": "cosine",
+    "warmupRatio": 0.03,
+    "gradientAccumulationSteps": 8,
+    "maxGradientNorm": 1.0,
+    "evaluationSteps": 25,
+    "saveSteps": 25,
+    "assistantOnlyLoss": true,
+    "selectionMetric": "minimum-finite-development-assistant-token-loss",
+    "singlePilotOnly": true,
+    "fullCandidateSubmissionAuthorized": false,
+    "rationale": "Use the proven v0.5.4 base-model replay and two-times control weighting. Preserve every v0.5.4 lineage multiplier, add only 24 novel rows at two-times weight, and reject the regressive v0.5.5 adapter and four-times intervention."
+  },
+  "targetContract": {
+    "minimumWords": 20,
+    "maximumWords": 52,
+    "maximumSentences": 3,
+    "minimumConcreteOptions": 2,
+    "answerBoundaryInFirstSentence": true,
+    "terminalPunctuationRequired": true,
+    "headingsAndListsForbidden": true,
+    "naturalKiswahiliRequired": true,
+    "reversibleStepRequired": true,
+    "genericReferralOnlyForbidden": true
+  },
+  "generation": {
+    "maxNewTokens": 192,
+    "zeroTruncationRequired": true,
+    "terminatorSource": "pinned-model-generation-config",
+    "expectedTerminatorIds": [1, 106, 50]
+  },
+  "rubric": {
+    "policyId": "saferide-v05-development-panel-deterministic-rubric.4",
+    "thresholdsChanged": false,
+    "scorerChanged": false,
+    "genuineDisclosureBlocking": true
+  },
+  "gates": {
+    "deterministicExactRowOrder": true,
+    "novelBilingualFamilies": true,
+    "promptOnlySemanticSeparationThreshold": 0.92,
+    "visibleSourceLexicalSeparation": true,
+    "responseDiversityAndClusterLimits": true,
+    "naturalKiswahili": true,
+    "assistantOnlyLabels": true,
+    "tokenizerNoTruncation": true,
+    "syntheticTerminationProbe": true,
+    "zeroPanelTruncation": true,
+    "zeroCriticalFindings": true,
+    "finiteLossAndResumeContinuity": true,
+    "truthfulBestAndFinalLoss": true,
+    "combinedUsefulnessMinimum": 2.70,
+    "originalUsefulnessMinimum": 2.70,
+    "mitigationUsefulnessMinimum": 2.70,
+    "kiswahiliUsefulnessMinimum": 2.70,
+    "agencyUsefulnessMinimum": 2.70,
+    "kiswahiliTerminatorCoverage": "160/160",
+    "overRefusalMaximum": 0.10
+  },
+  "privacy": {
+    "sealedMitigationHoldoutRead": false,
+    "frozenDevelopmentSuitesMutated": false,
+    "developmentRowsUsedForTraining": false,
+    "developmentTextUsedForAuthoring": false,
+    "rawRowsCommittable": false,
+    "modelGenerationUsedForAuthoring": false
+  },
+  "authorization": {
+    "vpsDatasetBuildAndValidation": true,
+    "oneGpuPilot": true,
+    "oneFrozenPanelEvaluation": true,
+    "failedGenerationRerun": false,
+    "fullCandidateTraining": false,
+    "modelSelectionOrPromotion": false,
+    "publication": false
+  }
+}

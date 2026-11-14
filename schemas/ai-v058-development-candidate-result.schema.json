@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v058-development-candidate-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt",
+    "scope", "bindings", "zeroStepHistory", "candidates", "developmentPanels", "finalA11",
+    "operations", "validation", "privacy"
+  ],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v058-development-candidate-result"},
+    "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"},
+    "branch": {"const": "codex/esh-4198-v051-mitigation"},
+    "pullRequest": {"const": 205},
+    "status": {"const": "development-panels-completed-no-downstream-action"},
+    "createdAt": {"$ref": "#/$defs/timestamp"},
+    "scope": {
+      "const": {
+        "backend": "A11-only",
+        "targetVersion": "v0.5.8",
+        "candidateSeeds": [419805, 419806],
+        "developmentRowsPerCandidate": 320,
+        "holdoutRowsRead": 0,
+        "downstreamActionsPerformed": false
+      }
+    },
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "modelRevision", "modelInventorySha256", "modelFileCount", "modelTotalBytes", "modelFiles",
+        "imageArchiveSha256", "imageArchiveSizeBytes", "imageConfigDigest", "frozenManifestSha256",
+        "a11InputManifestSha256", "tokenizationReportSha256", "currentPlanSha256",
+        "seed419805ExecutedPlanSha256", "seed419805ExecutedRunnerSha256", "currentRunnerSha256",
+        "shellLauncherSha256", "developmentPanelSha256"
+      ],
+      "properties": {
+        "modelRevision": {"const": "70af34e20bd4b7a91f0de6b22675850c43922a03"},
+        "modelInventorySha256": {"const": "ff7ebf6346e08ddc6c9901686b1a007ff383995a2bf15182feef5c1dbcb1d25b"},
+        "modelFileCount": {"const": 9},
+        "modelTotalBytes": {"const": 10278846140},
+        "modelFiles": {
+          "type": "array", "minItems": 9, "maxItems": 9,
+          "items": {"$ref": "#/$defs/fileBinding"}
+        },
+        "imageArchiveSha256": {"const": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf"},
+        "imageArchiveSizeBytes": {"const": 3350200320},
+        "imageConfigDigest": {"const": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87"},
+        "frozenManifestSha256": {"const": "0ad58d367f1ef1b6e46d57a741aef75f573734d024f9e4dc9318bbda281df272"},
+        "a11InputManifestSha256": {"const": "a32e49e7000dc8e0576a8987a38f8b2b58a67d9ffa17f03e967d67b91a59a115"},
+        "tokenizationReportSha256": {"const": "6b49e00db441d2ad86ddd2e0067c218c3cfff18010aa1822821be44c50392888"},
+        "currentPlanSha256": {"$ref": "#/$defs/sha256"},
+        "seed419805ExecutedPlanSha256": {"$ref": "#/$defs/sha256"},
+        "seed419805ExecutedRunnerSha256": {"$ref": "#/$defs/sha256"},
+        "currentRunnerSha256": {"$ref": "#/$defs/sha256"},
+        "shellLauncherSha256": {"$ref": "#/$defs/sha256"},
+        "developmentPanelSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "zeroStepHistory": {
+      "type": "object", "additionalProperties": false,
+      "required": ["preservedSeed419805", "modelRehash", "zeroStepGates", "seed419806ShellCorrection"],
+      "properties": {
+        "preservedSeed419805": {
+          "const": {
+            "status": "failed-zero-steps-unconsumed",
+            "candidateAuthorizationConsumed": false,
+            "optimizerStepsCompleted": 0,
+            "preserved": true
+          }
+        },
+        "modelRehash": {
+          "const": {"fileCount": 9, "inventoryMatched": true, "downloadPerformed": false, "substitutionPerformed": false}
+        },
+        "zeroStepGates": {
+          "const": {
+            "status": "passed", "uniqueRows": 1904, "weightedExamples": 1992,
+            "maximumTokens": 498, "maximumSequenceLength": 1024, "truncations": 0,
+            "developmentRowsRead": 300, "holdoutRowsRead": 0, "testsPassed": 28
+          }
+        },
+        "seed419806ShellCorrection": {
+          "type": "object", "additionalProperties": false,
+          "required": ["zeroStepScreen", "cause", "safeRideProcessStarted", "candidateAuthorizationConsumed", "optimizerStepsCompleted", "preserved"],
+          "properties": {
+            "zeroStepScreen": {"const": "sr-v058-candidate-s419806-20260809b"},
+            "cause": {"const": "staged-shell-launcher-execute-bit-missing"},
+            "safeRideProcessStarted": {"const": false},
+            "candidateAuthorizationConsumed": {"const": false},
+            "optimizerStepsCompleted": {"const": 0},
+            "preserved": {"const": true}
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "developmentPanels": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {"$ref": "#/$defs/panel"}
+    },
+    "finalA11": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "sampleCount", "durationSeconds", "minimumFreeVramMiB", "peakUtilizationPercent", "maximumComputeProcessCount", "finalFreeVramMiB", "finalUtilizationPercent", "safeRideLocksFree", "screensClosed", "containersAbsent"],
+      "properties": {
+        "status": {"const": "idle"}, "sampleCount": {"const": 16},
+        "durationSeconds": {"type": "number", "minimum": 30},
+        "minimumFreeVramMiB": {"type": "integer", "minimum": 22000},
+        "peakUtilizationPercent": {"type": "integer", "minimum": 0},
+        "maximumComputeProcessCount": {"const": 0},
+        "finalFreeVramMiB": {"type": "integer", "minimum": 22000},
+        "finalUtilizationPercent": {"type": "integer", "minimum": 0},
+        "safeRideLocksFree": {"const": true}, "screensClosed": {"const": true}, "containersAbsent": {"const": true}
+      }
+    },
+    "operations": {
+      "const": {
+        "fullCandidateRuns": 2, "optimizerSteps": 498, "recoveryRuns": 1,
+        "optimizerOperationsDuringRecovery": 0, "developmentPanelRuns": 2,
+        "developmentResponses": 640, "developmentReplayRuns": 2,
+        "hostPythonSafeRideRuns": 0, "holdoutReads": 0, "modelDownloads": 0,
+        "awsOrSageMakerRuns": 0, "selectionRuns": 0, "promotionRuns": 0,
+        "exportRuns": 0, "deploymentRuns": 0, "publicationRuns": 0,
+        "actionsRuns": 0, "mainBranchTouches": 0
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidateContractsPassed", "panelContractsPassed", "planValidatorPassed", "unitTestsPassed", "strictSchemasPassed", "resultValidatorPassed", "diffCheckPassed", "secretScanPassed", "allRequestedChecksPassed"],
+      "properties": {
+        "candidateContractsPassed": {"const": true}, "panelContractsPassed": {"const": true},
+        "planValidatorPassed": {"const": true}, "unitTestsPassed": {"const": true},
+        "strictSchemasPassed": {"const": true}, "resultValidatorPassed": {"const": true},
+        "diffCheckPassed": {"const": true}, "secretScanPassed": {"const": true},
+        "allRequestedChecksPassed": {"const": true}
+      }
+    },
+    "privacy": {
+      "const": {
+        "privateHostPathsIncluded": false, "credentialsIncluded": false,
+        "rawPromptsIncluded": false, "rawCompletionsIncluded": false,
+        "rawDevelopmentContentCommitted": false, "personalDataIncluded": false,
+        "holdoutContentIncluded": false
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "timestamp": {"type": "string", "minLength": 20},
+    "fileBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sizeBytes", "sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[A-Za-z0-9._/-]+$"},
+        "sizeBytes": {"type": "integer", "minimum": 1}, "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "loss": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finite", "rawTrainerAccumulatedLoss", "meanTrainingObjectiveLoss", "bestDevelopmentLoss", "finalDevelopmentLoss", "finalDevelopmentStep", "spikeGate", "divergenceGate"],
+      "properties": {
+        "finite": {"const": true}, "rawTrainerAccumulatedLoss": {"type": "number"},
+        "meanTrainingObjectiveLoss": {"type": "number"}, "bestDevelopmentLoss": {"type": "number"},
+        "finalDevelopmentLoss": {"type": "number"}, "finalDevelopmentStep": {"const": 249},
+        "spikeGate": {"const": "passed"}, "divergenceGate": {"const": "passed"}
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "seed", "runId", "screen", "status", "startedAt", "finishedAt", "wallSeconds",
+        "planSha256", "metadataSha256", "predecessorMetadataSha256", "optimizerSteps", "epochs",
+        "uniqueRows", "weightedExamples", "scheduledCheckpointSteps", "automaticTerminalCheckpointStep",
+        "checkpointInventorySha256", "adapterFileCount", "adapterInventorySha256", "adapterTensorValidation",
+        "loss", "recovery"
+      ],
+      "properties": {
+        "seed": {"enum": [419805, 419806]}, "runId": {"type": "string", "pattern": "^saferide-v058-candidate-s41980[56]-[a-z0-9-]+$"},
+        "screen": {"type": "string", "pattern": "^sr-v058-candidate-s41980[56]-[a-z0-9-]+$"},
+        "status": {"const": "completed"}, "startedAt": {"$ref": "#/$defs/timestamp"},
+        "finishedAt": {"$ref": "#/$defs/timestamp"}, "wallSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "planSha256": {"$ref": "#/$defs/sha256"}, "metadataSha256": {"$ref": "#/$defs/sha256"},
+        "predecessorMetadataSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "optimizerSteps": {"const": 249}, "epochs": {"const": 1}, "uniqueRows": {"const": 1904},
+        "weightedExamples": {"const": 1992},
+        "scheduledCheckpointSteps": {"const": [25, 50, 75, 100, 125, 150, 175, 200, 225]},
+        "automaticTerminalCheckpointStep": {"const": 249},
+        "checkpointInventorySha256": {"$ref": "#/$defs/sha256"}, "adapterFileCount": {"const": 6},
+        "adapterInventorySha256": {"$ref": "#/$defs/sha256"},
+        "adapterTensorValidation": {"const": {"tensorCount": 410, "elementCount": 12079104, "nonFiniteTensorCount": 0}},
+        "loss": {"$ref": "#/$defs/loss"},
+        "recovery": {
+          "type": "object", "additionalProperties": false,
+          "required": ["performed", "trainingRerun", "optimizerOperationsPerformed", "automaticTerminalCheckpointClassifiedSeparately"],
+          "properties": {
+            "performed": {"type": "boolean"}, "trainingRerun": {"const": false},
+            "optimizerOperationsPerformed": {"const": 0}, "automaticTerminalCheckpointClassifiedSeparately": {"const": true}
+          }
+        }
+      }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": true,
+      "required": ["rowCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage", "modelTerminatorStops"],
+      "properties": {
+        "rowCount": {"type": "integer", "minimum": 1}, "completed": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "integer", "minimum": 0}, "errors": {"type": "integer", "minimum": 0},
+        "criticalFailures": {"type": "integer", "minimum": 0}, "overRefusalRate": {"type": "number", "minimum": 0, "maximum": 1},
+        "usefulnessAverage": {"type": "number", "minimum": 0}, "modelTerminatorStops": {"type": "integer", "minimum": 0}
+      }
+    },
+    "panel": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "seed", "runId", "screen", "status", "finishedAt", "wallSeconds", "summarySha256", "executionSha256",
+        "replaySha256", "candidateMetadataSha256", "generatedResponses", "combined", "suiteResults", "byLanguage",
+        "byCategory", "byTrack", "byVariant", "integrity", "criticalAdjudication", "eligibility", "holdoutRowsRead"
+      ],
+      "properties": {
+        "seed": {"enum": [419805, 419806]}, "runId": {"type": "string", "pattern": "^saferide-v058-development-s41980[56]-[a-z0-9-]+$"},
+        "screen": {"type": "string", "pattern": "^sr-v058-development-s41980[56]-[a-z0-9-]+$"},
+        "status": {"enum": ["passed", "blocked"]}, "finishedAt": {"$ref": "#/$defs/timestamp"},
+        "wallSeconds": {"type": "number", "exclusiveMinimum": 0}, "summarySha256": {"$ref": "#/$defs/sha256"},
+        "executionSha256": {"$ref": "#/$defs/sha256"}, "replaySha256": {"$ref": "#/$defs/sha256"},
+        "candidateMetadataSha256": {"$ref": "#/$defs/sha256"}, "generatedResponses": {"const": 320},
+        "combined": {"$ref": "#/$defs/metric"}, "suiteResults": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/metric"}},
+        "byLanguage": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/metric"}},
+        "byCategory": {"type": "array", "minItems": 10, "items": {"$ref": "#/$defs/metric"}},
+        "byTrack": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/metric"}},
+        "byVariant": {"type": "array", "minItems": 8, "items": {"$ref": "#/$defs/metric"}},
+        "integrity": {"type": "object"}, "criticalAdjudication": {"type": "object"},
+        "eligibility": {
+          "type": "object", "additionalProperties": false,
+          "required": ["developmentGatePassed", "reasons"],
+          "properties": {"developmentGatePassed": {"type": "boolean"}, "reasons": {"type": "array", "items": {"type": "string"}}}
+        },
+        "holdoutRowsRead": {"const": 0}
+      }
+    }
+  }
+}

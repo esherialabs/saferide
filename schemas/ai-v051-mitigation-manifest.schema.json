@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "manifestId", "datasetId", "status", "classification", "sourceCommit", "bindings", "counts", "files", "checks", "review", "semanticGate", "trainingAllowed", "promotionAllowed", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-manifest" },
+    "schemaVersion": { "const": 1 },
+    "manifestId": { "type": "string", "pattern": "^saferide-v051-mitigation-[a-f0-9]{16}$" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "status": { "enum": ["pending-human-review", "pending-automated-gates", "frozen", "rejected"] },
+    "classification": { "const": "controlled-content-free" },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "bindings": { "type": "object" },
+    "counts": { "type": "object" },
+    "files": { "type": "array" },
+    "checks": { "type": "object" },
+    "review": { "type": "object" },
+    "systemPromptGovernance": { "type": "object" },
+    "semanticGate": { "type": "object" },
+    "trainingAllowed": { "type": "boolean" },
+    "promotionAllowed": { "const": false },
+    "privacy": { "type": "object" }
+  }
+}
