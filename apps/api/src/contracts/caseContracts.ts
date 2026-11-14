@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { normalizeCallbackPhone } from '../services/partnerCallbackSeal.js';
 import { rsiSignalSchema } from './rsiContracts.js';
 
 const safeIdentifier = z.string().trim().min(1).max(100).regex(/^[a-zA-Z0-9._:-]+$/);
@@ -23,11 +24,11 @@ const referralSelectedFieldSchema = z.enum([
   'ongoing_status',
 ]);
 
-export const referralWorkflowSchema = z.object({
+const referralBriefWorkflowSchema = z.object({
   schemaVersion: z.literal('1.0'),
   workflowType: z.literal('referral'),
   providerId: safeIdentifier,
-  channel: z.enum(['call', 'whatsapp', 'sms']),
+  channel: z.enum(['call', 'whatsapp', 'sms', 'partner_dashboard']),
   supportBrief: z.union([
     z.object({
       included: z.literal(false),
@@ -111,12 +112,62 @@ export const escalationWorkflowSchema = z.object({
   }).strict(),
 }).strict();
 
+// v3 is a distinct, separately recorded HURIA consent. Legacy briefs remain valid.
+export const HURIA_PACKET_CONSENT_VERSION = 'partner-follow-up.ke-coast-huria.v3';
+export const referralWorkflowSchema = referralBriefWorkflowSchema.extend({
+  partnerPacket: z.object({
+    consentVersion: z.literal(HURIA_PACKET_CONSENT_VERSION),
+    packet: escalationWorkflowSchema.shape.packet,
+  }).strict().optional(),
+});
+
 export const submittedCaseWorkflowSchema = z.object({
   schemaVersion: z.literal('1.0'),
   workflowType: z.literal('submitted-case'),
   pathway: z.literal('escalation'),
   submission: escalationWorkflowSchema,
 }).strict();
+
+/**
+ * Partners a survivor can route to in phase 1: HURIA, and the synthetic
+ * `test-partner` that only the dev/test seed creates (it never exists live,
+ * so routing to it there is refused as not accepting).
+ */
+export const ROUTABLE_PARTNER_STABLE_IDS = ['ke-coast-huria', 'test-partner'] as const;
+
+// Kenyan mobile subscriber numbers: +254 7XX XXX XXX or the 10X/11X ranges.
+const KENYAN_MOBILE_E164 = /^\+254(7\d{8}|1[01]\d{7})$/;
+
+/** A Kenyan mobile number in E.164 (via P1's normaliser), or null for landlines, short codes and other countries. */
+export function normalizeKenyanMobile(input: string): string | null {
+  const e164 = normalizeCallbackPhone(input);
+  return e164 && KENYAN_MOBILE_E164.test(e164) ? e164 : null;
+}
+
+const kenyanMobileSchema = z.string().max(24).transform((value, ctx) => {
+  const normalized = normalizeKenyanMobile(value);
+  if (!normalized) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'must be a Kenyan mobile number' });
+    return z.NEVER;
+  }
+  return normalized;
+});
+
+/**
+ * The survivor's explicit, per-report choice to route this case to a
+ * partner's secure dashboard. Both consents are recorded first through
+ * POST /api/privacy/consents and must still be granted and unused.
+ */
+export const partnerRoutingSchema = z.object({
+  partnerStableId: z.enum(ROUTABLE_PARTNER_STABLE_IDS),
+  consentRecordId: z.string().uuid(),
+  callback: z.object({
+    phoneNumber: kenyanMobileSchema,
+    consentRecordId: z.string().uuid(),
+  }).strict().optional(),
+}).strict();
+
+export type PartnerRoutingInput = z.infer<typeof partnerRoutingSchema>;
 
 export const createCaseSchema = z.object({
   idempotencyKey: z.string().uuid(),
@@ -127,12 +178,38 @@ export const createCaseSchema = z.object({
     version: z.literal('pathway-consent.v1'),
   }).strict(),
   workflow: z.discriminatedUnion('workflowType', [referralWorkflowSchema, submittedCaseWorkflowSchema]),
+  partnerRouting: partnerRoutingSchema.optional(),
 }).strict().superRefine((submission, ctx) => {
   if (submission.idempotencyKey !== submission.pathwayConsent.recordId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['idempotencyKey'],
       message: 'submission idempotency must be bound to the pathway consent record',
+    });
+  }
+  const routing = submission.partnerRouting;
+  if (submission.workflow.workflowType === 'referral' && submission.workflow.channel === 'partner_dashboard'
+    && (submission.workflow.providerId !== 'ke-coast-huria' || routing?.partnerStableId !== 'ke-coast-huria' || !submission.workflow.partnerPacket)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['workflow', 'channel'], message: 'digital referral requires a reviewed packet and explicit HURIA routing consent' });
+  }
+  if (submission.workflow.workflowType === 'referral' && submission.workflow.partnerPacket && routing?.partnerStableId !== 'ke-coast-huria') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['workflow', 'partnerPacket'], message: 'a reviewed HURIA packet requires explicit HURIA routing' });
+  }
+  if (!routing) return;
+  if (submission.workflow.workflowType === 'referral' && submission.workflow.providerId !== routing.partnerStableId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['partnerRouting', 'partnerStableId'],
+      message: 'a referral can only be routed to the provider it names',
+    });
+  }
+  const consentIds = [submission.pathwayConsent.recordId, routing.consentRecordId, routing.callback?.consentRecordId]
+    .filter((id): id is string => Boolean(id));
+  if (new Set(consentIds).size !== consentIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['partnerRouting', 'consentRecordId'],
+      message: 'each purpose needs its own consent record',
     });
   }
 });

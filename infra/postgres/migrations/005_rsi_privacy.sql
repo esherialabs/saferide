@@ -92,7 +92,7 @@ create table if not exists saferide.aggregate_release_windows (
     (
       dp_status = 'approved' and
       jsonb_typeof(dp_parameters) = 'object' and
-      jsonb_object_length(dp_parameters) = 6 and
+      (dp_parameters - array['epsilon', 'delta', 'sensitivity', 'clipping', 'composition', 'releaseCadenceHours']) = '{}'::jsonb and
       dp_parameters ?& array['epsilon', 'delta', 'sensitivity', 'clipping', 'composition', 'releaseCadenceHours']
     )
   ),

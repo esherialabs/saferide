@@ -31,7 +31,7 @@ update saferide.case_events event
 set payload = jsonb_build_object(
   'schemaVersion', 'legacy-minimized.1',
   'workflowType', coalesce(case_record.pathway, 'unknown'),
-  'status', case when event.event_type = 'submission' then 'submitted' else 'recorded'
+  'status', case when event.event_type = 'submission' then 'submitted' else 'recorded' end
 )
 from saferide.cases case_record
 where event.case_id = case_record.id;

@@ -31,8 +31,33 @@ export const DELETION_TARGET_CLASSES = [
   'derived_linkable_records',
   'temporary_files',
   'abandoned_uploads',
+  'partner_access',
 ] as const;
 export type DeletionTargetClass = typeof DELETION_TARGET_CLASSES[number];
+
+/**
+ * What the `partner_access` deletion class and the
+ * `partner-access-after-close-v1` retention policy (008, privacy manifest)
+ * cover: every partner-side table keyed by a referral. All of it is deleted
+ * with the case (cascade); on any revocation of the referral's access the
+ * partner-internal rows (notes, callback, onward referrals, activity) are
+ * deleted and the assignment cleared, leaving the tombstone and the audit.
+ * A new table that references partner_referrals must be added here (a
+ * database test checks the list against the schema).
+ */
+export const PARTNER_ACCESS_DELETION_SCOPE = {
+  targetClass: 'partner_access',
+  retentionPolicyId: 'partner-access-after-close-v1',
+  tables: [
+    'partner_referrals',
+    'partner_referral_evidence',
+    'partner_referral_callbacks',
+    'partner_case_notes',
+    'partner_onward_referrals',
+    'partner_case_activity',
+    'partner_push_jobs',
+  ],
+} as const satisfies { targetClass: DeletionTargetClass; retentionPolicyId: string; tables: readonly string[] };
 
 const transitions: Record<DeletionStatus, ReadonlySet<DeletionStatus>> = {
   requested: new Set(['verified', 'failed', 'legal_hold']),

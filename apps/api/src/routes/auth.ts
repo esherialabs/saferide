@@ -27,7 +27,7 @@ type AuthUserRow = {
 const signupSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(8).optional(),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 
 const passwordTokenSchema = z.object({
@@ -214,8 +214,8 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
   app.post('/auth/signup', async request => {
     const parsed = signupSchema.safeParse(request.body ?? {});
     if (!parsed.success) throw badRequest('Invalid signup payload', parsed.error.flatten());
-    if (!isPrivacyCapabilityEnabled('minor_processing')) {
-      throw serviceUnavailable('Remote account creation is disabled pending legal and safeguarding approval', {
+    if (!isPrivacyCapabilityEnabled('submitted_case_ingestion')) {
+      throw serviceUnavailable('Remote account creation is disabled while report submission is unavailable', {
         handoffId: 'HANDOFF-PRIVACY-LEGAL-REVIEW',
       });
     }
