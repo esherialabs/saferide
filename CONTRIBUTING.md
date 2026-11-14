@@ -60,10 +60,29 @@ maintainer may reserve an issue before substantial work begins.
    npm test
    ```
 
-5. Include behavior, safety/privacy impact, verification, limitations, and
+5. Optionally run the full public gates before you open the pull request
+   (Node 24.18.1, npm 11.16.0; takes several minutes and needs a quiet machine):
+
+   ```bash
+   npm run verify:public -- --snapshot . --out ../saferide-verify
+   ```
+
+   Paste `../saferide-verify/public-verify-summary.md` into the pull request if you like; it is self-reported and helps reviewers, but it is not proof (maintainers re-run the gates).
+6. Include behavior, safety/privacy impact, verification, limitations, and
    rollback notes in the pull request.
-6. Add a `Signed-off-by:` line using `git commit -s` to certify the Developer
+7. Add a `Signed-off-by:` line using `git commit -s` to certify the Developer
    Certificate of Origin 1.1.
+
+### How pull requests are verified
+
+GitHub Actions is unavailable for the organisation (billing lock), so GitHub will not
+show a green check on its own. After a maintainer has read your diff, they run the
+same checks on the maintainers' server (`npm run verify:public:pr -- <number>`) and
+post the two required statuses on your pull request head, together with an evidence
+file. Those steps are manual, so verification can take a little longer than hosted CI.
+If you push again, the statuses must be posted again for the new head. Your code is
+treated as untrusted: it runs in a sandbox with no tokens, a private home directory and no network except the dependency install (audit data is fetched by the maintainers' runner). Details:
+`docs/open-source/local-verification.md`.
 
 Release, model, privacy, security, and safeguarding changes require the
 independent reviews described in `GOVERNANCE.md`. Maintainers may port an

@@ -1,5 +1,11 @@
 # SafeRide Design System Foundation
 
+The September 2026 visual reskin supersedes the historical colour and radius
+values below. Use `src/theme/tokens.ts` and
+`docs/product/saferide-ui-reskin-reference.md` for the current ivory/lavender
+palette, rounded surfaces, selected reference, and mobile verification evidence.
+Existing semantic states, accessibility rules, and product behaviour still apply.
+
 This document is the working visual and accessibility contract for the SafeRide mobile app. It replaces the previous sector-agnostic style notes with a SafeRide-specific system for safety reporting, privacy-preserving evidence workflows, offline legal aid, and Kenyan public-transport contexts.
 
 Implementation source of truth:

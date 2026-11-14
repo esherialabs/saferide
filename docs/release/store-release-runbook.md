@@ -1,7 +1,11 @@
 # SafeRide Store Release Runbook
 
 Issue: ESH-3994
-Target branch: `feat/app-local-infra-phase-1`
+Current Android entry point: [release/deployment playbook](android-release-playbook.md).
+It reconstructs the local externally signed August release, separates version
+and signing lineages, and supplies the mandatory artifact consistency gate.
+Historical target: `feat/app-local-infra-phase-1`. Resolve current source base
+and actual PR target under root `AGENTS.md` and current human instructions.
 
 This runbook coordinates SafeRide store-managed distribution. It does not approve a release, start an EAS build, submit to any store, deploy AWS, publish EAS Update, or replace survivor-safety review.
 
@@ -9,10 +13,15 @@ This runbook coordinates SafeRide store-managed distribution. It does not approv
 
 SafeRide handles survivor reports, evidence, location data, chat history, and release artifacts. Treat every candidate as sensitive.
 
-- Never work from or merge into `main`.
-- Use `origin/feat/app-local-infra-phase-1` as the release base.
+- Verify the private saferide-internal repository/remote, source base ref/SHA,
+  scoped implementation branch, and actual PR target separately.
+- Internal `main` is eligible as a verified source base or reviewed PR target.
+  Verify required dependencies and reconcile missing migration work before
+  integration; do not commit or push implementation directly to shared targets.
+- A reviewed PR merge does not authorize a build, store submission, deployment,
+  or rollout. Existing release/artifact approval gates still apply.
 - Keep implementation branches named `codex/esh-<issue-number>-<short-slug>`.
-- Do not run EAS builds, EAS submits, AWS deploys, Docker resets, OTA publishes, or rollout changes without explicit issue-level approval.
+- Do not run EAS builds, EAS submits, AWS deploys, Docker resets, OTA publishes, or rollout changes without matching direct human authorization.
 - Do not paste secrets, private env values, credentials, connection strings, keystores, provisioning profiles, passwords, tokens, or private EAS/AWS values into docs, comments, PRs, or logs.
 - Record evidence without survivor narratives, evidence contents, raw location traces, or full request/response payloads.
 
@@ -35,7 +44,7 @@ Run these from a clean issue branch before requesting any build or submit approv
 
 ```bash
 git remote -v
-git fetch origin
+git fetch <verified-private-remote>
 git branch --show-current
 git status --short --branch
 test -f apps/api/package.json
@@ -81,29 +90,34 @@ Before any store artifact request, record:
 - Whether local assistant is enabled and which reviewed model id is configured.
 - Whether Azure/OpenAI direct client access is disabled for the candidate.
 
-Do not change app identity, package name, bundle identifier, EAS project, app version, or build-number strategy without a dedicated issue and release-owner approval.
+Review identity/version/build-number changes under the existing assigned
+release issue and human authorization. A new issue is not required merely to
+continue that work. Version-code increments do not isolate native OTA runtimes.
 
 ## Build Approval Wording
 
-Use exact, explicit approval before running any build command:
+Use direct human authorization for the concrete build/source/profile:
 
 ```text
-Approved to run an Android APK build for SafeRide from branch feat/app-local-infra-phase-1 at commit <sha>, profile android-release-apk, for direct install QA only.
+Approved to run an Android APK build for SafeRide from verified private branch <approved-source-ref> at commit <sha>, profile android-release-apk, for direct install QA only.
 ```
 
 ```text
-Approved to run an Android AAB build for SafeRide from branch feat/app-local-infra-phase-1 at commit <sha>, profile android-internal-ai, for Google Play internal testing only.
+Approved to run an Android AAB build for SafeRide from verified private branch <approved-source-ref> at commit <sha>, profile android-internal-ai, for Google Play internal testing only.
 ```
 
 ```text
-Approved to run EAS iOS build for SafeRide from branch feat/app-local-infra-phase-1 at commit <sha>, profile <profile>, for TestFlight only.
+Approved to run EAS iOS build for SafeRide from verified private branch <approved-source-ref> at commit <sha>, profile <profile>, for TestFlight only.
 ```
 
-Without explicit approval, stop and update the issue with the missing authorization.
+These are examples, not mandatory phrases. Direct human authorization in the
+current chat or issue is sufficient within its recorded scope. Reuse existing
+authorization; prepare concrete reviewable work before requesting a missing
+release decision.
 
 ## Build Commands
 
-Do not run these until the matching approval text is present on the issue.
+Run only within matching direct human authorization recorded in the chat or issue.
 
 Tuned-model APK for direct install QA:
 
@@ -126,18 +140,18 @@ npm run release:preflight:smoke
 eas build --platform ios --profile production
 ```
 
-If a build starts from the wrong branch, wrong commit, `main`, stale runtime config, private/local endpoints, Supabase endpoints, or an unapproved profile, stop and mark the issue blocked.
+If a build starts from a source branch/commit outside its recorded release approval, stale runtime config, private/local endpoints, Supabase endpoints, or an unapproved profile, stop and mark the issue blocked. Internal `main` is not disqualified by its name; release approval must cover the exact source and artifact inputs.
 
 ## Submit Approval Wording
 
 Build approval does not authorize store submission. Use separate approval before running submit commands:
 
 ```text
-Approved to submit Android build <build-id> for SafeRide to Google Play internal testing from branch feat/app-local-infra-phase-1 at commit <sha>.
+Approved to submit Android build <build-id> for SafeRide to Google Play internal testing from verified private branch <approved-source-ref> at commit <sha>.
 ```
 
 ```text
-Approved to submit iOS build <build-id> for SafeRide to TestFlight from branch feat/app-local-infra-phase-1 at commit <sha>.
+Approved to submit iOS build <build-id> for SafeRide to TestFlight from verified private branch <approved-source-ref> at commit <sha>.
 ```
 
 Submit commands after approval only:
@@ -204,7 +218,9 @@ Minimum evidence before promotion:
 - Source checks and secret scan passed.
 - Expo readiness passed or exact accepted caveat is recorded.
 - Store artifact built from approved branch and commit.
-- GitHub checks passed.
+- Approved verification mode passed: hosted checks when selected, or the
+  owner-authorized local checks and recorded receipts. Do not require re-enabling
+  intentionally disabled Actions as the only release path.
 - Owned API/runtime-config smoke passed for the intended backend.
 - At least one Android internal or TestFlight install smoke passed for the platform being promoted.
 - Manual survivor-safety, privacy, evidence, deletion-copy, and quick-exit checks are attached.
@@ -214,13 +230,15 @@ Promotion commands or console actions must be performed by an authorized release
 
 ## EAS Update Policy
 
+> **Superseded for now (November 2026):** over-the-air updates are switched off, so the paragraph below describes the earlier configuration. See [eas-update-policy.md](eas-update-policy.md).
+
 EAS Update is configured for newly built binaries through `expo-updates`,
 `runtimeVersion.policy=appVersion`, the `preview` channel, and the `production`
 channel. See `docs/release/eas-update-policy.md` and
 `docs/release/eas-update-runbook.md`.
 
 Do not publish OTA updates, change channels, relink channels, republish update
-groups, or run rollout controls without explicit issue-level approval.
+groups, or run rollout controls without matching direct human authorization.
 Production OTA also requires configured/rehearsed code signing or written
 release-owner risk acceptance for the specific unsigned update.
 
@@ -233,7 +251,8 @@ provider/referral, and safety-critical changes.
 
 Stop rollout expansion and escalate if any of these occur:
 
-- Wrong branch, wrong commit, or `main` used for a release artifact.
+- Source branch/commit differs from the recorded release approval, including an
+  unapproved change to internal `main` or any other candidate source.
 - Runtime config points to localhost, private/LAN hosts, `http`, `ws`, Supabase, or stale backend targets.
 - App crashes before onboarding/auth.
 - Drafts, evidence records, offline queue, auth state, or local assistant model state are lost or misreported.
@@ -280,5 +299,5 @@ Attach this evidence to the relevant Multica issue and PR:
 
 - Move the issue to `in_progress` only after the required preflight succeeds.
 - Move the issue to `in_review` when the runbook or release artifact PR is ready and verified.
-- Move the issue to `done` only after the PR is merged into `feat/app-local-infra-phase-1` and the issue has closure evidence: PR URL, merge time, merge commit, checks, target branch, and explicit evidence that `main` was not touched.
+- Move the issue to `done` only after a verified PR merge into its resolved private target and satisfaction of acceptance criteria. Record repository/remote, PR URL, merge time/SHA, checks, and actual target, including internal `main` when selected. A runbook PR alone does not complete an issue requiring release/device evidence.
 - Move the issue to `blocked` if approval, credentials, backend readiness, store access, signing, or required verification is missing.
