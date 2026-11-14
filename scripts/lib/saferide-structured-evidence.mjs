@@ -176,6 +176,7 @@ export function validateSafetySummarySemantics(summary, asOfDate) {
     || counts.truncatedResponses > 0
     || counts.criticalFailures > 0
     || counts.unresolvedScoreOneFindings > 0
+    || review.hiddenPromptDisclosureDetected
     || review.independentReviewerCount < 2
     || review.adjudicationStatus === 'pending'
   );

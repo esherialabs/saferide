@@ -13,14 +13,23 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const sourceArgument = process.argv.find((argument) => argument.startsWith('--source-root='));
+const sourceRoot = sourceArgument
+  ? path.resolve(sourceArgument.slice('--source-root='.length))
+  : repoRoot;
+assert.ok(existsSync(path.join(sourceRoot, 'app.config.js')), 'Source app.config.js is missing.');
 const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), 'saferide-android-prebuild-'));
-const excludedRoots = new Set(['.git', 'android', 'ios', 'node_modules']);
+const keepGenerated = process.argv.includes('--keep-generated');
+const excludedRoots = new Set(['.git', 'android', 'ios', 'node_modules', 'outputs', 'artifacts', '.models', '.ai-smoke', '.venv-ai']);
 
 function shouldCopy(sourcePath) {
-  const relativePath = path.relative(repoRoot, sourcePath);
+  const relativePath = path.relative(sourceRoot, sourcePath);
   if (!relativePath) return true;
   const [rootName] = relativePath.split(path.sep);
   if (excludedRoots.has(rootName)) return false;
+  // Nested workspace dependencies and Git metadata are not prebuild source.
+  // In particular, never copy a nested dependency junction into this tree.
+  if (['node_modules', '.git', '__pycache__'].includes(path.basename(sourcePath))) return false;
   return !path.basename(sourcePath).startsWith('.env');
 }
 
@@ -31,7 +40,7 @@ function readGenerated(relativePath) {
 }
 
 try {
-  cpSync(repoRoot, temporaryRoot, {
+  cpSync(sourceRoot, temporaryRoot, {
     recursive: true,
     filter: shouldCopy,
   });
@@ -41,7 +50,7 @@ try {
     process.platform === 'win32' ? 'junction' : 'dir',
   );
 
-  const eas = JSON.parse(readFileSync(path.join(repoRoot, 'eas.json'), 'utf8'));
+  const eas = JSON.parse(readFileSync(path.join(sourceRoot, 'eas.json'), 'utf8'));
   const previewEnv = eas?.build?.preview?.env;
   assert.ok(previewEnv && typeof previewEnv === 'object', 'EAS preview environment is missing.');
 
@@ -81,7 +90,8 @@ try {
   const appGradle = readGenerated('android/app/build.gradle');
   assert.match(appGradle, /SAFERIDE_LITERTLM_REAL_RUNTIME_ALLOWED/);
   assert.match(appGradle, /litertlm:litertlm-android:\$\{safeRideLiteRtLmVersion\}/);
-  assert.match(appGradle, /versionName "1\.0\.0"/);
+  const sourceAppVersion = JSON.parse(readFileSync(path.join(sourceRoot, 'app.json'), 'utf8')).expo.version;
+  assert.ok(appGradle.includes(`versionName "${sourceAppVersion}"`), 'Generated version differs from reviewed source app.json.');
 
   const gradleProperties = readGenerated('android/gradle.properties');
   assert.match(gradleProperties, /saferide\.litertlm\.version=0\.16\.0/);
@@ -96,7 +106,16 @@ try {
   const proguard = readGenerated('android/app/proguard-rules.pro');
   assert.match(proguard, /-keep class com\.google\.ai\.edge\.litertlm\.\*\*/);
 
-  console.log('Clean Android prebuild regenerated and wired the SafeRide LiteRT-LM bridge.');
+  console.log(`Clean Android prebuild regenerated and wired the SafeRide LiteRT-LM bridge from ${sourceRoot}.`);
 } finally {
-  rmSync(temporaryRoot, { force: true, recursive: true });
+  // Windows junction cleanup can traverse the shared dependency target. Retain
+  // the verification tree until its links have been detached independently.
+  if (keepGenerated || process.platform === 'win32') {
+    console.log(`Generated Android verification project retained at ${temporaryRoot}`);
+    if (process.platform === 'win32' && !keepGenerated) {
+      console.log('Windows junction safety: automatic recursive cleanup is disabled.');
+    }
+  } else {
+    rmSync(temporaryRoot, { force: true, recursive: true });
+  }
 }

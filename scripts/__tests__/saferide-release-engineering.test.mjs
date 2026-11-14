@@ -98,7 +98,7 @@ test('rejects stale source-input hashes and premature publication authority', ()
   const documents = loadReleaseDocuments(rootDir);
   documents.manifest = clone(documents.manifest);
   documents.openSource = clone(documents.openSource);
-  documents.manifest.inputs[0].sha256 = '0'.repeat(64);
+  documents.manifest.inputs.find(input => input.path === 'package.json').sha256 = '0'.repeat(64);
   documents.openSource.status = 'blocked';
   documents.openSource.publicReleaseAuthorized = true;
 
@@ -110,6 +110,9 @@ test('rejects stale source-input hashes and premature publication authority', ()
 test('requires the exact owner statement for local verification mode', () => {
   const documents = loadReleaseDocuments(rootDir);
   documents.manifest = clone(documents.manifest);
+  documents.manifest.verification.verificationMode = 'local-owner-authorized';
+  documents.manifest.verification.githubActions = 'intentionally-disabled';
+  documents.manifest.verification.ciRun = null;
   documents.manifest.verification.ownerDecisionStatement = 'Hosted CI passed.';
 
   const result = validateReleaseEvidenceRepository({
@@ -124,6 +127,6 @@ test('fails the release gate while external evidence and approvals are absent', 
   const result = validateReleaseEvidenceRepository({ rootDir, release: true, asOfDate });
   assert.equal(result.ok, false);
   assert.equal(result.structurallyValid, true, result.errors.join('\n'));
-  assert(!result.blockers.some(blocker => blocker.includes('HANDOFF-CI-BUDGET')));
+  assert(result.blockers.some(blocker => blocker.includes('HANDOFF-CI-BUDGET')));
   assert(result.blockers.some(blocker => blocker.includes('UNICEF-CHECKPOINT-001')));
 });

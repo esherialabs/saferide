@@ -57,8 +57,8 @@ jobs:
       - name: Validate dependency integrity and reviewed licenses
         run: npm run security:dependency:check
 
-      - name: Audit API production dependencies
-        run: npm --prefix apps/api audit --omit=dev --audit-level=high
+      - name: Audit API production dependencies against time-bounded reviewed exceptions
+        run: npm run security:api-audit:check
 
       - name: Audit website production dependencies
         run: npm --prefix web audit --omit=dev --audit-level=high

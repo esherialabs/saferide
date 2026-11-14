@@ -18,6 +18,18 @@ const policy = JSON.parse(fs.readFileSync(path.join(
   repoRoot,
   'config/ai/training/saferide-gemma4-v05-sagemaker-policy.json',
 ), 'utf8'));
+const v051Policy = JSON.parse(fs.readFileSync(path.join(
+  repoRoot,
+  'config/ai/training/saferide-gemma4-v051-sagemaker-policy.json',
+), 'utf8'));
+const v052Policy = JSON.parse(fs.readFileSync(path.join(
+  repoRoot,
+  'config/ai/training/saferide-gemma4-v052-sagemaker-policy.json',
+), 'utf8'));
+const v053Policy = JSON.parse(fs.readFileSync(path.join(
+  repoRoot,
+  'config/ai/training/saferide-gemma4-v053-sagemaker-policy.json',
+), 'utf8'));
 const sha = character => character.repeat(64);
 const datasetCommit = '8de9b7a5b5105fc244dffe5cea31a34d85994ba2';
 const launcherCommit = '1'.repeat(40);
@@ -130,6 +142,12 @@ function preflightPlan(directory, manifest) {
 
 test('SageMaker policy and immutable input manifest pass fail-closed contracts', () => {
   assert.deepEqual(validateSageMakerPolicy(policy), []);
+  for (const governedPolicy of [policy, v051Policy, v052Policy, v053Policy]) {
+    assert.equal(governedPolicy.instance.quotaCode, 'L-B6D80D9C');
+  }
+  const endpointQuotaPolicy = structuredClone(policy);
+  endpointQuotaPolicy.instance.quotaCode = 'L-1928E07B';
+  assert.match(validateSageMakerPolicy(endpointQuotaPolicy).join('\n'), /training-job quota/);
   assert.deepEqual(validateInputManifest(inputManifest()), []);
   const bad = inputManifest();
   bad.baseModel.files[0].path = 'reviews/private.json';
@@ -197,4 +215,123 @@ test('second candidate seed cannot launch without the first run lineage', () => 
     outputS3Uri: `s3://${bucket}/saferide/v05/sagemaker/runs/candidate/output/`,
     checkpointS3Uri: `s3://${bucket}/saferide/v05/sagemaker/runs/candidate/checkpoints/`,
   }), /must bind the first candidate run/);
+});
+
+test('v0.5.1 launch uses 1,720-row policy and a distinct immutable namespace', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'saferide-sagemaker-v051-'));
+  const manifest = inputManifest();
+  manifest.datasetId = 'saferide-synthetic-guidance-v0.5.1';
+  manifest.manifestId = 'saferide-v051-sagemaker-input-0123456789ab';
+  manifest.storage.prefix = 'saferide/v051/sagemaker/inputs/saferide-v051-sagemaker-input-0123456789ab/';
+  manifest.trainingArchive.fileName = 'saferide-v051-sagemaker-input-0123456789ab.tar.gz';
+  manifest.trainingArchive.topLevelDirectory = manifest.manifestId;
+  manifest.trainingArchive.s3Uri = `s3://${bucket}/${manifest.storage.prefix}handoff/${manifest.trainingArchive.fileName}`;
+  const manifestPath = writeManifest(directory, manifest);
+  const plan = buildLaunchPlan({
+    policy: v051Policy,
+    inputManifest: manifest,
+    inputManifestPath: manifestPath,
+    inputManifestSha256: fileSha256(manifestPath),
+    inputManifestS3Uri: `s3://${bucket}/${manifest.storage.prefix}handoff/input-manifest.json`,
+    inputManifestVersionId: 'manifest-version-v051',
+    datasetSourceCommit: datasetCommit,
+    launcherSourceCommit: launcherCommit,
+    runKind: 'preflight',
+    runId: 'saferide-v051-preflight-20260804-01',
+    seed: 419805,
+    learningRate: 1e-5,
+    roleArn: 'arn:aws:iam::123456789012:role/SafeRideSageMakerTrainingRole',
+    imageUri: '123456789012.dkr.ecr.eu-central-1.amazonaws.com/saferide/gemma4-v05:commit-111111111111',
+    imageDigest: sha('d'),
+    outputS3Uri: `s3://${bucket}/saferide/v051/sagemaker/runs/preflight/output/`,
+    checkpointS3Uri: `s3://${bucket}/saferide/v051/sagemaker/runs/preflight/checkpoints/`,
+    createdAt: '2026-08-04T12:00:00.000Z',
+  });
+  assert.equal(v051Policy.training.candidate.trainRows, 1720);
+  assert.match(plan.launchId, /^saferide-v051-sagemaker-launch-/);
+  const spec = buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath), v051Policy);
+  assert.deepEqual(spec.Tags.find(item => item.Key === 'Dataset'), { Key: 'Dataset', Value: 'v0.5.1' });
+  assert.throws(() => buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath), policy), /must be 1720/);
+});
+
+test('v0.5.2 launch is limited to the frozen 2e-5 pilot recipe', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'saferide-sagemaker-v052-'));
+  const manifest = inputManifest();
+  manifest.datasetId = 'saferide-synthetic-guidance-v0.5.2';
+  manifest.manifestId = 'saferide-v052-sagemaker-input-0123456789ab';
+  manifest.storage.prefix = 'saferide/v052/sagemaker/inputs/saferide-v052-sagemaker-input-0123456789ab/';
+  manifest.trainingArchive.fileName = 'saferide-v052-sagemaker-input-0123456789ab.tar.gz';
+  manifest.trainingArchive.topLevelDirectory = manifest.manifestId;
+  manifest.trainingArchive.s3Uri = `s3://${bucket}/${manifest.storage.prefix}handoff/${manifest.trainingArchive.fileName}`;
+  const manifestPath = writeManifest(directory, manifest);
+  const options = {
+    policy: v052Policy,
+    inputManifest: manifest,
+    inputManifestPath: manifestPath,
+    inputManifestSha256: fileSha256(manifestPath),
+    inputManifestS3Uri: `s3://${bucket}/${manifest.storage.prefix}handoff/input-manifest.json`,
+    inputManifestVersionId: 'manifest-version-v052',
+    datasetSourceCommit: datasetCommit,
+    launcherSourceCommit: launcherCommit,
+    runKind: 'pilot',
+    runId: 'saferide-v052-pilot-20260804-01',
+    seed: 419805,
+    learningRate: 2e-5,
+    roleArn: 'arn:aws:iam::123456789012:role/SafeRideSageMakerTrainingRole',
+    imageUri: '123456789012.dkr.ecr.eu-central-1.amazonaws.com/saferide/gemma4-v05:commit-111111111111',
+    imageDigest: sha('d'),
+    outputS3Uri: `s3://${bucket}/saferide/v052/sagemaker/runs/pilot/output/`,
+    checkpointS3Uri: `s3://${bucket}/saferide/v052/sagemaker/runs/pilot/checkpoints/`,
+    createdAt: '2026-08-04T15:00:00.000Z',
+  };
+  const plan = buildLaunchPlan(options);
+  assert.match(plan.launchId, /^saferide-v052-sagemaker-launch-/);
+  const spec = buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath), v052Policy);
+  assert.deepEqual(spec.Tags.find(item => item.Key === 'Dataset'), { Key: 'Dataset', Value: 'v0.5.2' });
+  assert.equal(spec.HyperParameters['learning-rate'], '0.00002');
+  assert.throws(() => buildLaunchPlan({ ...options, learningRate: 1e-5 }), /frozen 2e-5/);
+  assert.throws(() => buildLaunchPlan({
+    ...options, runKind: 'candidate', runId: 'saferide-v052-candidate-20260804-01',
+  }), /full candidate submission is not authorized/);
+});
+
+test('v0.5.3 launch is limited to the frozen 1e-5 pilot recipe', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'saferide-sagemaker-v053-'));
+  const manifest = inputManifest();
+  manifest.datasetId = 'saferide-synthetic-guidance-v0.5.3';
+  manifest.manifestId = 'saferide-v053-sagemaker-input-0123456789ab';
+  manifest.storage.prefix = 'saferide/v053/sagemaker/inputs/saferide-v053-sagemaker-input-0123456789ab/';
+  manifest.trainingArchive.fileName = 'saferide-v053-sagemaker-input-0123456789ab.tar.gz';
+  manifest.trainingArchive.topLevelDirectory = manifest.manifestId;
+  manifest.trainingArchive.s3Uri = `s3://${bucket}/${manifest.storage.prefix}handoff/${manifest.trainingArchive.fileName}`;
+  const manifestPath = writeManifest(directory, manifest);
+  const options = {
+    policy: v053Policy,
+    inputManifest: manifest,
+    inputManifestPath: manifestPath,
+    inputManifestSha256: fileSha256(manifestPath),
+    inputManifestS3Uri: `s3://${bucket}/${manifest.storage.prefix}handoff/input-manifest.json`,
+    inputManifestVersionId: 'manifest-version-v053',
+    datasetSourceCommit: datasetCommit,
+    launcherSourceCommit: launcherCommit,
+    runKind: 'pilot',
+    runId: 'saferide-v053-pilot-20260806-01',
+    seed: 419805,
+    learningRate: 1e-5,
+    roleArn: 'arn:aws:iam::123456789012:role/SafeRideSageMakerTrainingRole',
+    imageUri: '123456789012.dkr.ecr.eu-central-1.amazonaws.com/saferide/gemma4-v05:commit-111111111111',
+    imageDigest: sha('d'),
+    outputS3Uri: `s3://${bucket}/saferide/v053/sagemaker/runs/pilot/output/`,
+    checkpointS3Uri: `s3://${bucket}/saferide/v053/sagemaker/runs/pilot/checkpoints/`,
+    createdAt: '2026-08-06T12:00:00.000Z',
+  };
+  const plan = buildLaunchPlan(options);
+  assert.match(plan.launchId, /^saferide-v053-sagemaker-launch-/);
+  const spec = buildTrainingJobSpec(plan, manifest, fileSha256(manifestPath), v053Policy);
+  assert.deepEqual(spec.Tags.find(item => item.Key === 'Dataset'), { Key: 'Dataset', Value: 'v0.5.3' });
+  assert.equal(spec.HyperParameters['learning-rate'], '0.00001');
+  assert.throws(() => buildLaunchPlan({ ...options, learningRate: 2e-5 }), /frozen 1e-5/);
+  assert.throws(() => buildLaunchPlan({
+    ...options, runKind: 'candidate', runId: 'saferide-v053-candidate-20260806-01',
+  }), /full candidate submission is not authorized/);
 });

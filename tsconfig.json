@@ -5,6 +5,8 @@
   },
   "exclude": [
     "apps/api",
-    "web"
+    "apps/partner-web",
+    "web",
+    "outputs"
   ]
 }

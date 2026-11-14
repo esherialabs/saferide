@@ -75,6 +75,20 @@ test('accessibility gate fails when the shared touch target regresses below 48dp
   assert.equal(gate?.passed, false);
 });
 
+test('chat restoration gate rejects implicit preparation of missing or partial files', () => {
+  for (const mutate of [
+    sources => { sources.chat = sources.chat.replace("if (payload?.state !== 'downloaded' || !payload.modelDownloaded) return;", ''); },
+    sources => { sources.assistantService = sources.assistantService.replace('if (!availability.downloaded) {\n    return false;', 'if (false) {\n    return false;'); },
+    sources => { sources.assistantService = sources.assistantService.replaceAll('!localAssistantForegroundActive', 'false'); },
+    sources => { sources.modelStorage = sources.modelStorage.replace('assertLargeDownloadAuthorized(config, file, authorization);', ''); },
+  ]) {
+    const sources = readAccessibilitySources(repositoryRoot);
+    mutate(sources);
+    const gate = validateAccessibilitySources(sources).find(item => item.id === 'chat-restoration-no-implicit-download');
+    assert.equal(gate?.passed, false);
+  }
+});
+
 test('accessibility gate keeps pending handoff blocked without fabricated device evidence', () => {
   const blockers = getAccessibilityReleaseBlockers(pendingEvidence);
   assert.ok(blockers.includes('sourceRevision must be a full lowercase commit SHA'));

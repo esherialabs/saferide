@@ -1,0 +1,10 @@
+// React Native 0.85.3 requests Foojay 0.5.0, which references IBM_SEMERU.
+// Gradle 9 removed that vendor constant. Override only the build-time resolver;
+// keep the reviewed React Native, Expo, Hermes and application inputs intact.
+gradle.beforeSettings { settings ->
+    settings.pluginManagement.resolutionStrategy.eachPlugin {
+        if (requested.id.id == 'org.gradle.toolchains.foojay-resolver-convention') {
+            useVersion('1.0.0')
+        }
+    }
+}

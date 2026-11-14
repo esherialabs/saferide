@@ -1,5 +1,6 @@
 import argparse
 import importlib.util
+import json
 import math
 import tempfile
 import unittest
@@ -181,6 +182,204 @@ class CandidateConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValueError):
                 RUNNER.write_metadata(Path(directory) / "run", {"grad_norm": math.nan})
+
+    def test_v054_register_selects_the_targeted_pilot_profile(self):
+        self.assertEqual(
+            RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v054-mitigation-register"}),
+            "v054",
+        )
+
+    def test_v054_targeted_pilot_recipe_is_fixed_and_candidate_is_forbidden(self):
+        args = self.args(
+            seed=419805,
+            base_model_id=RUNNER.DEFAULT_BASE_MODEL,
+            learning_rate=2e-5,
+            lora_r=8,
+            lora_alpha=16,
+            lora_dropout=0.05,
+            lora_rank_approval_ref=None,
+            lr_scheduler_type="cosine",
+            max_grad_norm=1.0,
+            eval_steps=25,
+            save_steps=25,
+        )
+        RUNNER.validate_run_configuration(args, "pilot", "v054")
+        with self.assertRaisesRegex(RuntimeError, "full candidate submission is not authorized"):
+            RUNNER.validate_run_configuration(args, "candidate", "v054")
+        with self.assertRaisesRegex(RuntimeError, "frozen 2e-5"):
+            RUNNER.validate_run_configuration(argparse.Namespace(**{**vars(args), "learning_rate": 1e-5}), "pilot", "v054")
+        with self.assertRaisesRegex(RuntimeError, "clipping"):
+            RUNNER.validate_run_configuration(argparse.Namespace(**{**vars(args), "max_grad_norm": 2.0}), "pilot", "v054")
+
+    def test_v054_preflight_requires_step_one_training_loss_logging(self):
+        args = self.args(
+            seed=419805,
+            base_model_id=RUNNER.DEFAULT_BASE_MODEL,
+            learning_rate=1e-5,
+            lora_r=8,
+            lora_alpha=16,
+            lora_dropout=0.05,
+            lora_rank_approval_ref=None,
+            lr_scheduler_type="cosine",
+            max_grad_norm=1.0,
+            max_steps=1,
+            logging_steps=1,
+            eval_steps=1,
+            save_steps=1,
+        )
+        RUNNER.validate_run_configuration(args, "preflight", "v054")
+        with self.assertRaisesRegex(RuntimeError, "training-loss logging at step 1"):
+            RUNNER.validate_run_configuration(
+                argparse.Namespace(**{**vars(args), "logging_steps": 5}),
+                "preflight",
+                "v054",
+            )
+
+    def test_v054_preflight_binds_the_frozen_recipe_without_consuming_pilot_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "recipe.json"
+            order = [f"row-{index}" for index in range(1864)] + [f"row-{index}" for index in range(32)]
+            path.write_text(json.dumps({
+                "schema": "com.saferide.ai.v054-training-recipe",
+                "datasetId": "saferide-synthetic-guidance-v0.5.4",
+                "status": "frozen-for-targeted-next-pilot",
+                "learningRate": 2e-5,
+                "epochs": 1,
+                "fullCandidateSubmissionAuthorized": False,
+                "seed": 419805,
+                "sampleOrder": order,
+                "sampleOrderSha256": RUNNER.hashlib.sha256("\n".join(order).encode("utf-8")).hexdigest(),
+            }), encoding="utf-8")
+            self.assertIsNone(RUNNER.load_pilot_row_ids(path, "v054", "preflight"))
+
+    def test_v055_register_selects_final_targeted_profile(self):
+        self.assertEqual(
+            RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v055-mitigation-register"}),
+            "v055",
+        )
+
+    def test_v055_low_rate_pilot_is_fixed_and_candidate_is_forbidden(self):
+        args = self.args(
+            seed=419805,
+            base_model_id=RUNNER.DEFAULT_BASE_MODEL,
+            learning_rate=1e-5,
+            lora_r=8,
+            lora_alpha=16,
+            lora_dropout=0.05,
+            lora_rank_approval_ref=None,
+            lr_scheduler_type="cosine",
+            max_grad_norm=1.0,
+            eval_steps=25,
+            save_steps=25,
+        )
+        RUNNER.validate_run_configuration(args, "pilot", "v055")
+        with self.assertRaisesRegex(RuntimeError, "full candidate submission is not authorized"):
+            RUNNER.validate_run_configuration(args, "candidate", "v055")
+        with self.assertRaisesRegex(RuntimeError, "frozen 1e-5"):
+            RUNNER.validate_run_configuration(argparse.Namespace(**{**vars(args), "learning_rate": 2e-5}), "pilot", "v055")
+
+    def test_v055_weighted_recipe_is_exact_and_preflight_does_not_consume_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "recipe.json"
+            unique = [f"row-{index}" for index in range(1896)]
+            order = unique + [f"row-{index}" for index in range(32)] * 3
+            path.write_text(json.dumps({
+                "schema": "com.saferide.ai.v055-training-recipe",
+                "datasetId": "saferide-synthetic-guidance-v0.5.5",
+                "status": "frozen-for-final-targeted-pilot",
+                "learningRate": 1e-5,
+                "epochs": 1,
+                "fullCandidateSubmissionAuthorized": False,
+                "seed": 419805,
+                "sampleOrder": order,
+                "sampleOrderSha256": RUNNER.hashlib.sha256("\n".join(order).encode("utf-8")).hexdigest(),
+            }), encoding="utf-8")
+            self.assertEqual(len(RUNNER.load_pilot_row_ids(path, "v055", "pilot")), 1992)
+            self.assertIsNone(RUNNER.load_pilot_row_ids(path, "v055", "preflight"))
+
+    def test_v056_control_replay_is_fixed_and_candidate_is_forbidden(self):
+        self.assertEqual(
+            RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v056-mitigation-register"}),
+            "v056",
+        )
+        args = self.args(
+            seed=419805,
+            base_model_id=RUNNER.DEFAULT_BASE_MODEL,
+            learning_rate=2e-5,
+            lora_r=8,
+            lora_alpha=16,
+            lora_dropout=0.05,
+            lora_rank_approval_ref=None,
+            lr_scheduler_type="cosine",
+            max_grad_norm=1.0,
+            eval_steps=25,
+            save_steps=25,
+        )
+        RUNNER.validate_run_configuration(args, "pilot", "v056")
+        with self.assertRaisesRegex(RuntimeError, "full candidate submission is not authorized"):
+            RUNNER.validate_run_configuration(args, "candidate", "v056")
+        with self.assertRaisesRegex(RuntimeError, "frozen 2e-5"):
+            RUNNER.validate_run_configuration(argparse.Namespace(**{**vars(args), "learning_rate": 1e-5}), "pilot", "v056")
+
+    def test_v056_weighted_recipe_preserves_v054_control_multiplicity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "recipe.json"
+            unique = [f"row-{index}" for index in range(1888)]
+            focused = unique[-56:]
+            order = unique + focused
+            path.write_text(json.dumps({
+                "schema": "com.saferide.ai.v056-training-recipe",
+                "datasetId": "saferide-synthetic-guidance-v0.5.6",
+                "status": "frozen-for-targeted-next-pilot",
+                "learningRate": 2e-5,
+                "epochs": 1,
+                "fullCandidateSubmissionAuthorized": False,
+                "seed": 419805,
+                "sampleOrder": order,
+                "sampleOrderSha256": RUNNER.hashlib.sha256("\n".join(order).encode("utf-8")).hexdigest(),
+            }), encoding="utf-8")
+            self.assertEqual(len(RUNNER.load_pilot_row_ids(path, "v056", "pilot")), 1944)
+            self.assertIsNone(RUNNER.load_pilot_row_ids(path, "v056", "preflight"))
+
+
+class FinalEvaluationControlFlowTests(unittest.TestCase):
+    class FakeTrainer:
+        def __init__(self, history):
+            self.state = argparse.Namespace(global_step=237, log_history=history)
+            self.evaluate_calls = 0
+
+        def evaluate(self):
+            self.evaluate_calls += 1
+            return {"eval_loss": 2.0, "eval_runtime": 25.0, "epoch": 1.0}
+
+    def test_reuses_scheduled_evaluation_at_final_step_without_replay(self):
+        trainer = self.FakeTrainer([{
+            "step": 237,
+            "epoch": 1.0,
+            "eval_loss": 1.8524575233459473,
+            "eval_runtime": 24.6787,
+        }])
+        metrics = RUNNER.final_evaluation_metrics(trainer)
+        self.assertEqual(metrics, {
+            "epoch": 1.0,
+            "eval_loss": 1.8524575233459473,
+            "eval_runtime": 24.6787,
+        })
+        self.assertEqual(trainer.evaluate_calls, 0)
+
+    def test_runs_one_explicit_evaluation_when_final_step_was_not_evaluated(self):
+        trainer = self.FakeTrainer([{"step": 225, "epoch": 0.95, "eval_loss": 1.9}])
+        self.assertEqual(RUNNER.final_evaluation_metrics(trainer)["eval_loss"], 2.0)
+        self.assertEqual(trainer.evaluate_calls, 1)
+
+    def test_duplicate_final_step_evaluations_fail_closed(self):
+        trainer = self.FakeTrainer([
+            {"step": 237, "epoch": 1.0, "eval_loss": 1.85},
+            {"step": 237, "epoch": 1.0, "eval_loss": 1.85},
+        ])
+        with self.assertRaisesRegex(RuntimeError, "duplicate evaluation entries"):
+            RUNNER.final_evaluation_metrics(trainer)
+        self.assertEqual(trainer.evaluate_calls, 0)
 
 
 class OfflineGradientSmokeTests(unittest.TestCase):

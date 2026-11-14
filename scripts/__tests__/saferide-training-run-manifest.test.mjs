@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -127,6 +128,284 @@ function v05CompletedFixture(runKind = 'candidate') {
   return value;
 }
 
+function v051CompletedFixture(runKind = 'candidate') {
+  const value = v05CompletedFixture(runKind);
+  const trainCount = runKind === 'pilot' ? 320 : 1720;
+  const trainRowIds = Array.from({ length: trainCount }, (_, index) => `v051-train-row-${String(index).padStart(4, '0')}`);
+  Object.assign(value, {
+    datasetProfile: 'v051',
+    dataSummary: {
+      rowCount: 2020,
+      datasetIds: ['saferide-synthetic-guidance-v0.5.0', 'saferide-synthetic-guidance-v0.5.1'],
+      splitCounts: { train: 1720, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.1',
+      planSha256: null, policySha256: null, systemPromptConfigSha256: null,
+      systemPromptTextSha256: null, scenarioSpecSha256: null,
+      splitManifestSha256: null, reviewLedgerSha256: null,
+      pilotRowManifest: runKind === 'pilot' ? '/controlled/pilot.json' : null,
+      pilotRowManifestSha256: runKind === 'pilot' ? '8'.repeat(64) : null,
+    },
+  });
+  value.outputs = {
+    ...value.outputs,
+    sampleOrder: [...trainRowIds], sampleOrderSha256: hashIds(trainRowIds), rowsSeen: trainCount,
+    trainRowIds, trainRowIdSha256: hashIds(trainRowIds),
+  };
+  return value;
+}
+
+function v052CompletedFixture() {
+  const value = v051CompletedFixture('pilot');
+  const trainRowIds = Array.from({ length: 1768 }, (_, index) => `v052-train-row-${String(index).padStart(4, '0')}`);
+  const sampleOrder = [...trainRowIds, ...trainRowIds.slice(-48), ...trainRowIds.slice(-48)];
+  Object.assign(value, {
+    datasetProfile: 'v052',
+    dataSummary: {
+      rowCount: 2068,
+      datasetIds: [
+        'saferide-synthetic-guidance-v0.5.0',
+        'saferide-synthetic-guidance-v0.5.1',
+        'saferide-synthetic-guidance-v0.5.2',
+      ],
+      splitCounts: { train: 1768, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.2',
+      diagnosisSummarySha256: '0'.repeat(64),
+      implementationSha256: '1'.repeat(64),
+      mitigationDevelopmentSha256: '2'.repeat(64),
+      originalDevelopmentSha256: '3'.repeat(64),
+      planSha256: '4'.repeat(64),
+      scoringPolicySha256: '5'.repeat(64),
+      sealedMitigationHoldoutSha256: '6'.repeat(64),
+      systemPromptTextSha256: '7'.repeat(64),
+      v051CombinedTrainSha256: '8'.repeat(64),
+      v051FrozenManifestSha256: '9'.repeat(64),
+      pilotRowManifest: '/controlled/pilot.json',
+      pilotRowManifestSha256: 'a'.repeat(64),
+    },
+  });
+  value.runArguments = { ...value.runArguments, learningRate: 0.00002 };
+  value.outputs = {
+    ...value.outputs,
+    sampleOrder,
+    sampleOrderSha256: hashIds(sampleOrder),
+    rowsSeen: 1864,
+    trainRowIds,
+    trainRowIdSha256: hashIds(trainRowIds),
+  };
+  return value;
+}
+
+function v053CompletedFixture() {
+  const value = v051CompletedFixture('pilot');
+  const trainRowIds = Array.from({ length: 1832 }, (_, index) => `v053-train-row-${String(index).padStart(4, '0')}`);
+  const sampleOrder = [...trainRowIds, ...trainRowIds.slice(-64), ...trainRowIds.slice(-64), ...trainRowIds.slice(-64), ...trainRowIds.slice(-64)];
+  Object.assign(value, {
+    datasetProfile: 'v053',
+    dataSummary: {
+      rowCount: 2132,
+      datasetIds: [
+        'saferide-synthetic-guidance-v0.5.0',
+        'saferide-synthetic-guidance-v0.5.1',
+        'saferide-synthetic-guidance-v0.5.2',
+        'saferide-synthetic-guidance-v0.5.3',
+      ],
+      splitCounts: { train: 1832, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.3',
+      diagnosisSummarySha256: '0'.repeat(64),
+      implementationSha256: '1'.repeat(64),
+      mitigationDevelopmentSha256: '2'.repeat(64),
+      originalDevelopmentSha256: '3'.repeat(64),
+      planSha256: '4'.repeat(64),
+      scoringPolicySha256: '5'.repeat(64),
+      sealedMitigationHoldoutSha256: '6'.repeat(64),
+      systemPromptTextSha256: '7'.repeat(64),
+      v052CombinedTrainSha256: '8'.repeat(64),
+      v052FrozenManifestSha256: '9'.repeat(64),
+      pilotRowManifest: '/controlled/pilot.json',
+      pilotRowManifestSha256: 'a'.repeat(64),
+    },
+  });
+  value.runArguments = { ...value.runArguments, learningRate: 0.00001 };
+  value.outputs = {
+    ...value.outputs,
+    sampleOrder,
+    sampleOrderSha256: hashIds(sampleOrder),
+    rowsSeen: 2088,
+    trainRowIds,
+    trainRowIdSha256: hashIds(trainRowIds),
+  };
+  return value;
+}
+
+function v054CompletedFixture() {
+  const value = v051CompletedFixture('pilot');
+  const trainRowIds = Array.from({ length: 1864 }, (_, index) => `v054-train-row-${String(index).padStart(4, '0')}`);
+  const sampleOrder = [...trainRowIds, ...trainRowIds.slice(-32)];
+  Object.assign(value, {
+    datasetProfile: 'v054',
+    dataSummary: {
+      rowCount: 2164,
+      datasetIds: [
+        'saferide-synthetic-guidance-v0.5.0',
+        'saferide-synthetic-guidance-v0.5.1',
+        'saferide-synthetic-guidance-v0.5.2',
+        'saferide-synthetic-guidance-v0.5.3',
+        'saferide-synthetic-guidance-v0.5.4',
+      ],
+      splitCounts: { train: 1864, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.4',
+      diagnosisSummarySha256: '0'.repeat(64),
+      implementationSha256: '1'.repeat(64),
+      lossPolicySha256: '2'.repeat(64),
+      mitigationDevelopmentSha256: '3'.repeat(64),
+      originalDevelopmentSha256: '4'.repeat(64),
+      planSha256: '5'.repeat(64),
+      scoringPolicySha256: '6'.repeat(64),
+      sealedMitigationHoldoutSha256: '7'.repeat(64),
+      systemPromptTextSha256: '8'.repeat(64),
+      v053CombinedTrainSha256: '9'.repeat(64),
+      v053FrozenManifestSha256: 'a'.repeat(64),
+      pilotRowManifest: '/controlled/pilot.json',
+      pilotRowManifestSha256: 'b'.repeat(64),
+    },
+  });
+  value.runArguments = { ...value.runArguments, learningRate: 0.00002, maxGradientNorm: 1 };
+  value.outputs = {
+    ...value.outputs,
+    lossMaskPolicy: 'assistant-turns-only',
+    sampleOrder,
+    sampleOrderSha256: hashIds(sampleOrder),
+    rowsSeen: 1896,
+    trainRowIds,
+    trainRowIdSha256: hashIds(trainRowIds),
+    lossReport: {
+      policyId: 'saferide-v054-training-loss-integrity.1',
+      policySha256: 'c'.repeat(64),
+      rawTrainerAccumulatedLoss: 20,
+      gradientAccumulationSteps: 8,
+      meanTrainingObjectiveLoss: 2.5,
+      bestDevelopmentLoss: 0.4,
+      finalDevelopmentLoss: 0.5,
+      selectionMetric: 'minimum-finite-development-assistant-token-loss',
+      finite: true,
+      spikeGate: 'passed',
+      divergenceGate: 'passed',
+    },
+  };
+  return value;
+}
+
+function v055CompletedFixture() {
+  const value = v054CompletedFixture();
+  const trainRowIds = Array.from({ length: 1896 }, (_, index) => `v055-train-row-${String(index).padStart(4, '0')}`);
+  const focused = trainRowIds.slice(-32);
+  const sampleOrder = [...trainRowIds, ...focused, ...focused, ...focused];
+  Object.assign(value, {
+    datasetProfile: 'v055',
+    dataSummary: {
+      rowCount: 2196,
+      datasetIds: [
+        'saferide-synthetic-guidance-v0.5.0',
+        'saferide-synthetic-guidance-v0.5.1',
+        'saferide-synthetic-guidance-v0.5.2',
+        'saferide-synthetic-guidance-v0.5.3',
+        'saferide-synthetic-guidance-v0.5.4',
+        'saferide-synthetic-guidance-v0.5.5',
+      ],
+      splitCounts: { train: 1896, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.5',
+      diagnosisSummarySha256: '0'.repeat(64),
+      implementationSha256: '1'.repeat(64),
+      lossPolicySha256: '2'.repeat(64),
+      mitigationDevelopmentSha256: '3'.repeat(64),
+      originalDevelopmentSha256: '4'.repeat(64),
+      planSha256: '5'.repeat(64),
+      scoringPolicySha256: '6'.repeat(64),
+      sealedMitigationHoldoutSha256: '7'.repeat(64),
+      systemPromptTextSha256: '8'.repeat(64),
+      v054CombinedTrainSha256: '9'.repeat(64),
+      v054FrozenManifestSha256: 'a'.repeat(64),
+      pilotRowManifest: '/controlled/pilot.json',
+      pilotRowManifestSha256: 'b'.repeat(64),
+    },
+  });
+  value.runArguments = { ...value.runArguments, learningRate: 0.00001, maxGradientNorm: 1 };
+  value.outputs = {
+    ...value.outputs,
+    sampleOrder,
+    sampleOrderSha256: hashIds(sampleOrder),
+    rowsSeen: 1992,
+    trainRowIds,
+    trainRowIdSha256: hashIds(trainRowIds),
+  };
+  return value;
+}
+
+function v056CompletedFixture() {
+  const value = v054CompletedFixture();
+  const trainRowIds = Array.from({ length: 1888 }, (_, index) => `v056-train-row-${String(index).padStart(4, '0')}`);
+  const focused = trainRowIds.slice(-56);
+  const sampleOrder = [...trainRowIds, ...focused];
+  Object.assign(value, {
+    datasetProfile: 'v056',
+    dataSummary: {
+      rowCount: 2188,
+      datasetIds: [
+        'saferide-synthetic-guidance-v0.5.0',
+        'saferide-synthetic-guidance-v0.5.1',
+        'saferide-synthetic-guidance-v0.5.2',
+        'saferide-synthetic-guidance-v0.5.3',
+        'saferide-synthetic-guidance-v0.5.4',
+        'saferide-synthetic-guidance-v0.5.6',
+      ],
+      splitCounts: { train: 1888, dev: 300 },
+      rowIdSha256: 'e'.repeat(64),
+    },
+    datasetBindings: {
+      datasetId: 'saferide-synthetic-guidance-v0.5.6',
+      diagnosisSummarySha256: '0'.repeat(64),
+      implementationSha256: '1'.repeat(64),
+      lossPolicySha256: '2'.repeat(64),
+      mitigationDevelopmentSha256: '3'.repeat(64),
+      originalDevelopmentSha256: '4'.repeat(64),
+      planSha256: '5'.repeat(64),
+      scoringPolicySha256: '6'.repeat(64),
+      sealedMitigationHoldoutSha256: '7'.repeat(64),
+      systemPromptTextSha256: '8'.repeat(64),
+      v054CombinedTrainSha256: '9'.repeat(64),
+      v054FrozenManifestSha256: 'a'.repeat(64),
+      v054TrainingRecipeSha256: 'b'.repeat(64),
+      pilotRowManifest: '/controlled/pilot.json',
+      pilotRowManifestSha256: 'c'.repeat(64),
+    },
+  });
+  value.runArguments = { ...value.runArguments, learningRate: 0.00002, maxGradientNorm: 1 };
+  value.outputs = {
+    ...value.outputs,
+    sampleOrder,
+    sampleOrderSha256: hashIds(sampleOrder),
+    rowsSeen: 1944,
+    trainRowIds,
+    trainRowIdSha256: hashIds(trainRowIds),
+  };
+  return value;
+}
+
 test('a content-free preflight manifest passes schema and semantic gates', () => {
   assert.deepEqual(validateTrainingRun(fixture(), validator(), { verifyFiles: false }), []);
 });
@@ -163,6 +442,163 @@ test('a complete v0.5 candidate manifest binds separate train/dev inputs and exa
 
 test('a complete v0.5 pilot requires exactly the deterministic 320-row inventory', () => {
   assert.deepEqual(validateTrainingRun(v05CompletedFixture('pilot'), validator(), { verifyFiles: false }), []);
+});
+
+test('complete v0.5.1 pilot and candidate manifests enforce the 1,720/300 lineage', () => {
+  assert.deepEqual(validateTrainingRun(v051CompletedFixture('pilot'), validator(), { verifyFiles: false }), []);
+  assert.deepEqual(validateTrainingRun(v051CompletedFixture(), validator(), { verifyFiles: false }), []);
+});
+
+test('complete v0.5.2 pilot permits only the frozen 1,864-example weighted order over 1,768 unique rows', () => {
+  assert.deepEqual(validateTrainingRun(v052CompletedFixture(), validator(), { verifyFiles: false }), []);
+
+  const overWeighted = v052CompletedFixture();
+  overWeighted.outputs.sampleOrder.push(overWeighted.outputs.sampleOrder[0]);
+  overWeighted.outputs.sampleOrderSha256 = hashIds(overWeighted.outputs.sampleOrder);
+  overWeighted.outputs.rowsSeen += 1;
+  assert.match(validateTrainingRun(overWeighted, validator(), { verifyFiles: false }).join('\n'), /governed train inventory\/weighting/);
+});
+
+test('v0.5.2 training-run validation rejects full candidates and non-frozen learning rates', () => {
+  const value = v052CompletedFixture();
+  value.runKind = 'candidate';
+  value.candidateRun = true;
+  value.runArguments.learningRate = 0.00001;
+  value.repeatability = { required: true, secondSeedRunId: 'saferide-v052-paired', status: 'pending' };
+  const errors = validateTrainingRun(value, validator(), { verifyFiles: false }).join('\n');
+  assert.match(errors, /full candidate training is not authorized/);
+  assert.match(errors, /approved pilot learning rate/);
+});
+
+test('complete v0.5.3 pilot permits only the frozen 2,088-example order over 1,832 unique rows', () => {
+  assert.deepEqual(validateTrainingRun(v053CompletedFixture(), validator(), { verifyFiles: false }), []);
+
+  const underWeighted = v053CompletedFixture();
+  underWeighted.outputs.sampleOrder.pop();
+  underWeighted.outputs.sampleOrderSha256 = hashIds(underWeighted.outputs.sampleOrder);
+  underWeighted.outputs.rowsSeen -= 1;
+  assert.match(validateTrainingRun(underWeighted, validator(), { verifyFiles: false }).join('\n'), /governed train inventory\/weighting/);
+});
+
+test('v0.5.3 training-run validation rejects full candidates and non-frozen learning rates', () => {
+  const value = v053CompletedFixture();
+  value.runKind = 'candidate';
+  value.candidateRun = true;
+  value.runArguments.learningRate = 0.00002;
+  value.repeatability = { required: true, secondSeedRunId: 'saferide-v053-paired', status: 'pending' };
+  const errors = validateTrainingRun(value, validator(), { verifyFiles: false }).join('\n');
+  assert.match(errors, /full candidate training is not authorized/);
+  assert.match(errors, /approved pilot learning rate/);
+});
+
+test('complete v0.5.4 pilot binds the 1,896-example order and truthful loss semantics', () => {
+  assert.deepEqual(validateTrainingRun(v054CompletedFixture(), validator(), { verifyFiles: false }), []);
+
+  const overWeighted = v054CompletedFixture();
+  overWeighted.outputs.sampleOrder.push(overWeighted.outputs.sampleOrder.at(-1));
+  overWeighted.outputs.sampleOrderSha256 = hashIds(overWeighted.outputs.sampleOrder);
+  overWeighted.outputs.rowsSeen += 1;
+  assert.match(validateTrainingRun(overWeighted, validator(), { verifyFiles: false }).join('\n'), /governed train inventory\/weighting/);
+
+  const falseLoss = v054CompletedFixture();
+  falseLoss.outputs.lossReport.meanTrainingObjectiveLoss = 20;
+  assert.match(validateTrainingRun(falseLoss, validator(), { verifyFiles: false }).join('\n'), /truthful finite raw\/objective\/best\/final loss/);
+});
+
+test('v0.5.4 permits one targeted pilot only and requires explicit clipping', () => {
+  const value = v054CompletedFixture();
+  value.runKind = 'candidate';
+  value.candidateRun = true;
+  value.runArguments.seed = 419806;
+  value.runArguments.maxGradientNorm = 2;
+  value.repeatability = { required: true, secondSeedRunId: 'saferide-v054-paired', status: 'pending' };
+  const errors = validateTrainingRun(value, validator(), { verifyFiles: false }).join('\n');
+  assert.match(errors, /full candidate training is not authorized/);
+  assert.match(errors, /one targeted pilot/);
+  assert.match(errors, /maxGradientNorm 1.0/);
+});
+
+test('complete v0.5.5 pilot binds the 1,992-example four-times focused order', () => {
+  assert.deepEqual(validateTrainingRun(v055CompletedFixture(), validator(), { verifyFiles: false }), []);
+
+  const wrongWeight = v055CompletedFixture();
+  wrongWeight.outputs.sampleOrder.pop();
+  wrongWeight.outputs.sampleOrderSha256 = hashIds(wrongWeight.outputs.sampleOrder);
+  wrongWeight.outputs.rowsSeen -= 1;
+  assert.match(validateTrainingRun(wrongWeight, validator(), { verifyFiles: false }).join('\n'), /governed train inventory\/weighting/);
+});
+
+test('v0.5.5 preserves truthful loss and forbids full candidates', () => {
+  const falseLoss = v055CompletedFixture();
+  falseLoss.outputs.lossReport.meanTrainingObjectiveLoss = 20;
+  assert.match(validateTrainingRun(falseLoss, validator(), { verifyFiles: false }).join('\n'), /truthful finite raw\/objective\/best\/final loss/);
+
+  const candidate = v055CompletedFixture();
+  candidate.runKind = 'candidate';
+  candidate.candidateRun = true;
+  candidate.repeatability = { required: true, secondSeedRunId: 'saferide-v055-paired', status: 'pending' };
+  assert.match(validateTrainingRun(candidate, validator(), { verifyFiles: false }).join('\n'), /full candidate training is not authorized/);
+});
+
+test('complete v0.5.6 pilot preserves the 1,944-example v0.5.4 control weighting', () => {
+  assert.deepEqual(validateTrainingRun(v056CompletedFixture(), validator(), { verifyFiles: false }), []);
+
+  const wrongWeight = v056CompletedFixture();
+  wrongWeight.outputs.sampleOrder.push(wrongWeight.outputs.sampleOrder.at(-1));
+  wrongWeight.outputs.sampleOrderSha256 = hashIds(wrongWeight.outputs.sampleOrder);
+  wrongWeight.outputs.rowsSeen += 1;
+  assert.match(validateTrainingRun(wrongWeight, validator(), { verifyFiles: false }).join('\n'), /governed train inventory\/weighting/);
+});
+
+test('v0.5.6 preserves truthful loss and forbids full candidates', () => {
+  const falseLoss = v056CompletedFixture();
+  falseLoss.outputs.lossReport.meanTrainingObjectiveLoss = 20;
+  assert.match(validateTrainingRun(falseLoss, validator(), { verifyFiles: false }).join('\n'), /truthful finite raw\/objective\/best\/final loss/);
+
+  const candidate = v056CompletedFixture();
+  candidate.runKind = 'candidate';
+  candidate.candidateRun = true;
+  candidate.repeatability = { required: true, secondSeedRunId: 'saferide-v056-paired', status: 'pending' };
+  assert.match(validateTrainingRun(candidate, validator(), { verifyFiles: false }).join('\n'), /full candidate training is not authorized/);
+});
+
+test('recovered v0.5.1 container paths verify against an explicit staged package root', () => {
+  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'saferide-v051-source-'));
+  const value = v051CompletedFixture();
+  const externalRoot = '/opt/ml/input/data/saferide-v05-extracted/fixture-package';
+  value.environment.requirements = 'requirements-ai-smoke.txt';
+  value.environment.requirementsSha256 = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(repoRoot, 'requirements-ai-smoke.txt'))).digest('hex');
+  value.environment.constraints = 'constraints-ai-training.txt';
+  value.environment.constraintsSha256 = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(repoRoot, 'constraints-ai-training.txt'))).digest('hex');
+  const files = {
+    'register.json': 'register',
+    'artifacts/audit/dataset-audit.json': 'audit',
+    'artifacts/dataset/controlled/train.jsonl': 'train',
+    'artifacts/dataset/controlled/dev.jsonl': 'dev',
+    'artifacts/dataset/public-safe/dataset-manifest.json': 'manifest',
+  };
+  for (const [relative, content] of Object.entries(files)) {
+    const target = path.join(sourceRoot, relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
+  value.register = `${externalRoot}/register.json`;
+  value.registerSha256 = crypto.createHash('sha256').update(files['register.json']).digest('hex');
+  value.audit = `${externalRoot}/artifacts/audit/dataset-audit.json`;
+  value.auditSha256 = crypto.createHash('sha256').update(files['artifacts/audit/dataset-audit.json']).digest('hex');
+  value.dataFiles.train = {
+    path: `${externalRoot}/artifacts/dataset/controlled/train.jsonl`,
+    sha256: crypto.createHash('sha256').update(files['artifacts/dataset/controlled/train.jsonl']).digest('hex'),
+  };
+  value.dataFiles.dev = {
+    path: `${externalRoot}/artifacts/dataset/controlled/dev.jsonl`,
+    sha256: crypto.createHash('sha256').update(files['artifacts/dataset/controlled/dev.jsonl']).digest('hex'),
+  };
+  value.datasetManifest = `${externalRoot}/artifacts/dataset/public-safe/dataset-manifest.json`;
+  value.datasetManifestSha256 = crypto.createHash('sha256').update(files['artifacts/dataset/public-safe/dataset-manifest.json']).digest('hex');
+  assert.deepEqual(validateTrainingRun(value, validator(), { sourceRoot }), []);
 });
 
 test('v0.5 manifest rejects holdout access, stale sample order, wrong seed, and unapproved rank 16', () => {
