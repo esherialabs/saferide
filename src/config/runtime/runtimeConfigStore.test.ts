@@ -245,3 +245,59 @@ describe('runtime config release endpoint gate', () => {
     expect(snapshots.at(-1)?.localAi.reasonCode).toBe('remote-control-expired');
   });
 });
+
+describe('partner consent versions', () => {
+  it('start empty and are replaced, not merged, so a server answer without them turns sharing off', async () => {
+    const store = await loadRuntimeConfigStore({
+      ...baseAppConfig,
+      remoteConfig: { refreshSeconds: 60, url: 'http://localhost:3333/api/config/runtime' },
+    } as AppConfig);
+    expect(store.getRuntimeConfigSnapshot().partnerConsentVersions).toEqual({});
+
+    const overridden = await store.setRuntimeConfigOverride({
+      partnerConsentVersions: { partner_follow_up: 'partner-follow-up.ke-coast-huria.v2', partner_callback: null },
+    });
+    expect(overridden.partnerConsentVersions).toEqual({
+      partner_follow_up: 'partner-follow-up.ke-coast-huria.v2',
+      partner_callback: null,
+    });
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ features: { partnerRouting: true } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )));
+    try {
+      const refreshed = await store.refreshRemoteRuntimeConfig();
+      expect(refreshed.features.partnerRouting).toBe(true);
+      expect(refreshed.partnerConsentVersions).toEqual({});
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('case submission flag', () => {
+  it('is never carried over: a server answer without it turns sending off', async () => {
+    const store = await loadRuntimeConfigStore({
+      ...baseAppConfig,
+      remoteConfig: { refreshSeconds: 60, url: 'http://localhost:3333/api/config/runtime' },
+    } as AppConfig);
+    const respond = (features: Record<string, boolean>) => vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ features }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )));
+    try {
+      respond({ caseSubmission: true });
+      const on = await store.refreshRemoteRuntimeConfig();
+      expect(on.features.caseSubmission).toBe(true);
+      expect(on.source).toBe('remote');
+      expect(Number.isFinite(Date.parse(on.appliedAt ?? ''))).toBe(true);
+
+      respond({ ownedApi: true });
+      const off = await store.refreshRemoteRuntimeConfig();
+      expect(off.features.caseSubmission).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

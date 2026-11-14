@@ -5,7 +5,9 @@ import { authClient } from '../lib/auth/authClient';
 import { encryptedAsyncStorage } from '../lib/encryptedAsyncStorage';
 import { draftStorage } from './draftStorage';
 import { OFFLINE_DATA_KEY_PREFIX, SYNC_QUEUE_KEY } from './storageKeys';
-import { submitCase } from '../services/caseService';
+import { PartnerRoutingConflictError, submitCase } from '../services/caseService';
+import { isCaseSubmissionEnabled } from '../config/runtime/caseSubmissionGate';
+import { CASE_SUBMISSION_COPY } from '../i18n/caseSubmissionCopy';
 import { devPrivacyError, devPrivacyWarn, getPrivacySafeErrorReason } from './privacyLog';
 
 export interface SyncQueueItem {
@@ -17,7 +19,7 @@ export interface SyncQueueItem {
   maxRetries: number;
   lastAttemptAt?: Date;
   lastError?: string;
-  blockedReason?: 'auth_required' | 'max_retries' | 'retry_pending';
+  blockedReason?: 'auth_required' | 'max_retries' | 'retry_pending' | 'needs_confirmation' | 'sending_paused';
   blockedAt?: Date;
 }
 
@@ -255,6 +257,22 @@ class OfflineSyncManager {
     item.blockedAt = undefined;
   }
 
+  /** Marks submit items 0..lastIndex as paused (not sent, no retry counted). Returns whether any were. */
+  private pauseQueuedSubmissions(lastIndex: number): boolean {
+    let paused = false;
+    for (let index = Math.min(lastIndex, this.syncQueue.length - 1); index >= 0; index--) {
+      const item = this.syncQueue[index];
+      if (!item || item.type !== 'submit') continue;
+      if (item.blockedReason === 'max_retries' || item.blockedReason === 'needs_confirmation' || item.blockedReason === 'auth_required') {
+        continue;
+      }
+      item.blockedReason = 'sending_paused';
+      item.blockedAt = new Date();
+      paused = true;
+    }
+    return paused;
+  }
+
   private retainFailedQueueItem(
     item: SyncQueueItem,
     error: unknown,
@@ -366,6 +384,16 @@ class OfflineSyncManager {
       throw new Error('Cannot sync while offline');
     }
 
+    // Sending is switched on only by a fresh server runtime config. While it
+    // is off, queued reports stay on this phone, paused and unsent.
+    if (!isCaseSubmissionEnabled()) {
+      if (this.pauseQueuedSubmissions(this.syncQueue.length - 1)) {
+        await this.saveSyncQueue();
+        this.notifyCallbacks('error');
+      }
+      return;
+    }
+
     const syncGeneration = this.privacyDeletePauseGeneration;
     this.isSyncing = true;
     this.notifyCallbacks('syncing');
@@ -384,9 +412,16 @@ class OfflineSyncManager {
           continue;
         }
 
-        if (item.blockedReason === 'max_retries' && !force) {
+        if ((item.blockedReason === 'max_retries' || item.blockedReason === 'needs_confirmation') && !force) {
           retainedFailedItem = true;
           continue;
+        }
+
+        // The switch can turn off mid-queue: this and every item not yet sent pause.
+        if (!isCaseSubmissionEnabled()) {
+          this.pauseQueuedSubmissions(i);
+          retainedFailedItem = true;
+          break;
         }
         
         try {
@@ -411,6 +446,14 @@ class OfflineSyncManager {
             type: item.type,
             retryCount: item.retryCount,
           });
+
+          // The survivor must confirm sharing with HURIA again (or turn it off);
+          // retrying on its own would never succeed, so hold the item instead.
+          if (error instanceof PartnerRoutingConflictError) {
+            this.retainFailedQueueItem(item, error, 'needs_confirmation');
+            retainedFailedItem = true;
+            continue;
+          }
 
           if (this.isAuthMissingError(error)) {
             this.retainFailedQueueItem(item, error, 'auth_required');
@@ -635,6 +678,14 @@ export function buildSyncQueueRecoveryMessage(items: SyncQueueItem[]): string | 
 
   if (items.some(item => item.blockedReason === 'auth_required')) {
     return 'Optional online sync needs attention. The local copy and evidence remain saved on this device.';
+  }
+
+  if (items.some(item => item.blockedReason === 'sending_paused')) {
+    return CASE_SUBMISSION_COPY.pausedRecovery;
+  }
+
+  if (items.some(item => item.blockedReason === 'needs_confirmation')) {
+    return 'A report is waiting for you to confirm sharing with HURIA, or to turn it off. Open the case to review. Nothing has been sent.';
   }
 
   if (items.some(item => item.blockedReason === 'max_retries')) {

@@ -70,8 +70,13 @@ export default function CalculatorScreen() {
     return unsubscribe;
   }, [calculator]);
 
-  const handleNumberPress = async (digit: string) => {
-    const result = await calculator.inputNumber(digit);
+  const handleNumberPress = (digit: string) => {
+    void calculator.inputNumber(digit);
+  };
+
+  // Only "=" can unlock: ordinary sums and digit runs are never PIN attempts.
+  const handleEqualsPress = async () => {
+    const result = await calculator.submit();
     if (result.shouldUnlock) {
       // Successfully entered decoy PIN, unlock the real app
       const canExitDecoy = await detector.exitDecoyMode();
@@ -134,7 +139,7 @@ export default function CalculatorScreen() {
               <Text style={styles.buttonText}>0</Text>
             </TouchableOpacity>
             <Button text="." onPress={() => calculator.inputDecimal()} />
-            <Button text="=" onPress={() => calculator.calculate()} />
+            <Button text="=" onPress={() => { void handleEqualsPress(); }} />
           </View>
         </View>
       </View>

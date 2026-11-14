@@ -75,7 +75,10 @@ export function normalizeCaseSummaryPayload(value: unknown): CaseSummaryPayload 
   }
 
   const workflow = value.workflow;
-  if (workflow.workflowType === 'referral' && isObjectRecord(workflow.supportBrief)) {
+  const reviewedReferralPacket = workflow.workflowType === 'referral' && isObjectRecord(workflow.partnerPacket)
+    && workflow.partnerPacket.consentVersion === 'partner-follow-up.ke-coast-huria.v3' && isObjectRecord(workflow.partnerPacket.packet)
+    ? workflow.partnerPacket.packet : null;
+  if (workflow.workflowType === 'referral' && isObjectRecord(workflow.supportBrief) && !reviewedReferralPacket) {
     const brief = workflow.supportBrief;
     const timeContext = isObjectRecord(brief.timeContext) ? brief.timeContext : null;
     const locationType = typeof brief.locationType === 'string' ? brief.locationType : null;
@@ -100,14 +103,19 @@ export function normalizeCaseSummaryPayload(value: unknown): CaseSummaryPayload 
     };
   }
 
-  if (workflow.workflowType === 'submitted-case' && isObjectRecord(workflow.submission)) {
-    const submission = workflow.submission;
-    const packet = isObjectRecord(submission.packet) ? submission.packet : null;
+  if (reviewedReferralPacket || (workflow.workflowType === 'submitted-case' && isObjectRecord(workflow.submission))) {
+    const submission = isObjectRecord(workflow.submission) ? workflow.submission : {};
+    const packet = reviewedReferralPacket ?? (isObjectRecord(submission.packet) ? submission.packet : null);
     const content = packet && isObjectRecord(packet.content) ? packet.content : null;
     const evidenceManifest = packet && Array.isArray(packet.evidenceManifest) ? packet.evidenceManifest : [];
     if (content) {
       return {
-        pathway: 'escalate',
+        pathway: reviewedReferralPacket ? 'referral' : 'escalate',
+        ...(reviewedReferralPacket ? {
+          selectedProvider: typeof workflow.providerId === 'string' ? workflow.providerId : null,
+          selectedChannel: typeof workflow.channel === 'string' ? workflow.channel as DraftData['selectedChannel'] : null,
+          supportBriefIncluded: isObjectRecord(workflow.supportBrief) && workflow.supportBrief.included === true,
+        } : {}),
         incidentDescription: typeof content.incidentDescription === 'string' ? content.incidentDescription : undefined,
         textEvidence: typeof content.statement === 'string' ? content.statement : undefined,
         location: typeof content.location === 'string' ? { description: content.location } : undefined,
@@ -200,4 +208,37 @@ export function buildCaseDetailSource({
     localMediaFiles,
     showAttachmentSyncNotice: !isAnonymousMapRecord && attachments.length === 0 && mediaCount > 0,
   };
+}
+
+export function getStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case 'draft':
+      return 'Draft';
+    case 'queued':
+      return 'Queued';
+    case 'submitted':
+      return 'Submitted';
+    case 'in_review':
+      return 'In review';
+    case 'referred':
+      return 'Referred';
+    case 'closed':
+      return 'Closed';
+    case 'acknowledged':
+      return 'Acknowledged';
+    case 'action-required':
+      return 'Action required';
+    default:
+      return status ? status.replace(/[_-]/g, ' ') : 'Unknown';
+  }
+}
+
+/** Timeline wording for a `status_change` case event. Only `new_status` is read: partner identity and notes never reach this payload. */
+export function describeStatusChange(
+  payload: Record<string, unknown> | null | undefined,
+  fallbackStatus: string | null | undefined,
+): { label: string; body: string } {
+  const newStatus = typeof payload?.new_status === 'string' ? payload.new_status : fallbackStatus;
+  const label = getStatusLabel(newStatus);
+  return { label, body: `Status updated to ${label}.` };
 }

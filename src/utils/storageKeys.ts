@@ -40,6 +40,11 @@ export const MEASUREMENT_SESSION_KEY = 'safe_ride_measurement_session_v1';
 export const MEASUREMENT_EVENTS_KEY = 'safe_ride_measurement_events_v1';
 export const MEASUREMENT_ISSUES_KEY = 'safe_ride_measurement_issues_v1';
 
+// Content-free local AI pilot diagnostics for QA tuned-model builds (encrypted
+// and device-bound; never uploaded; exported only after explicit tester consent).
+export const AI_PILOT_DIAGNOSTICS_KEY = 'safe_ride_ai_pilot_diagnostics_v1';
+export const AI_PILOT_INFLIGHT_KEY = 'safe_ride_ai_pilot_inflight_v1';
+
 // Content-free, device-local assignment for an explicitly approved tuned-model
 // rollout. It is never created while the bundled rollout remains disabled.
 export const TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY = '@saferide_tuned_artifact_rollout_bucket_v1';
@@ -48,3 +53,8 @@ export const TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY = '@saferide_tuned_artifact_rollo
 export const LEGACY_SETTINGS_KEY = 'app_settings';
 export const LEGACY_DRAFTS_KEY = 'incident_drafts';
 export const LEGACY_USER_DATA_KEY = 'user_data';
+
+// Decoy PIN verifier and its unlock-attempt record (SecureStore). The verifier
+// key is also the legacy AsyncStorage location, migrated on read.
+export const DECOY_PIN_STORE_KEY = 'safe_ride_decoy_pin';
+export const DECOY_PIN_ATTEMPTS_STORE_KEY = 'safe_ride_decoy_pin_attempts';

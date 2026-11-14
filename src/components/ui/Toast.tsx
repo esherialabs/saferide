@@ -119,7 +119,7 @@ function ToastCard({ toast, onClose, colors }: { toast: ToastItem; onClose: () =
       <TouchableOpacity
         accessibilityLabel="Dismiss notification"
         accessibilityRole="button"
-        hitSlop={8}
+        hitSlop={10}
         onPress={onClose}
         style={styles.close}
       >
@@ -132,15 +132,16 @@ function ToastCard({ toast, onClose, colors }: { toast: ToastItem; onClose: () =
 function getVariantColors(variant: ToastVariant, colors: any) {
   switch (variant) {
     case 'success':
-      return { bg: colors.primary + '22', border: colors.primary + '55', fg: colors.foreground, muted: colors.mutedForeground };
+      return { bg: colors.successMuted, border: colors.success, fg: colors.foreground, muted: colors.textSecondary };
     case 'error':
-      return { bg: colors.destructive + '22', border: colors.destructive + '55', fg: colors.foreground, muted: colors.mutedForeground };
+      return { bg: colors.dangerMuted, border: colors.destructive, fg: colors.foreground, muted: colors.textSecondary };
     case 'warning':
-      return { bg: colors.warning + '22', border: colors.warning + '55', fg: colors.foreground, muted: colors.mutedForeground };
+      return { bg: colors.warningMuted, border: colors.warning, fg: colors.foreground, muted: colors.textSecondary };
     case 'info':
-      return { bg: colors.accent + '22', border: colors.accent + '55', fg: colors.foreground, muted: colors.mutedForeground };
+      return { bg: colors.infoMuted, border: colors.info, fg: colors.foreground, muted: colors.textSecondary };
     default:
-      return { bg: colors.muted, border: colors.border, fg: colors.foreground, muted: colors.mutedForeground };
+      // Opaque surfaces keep toast text readable over scrolling content.
+      return { bg: colors.surface, border: colors.border, fg: colors.foreground, muted: colors.textSecondary };
   }
 }
 
@@ -159,6 +160,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 10,
     paddingHorizontal: 12,
+    shadowColor: 'rgba(29,21,19,0.16)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   content: { flex: 1 },
   title: { fontWeight: '600', fontSize: 14 },

@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '../../theme/SimpleThemeProvider';
-import { borders, elevation, radii, spacing, typography } from '../../theme/tokens';
+import { radii, spacing, typography } from '../../theme/tokens';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type FeatureTone = 'primary' | 'support' | 'evidence' | 'privacy' | 'safety' | 'critical' | 'consent';
@@ -26,6 +25,11 @@ export interface FeatureHeaderProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Page title set directly on the canvas: a toned eyebrow, a large title, one
+ * supporting line and an optional row of facts. It deliberately has no card,
+ * gradient or illustration, so the screen's own content sits right below it.
+ */
 export function FeatureHeader({
   eyebrow,
   title,
@@ -36,7 +40,7 @@ export function FeatureHeader({
   children,
   style,
 }: FeatureHeaderProps) {
-  const { colors, mode, isHighContrast } = useTheme();
+  const { colors } = useTheme();
   const palette = {
     primary: { color: colors.primary, muted: colors.primaryMuted },
     support: { color: colors.support, muted: colors.supportMuted },
@@ -46,153 +50,109 @@ export function FeatureHeader({
     critical: { color: colors.critical, muted: colors.criticalMuted },
     consent: { color: colors.consent, muted: colors.consentMuted },
   }[tone];
-  const gradientColors = isHighContrast
-    ? [colors.surface, colors.surface] as const
-    : mode === 'dark'
-      ? [colors.surfaceAlt, colors.surface] as const
-      : [colors.surface, palette.muted] as const;
 
   return (
-    <View style={[styles.shadowWrap, { shadowColor: palette.color }, style]}>
-      <LinearGradient
-        colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.surface, { borderColor: colors.border }]}
-      >
-        <View style={[styles.accent, { backgroundColor: palette.color }]} />
-        <View style={styles.topRow}>
-          <View style={[styles.iconBox, { backgroundColor: palette.muted, borderColor: palette.color + '33' }]}>
-            <Ionicons name={icon} size={22} color={palette.color} />
-          </View>
-          <View style={styles.copy}>
-            {eyebrow ? <Text style={[styles.eyebrow, { color: colors.textSecondary }]}>{eyebrow}</Text> : null}
-            <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
-            {description.trim() ? (
-              <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
-            ) : null}
-          </View>
+    <View style={[styles.root, style]}>
+      <View style={styles.eyebrowRow}>
+        <View style={[styles.eyebrowIcon, { backgroundColor: palette.muted }]}>
+          <Ionicons accessible={false} name={icon} size={14} color={palette.color} />
         </View>
+        {eyebrow ? <Text style={[styles.eyebrow, { color: palette.color }]}>{eyebrow}</Text> : null}
+      </View>
+      <Text accessibilityRole="header" style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+      {description.trim() ? (
+        <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
+      ) : null}
 
-        {stats.length > 0 ? (
-          <View style={styles.stats}>
-            {stats.map((stat) => (
-              <View
-                key={`${stat.label}-${stat.value}`}
-                accessible
-                accessibilityLabel={`${stat.label}: ${stat.value}`}
-                style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.divider }]}
-              >
-                <View style={styles.statValueRow}>
-                  {stat.icon ? <Ionicons name={stat.icon} size={14} color={palette.color} /> : null}
-                  <Text
-                    style={[styles.statValue, { color: colors.foreground }]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {stat.value}
-                  </Text>
-                </View>
-                <Text
-                  style={[styles.statLabel, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {stat.label}
+      {stats.length > 0 ? (
+        <View style={styles.stats}>
+          {stats.map((stat) => (
+            <View
+              key={`${stat.label}-${stat.value}`}
+              accessible
+              accessibilityLabel={`${stat.label}: ${stat.value}`}
+              style={[styles.statItem, { backgroundColor: colors.surfaceAlt }]}
+            >
+              {stat.icon ? <Ionicons name={stat.icon} size={14} color={palette.color} /> : null}
+              {typeof stat.value === 'number' ? (
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
+                  {` ${stat.label}`}
                 </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+              ) : (
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                  {`${stat.label} `}
+                  <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
+                </Text>
+              )}
+            </View>
+          ))}
+        </View>
+      ) : null}
 
-        {children ? <View style={styles.children}>{children}</View> : null}
-      </LinearGradient>
+      {children ? <View style={styles.children}>{children}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shadowWrap: {
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    ...elevation.card,
+  root: {
+    paddingBottom: spacing.xs,
+    paddingTop: spacing.xxs,
   },
-  surface: {
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    overflow: 'hidden',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  accent: {
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  topRow: {
+  eyebrowRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-  iconBox: {
+  eyebrowIcon: {
     alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    height: 44,
+    borderRadius: radii.round,
+    height: 24,
     justifyContent: 'center',
-    width: 44,
-  },
-  copy: {
-    flex: 1,
-    minWidth: 0,
+    width: 24,
   },
   eyebrow: {
     ...typography.overline,
-    marginBottom: spacing.xxxs,
+    flexShrink: 1,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   title: {
-    ...typography.titleMedium,
+    ...typography.headlineMedium,
+    letterSpacing: -0.3,
+    marginTop: spacing.xs,
   },
   description: {
-    ...typography.bodySmall,
-    marginTop: spacing.xxxs,
+    ...typography.bodyMedium,
+    marginTop: spacing.xxs,
   },
   stats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   statItem: {
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    flex: 1,
-    gap: spacing.xxxs,
-    justifyContent: 'center',
-    minHeight: 54,
-    minWidth: 0,
-    overflow: 'hidden',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  statValueRow: {
     alignItems: 'center',
+    borderRadius: radii.round,
     flexDirection: 'row',
-    gap: spacing.xxxs,
-    minWidth: 0,
+    gap: spacing.xxs,
+    maxWidth: '100%',
+    minHeight: 28,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
   },
   statValue: {
-    ...typography.titleSmall,
-    flexShrink: 1,
-    minWidth: 0,
+    ...typography.labelMedium,
+    fontWeight: '700',
   },
   statLabel: {
-    ...typography.caption,
-    minWidth: 0,
+    ...typography.labelMedium,
+    flexShrink: 1,
+    fontWeight: '500',
   },
   children: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
 });

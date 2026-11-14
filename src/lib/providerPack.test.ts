@@ -38,8 +38,10 @@ describe('provider pack runtime verifier', () => {
   });
 
   it('reports stale and expired state without silently granting trust', () => {
-    expect(inspectProviderPack(packRaw, manifestRaw, controlsRaw, new Date('2026-08-25T00:00:00.000Z'))?.freshness).toBe('stale');
-    expect(inspectProviderPack(packRaw, manifestRaw, controlsRaw, new Date('2026-08-31T00:00:00.000Z'))).toMatchObject({
+    const expiresAt = Date.parse(packRaw.expiresAt);
+    const day = 24 * 60 * 60 * 1000;
+    expect(inspectProviderPack(packRaw, manifestRaw, controlsRaw, new Date(expiresAt - 5 * day))?.freshness).toBe('stale');
+    expect(inspectProviderPack(packRaw, manifestRaw, controlsRaw, new Date(expiresAt + day))).toMatchObject({
       freshness: 'expired',
       trust: 'pending',
       contactActionsAllowed: false,

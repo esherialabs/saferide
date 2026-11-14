@@ -23,7 +23,7 @@ const ROOT_ROUTE_TITLES: Record<AppCopyLanguageCode, Partial<Record<RootRouteNam
     StatementReview: 'Review Statement',
     Cases: 'Cases',
     CaseDetail: 'Case Details',
-    EscalationConfirmation: 'Escalation Sent',
+    EscalationConfirmation: 'Report status',
     Settings: 'Settings',
     SafetySettings: 'Safety Settings',
     PrivacyData: 'Privacy & Data',

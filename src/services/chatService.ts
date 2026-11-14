@@ -16,6 +16,14 @@ import {
 } from '../config/languageAvailability';
 import { getAssistantLanguageCopy } from '../i18n/appLanguage';
 import { devPrivacyWarn, getPrivacySafeErrorReason, getPrivacySafeHttpStatus } from '../utils/privacyLog';
+import { getCachedLocalAiDeviceFacts } from '../lib/localAssistant/pilotDeviceProfile';
+import { recordAiPilotFallback } from '../lib/localAssistant/pilotDiagnostics';
+import {
+  categorizeLocalAiFailure,
+  classifyLocalAiFailure,
+  type LocalAiFailureCode,
+} from '../lib/localAssistant/pilotFailureReasons';
+import { getLocalAiPilotCopy } from '../i18n/localAiPilotCopy';
 
 export type ChatSession = {
   id: string;
@@ -194,6 +202,24 @@ function buildAssistantUnavailableResponse(languageCode?: SelectableAppLanguageC
   };
 }
 
+/**
+ * Replaces the former silent fallback: the reply names a short reason category
+ * (still with help-line guidance) and the reason code is kept in pilot diagnostics.
+ */
+function buildAssistantFailureResponse(
+  failureCode: LocalAiFailureCode,
+  languageCode?: SelectableAppLanguageCode,
+): AssistantResponse {
+  const category = categorizeLocalAiFailure(failureCode, {
+    ramClassGb: getCachedLocalAiDeviceFacts()?.ramClassGb ?? null,
+  });
+  if (category === 'not-ready') return buildAssistantUnavailableResponse(languageCode);
+  return {
+    content: getLocalAiPilotCopy(languageCode).failure.chatFallback(category),
+    sources: ['System notice'],
+  };
+}
+
 export async function requestAssistantReply(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   options: AssistantRequestOptions = {},
@@ -226,13 +252,24 @@ export async function requestAssistantReply(
         devPrivacyWarn('local assistant reply failed', {
           reason: getPrivacySafeErrorReason(error),
         });
+        const failureCode = classifyLocalAiFailure(error);
+        recordAiPilotFallback({ failureCode, attemptedLocal: true });
         if (!allowUnavailableFallback) {
           throw error instanceof Error ? error : new Error(String(error));
         }
+        return buildAssistantFailureResponse(failureCode, enabledLanguageCode);
       }
     }
   }
 
+  recordAiPilotFallback({
+    failureCode: !localAssistantConfig.enabled
+      ? 'LOCAL_AI_DISABLED'
+      : getLocalAssistantStatus().modelDownloaded
+        ? 'MODEL_NOT_LOADED'
+        : 'MODEL_NOT_DOWNLOADED',
+    attemptedLocal: false,
+  });
   if (!allowUnavailableFallback) {
     throw new Error('Local assistant is not ready on this device.');
   }

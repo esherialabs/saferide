@@ -12,6 +12,13 @@ import {
 } from './modelIdentity';
 import { TUNED_ARTIFACT_CONTROLS, type TunedArtifactControls } from './tunedArtifactControls';
 import { devPrivacyWarn, getPrivacySafeErrorReason } from '../../utils/privacyLog';
+import {
+  isAiPilotDiagnosticsEnabled,
+  recordAiPilotDownloadEvent,
+  recordAiPilotVerifyEvent,
+  runWithAiPilotInFlight,
+} from './pilotDiagnostics';
+import { readLocalAiFreeStorageBucket } from './pilotDeviceProfile';
 
 const MODEL_ROOT = `${FileSystem.documentDirectory ?? ''}models/`;
 const MODEL_CHECKSUM_CHUNK_BYTES = 4 * 1024 * 1024;
@@ -644,15 +651,22 @@ async function validateChecksum(
     if (fileInfo && await hasPersistedVerificationState(config, file, uri, fileInfo)) {
       return true;
     }
-    const digest = await sha256FileInChunks(uri, fileSize, MODEL_CHECKSUM_CHUNK_BYTES, (verifiedBytes, totalBytes) => {
-      onProgress?.({
-        fileName: file.fileName,
-        phase: 'verify',
-        receivedBytes: verifiedBytes,
-        totalBytes,
-      });
-    });
+    const verifyStartedAt = Date.now();
+    const digest = await runWithAiPilotInFlight('verify', () => sha256FileInChunks(
+      uri,
+      fileSize,
+      MODEL_CHECKSUM_CHUNK_BYTES,
+      (verifiedBytes, totalBytes) => {
+        onProgress?.({
+          fileName: file.fileName,
+          phase: 'verify',
+          receivedBytes: verifiedBytes,
+          totalBytes,
+        });
+      },
+    ));
     const valid = digest.toLowerCase() === file.sha256.toLowerCase();
+    recordAiPilotVerifyEvent({ outcome: valid ? 'passed' : 'failed', durationMs: Date.now() - verifyStartedAt });
     if (valid && fileInfo) {
       try {
         await persistVerificationState(config, file, uri, fileInfo);
@@ -680,6 +694,7 @@ async function validateChecksum(
     devPrivacyWarn('local model checksum validation failed', {
       reason: getPrivacySafeErrorReason(error),
     });
+    recordAiPilotVerifyEvent({ outcome: 'read-error' });
     throw new Error(`Could not read ${file.fileName} for checksum verification.`);
   }
 }
@@ -1124,6 +1139,62 @@ export async function cancelActiveModelDownload(): Promise<boolean> {
   return activeModelDownload ? activeModelDownload.cancel() : false;
 }
 
+async function readDownloadStartBytes(
+  config: LocalModelConfig,
+  file: LocalModelFile,
+): Promise<{ receivedBytes: number; nativeResume: boolean }> {
+  try {
+    const target = resolveFilePath(config, file);
+    const persistedState = await readPersistedDownloadState(config, file, target);
+    const currentProgress = await progressFromCurrentFile(file, target);
+    const savedProgress = persistedState ? progressFromSavedState(file, persistedState) : undefined;
+    return {
+      receivedBytes: currentProgress?.receivedBytes ?? savedProgress?.receivedBytes ?? 0,
+      nativeResume: hasNativeResumeData(persistedState),
+    };
+  } catch {
+    return { receivedBytes: 0, nativeResume: false };
+  }
+}
+
+/** Records content-free download start/resume/pause/finish/failure events in pilot builds. */
+async function downloadFileWithPilotDiagnostics(
+  config: LocalModelConfig,
+  file: LocalModelFile,
+  onProgress?: ProgressCallback,
+  authorization?: LargeModelDownloadAuthorization,
+): Promise<void> {
+  if (!isAiPilotDiagnosticsEnabled()) {
+    return downloadFile(config, file, onProgress, authorization);
+  }
+
+  const networkType = authorization?.networkType ?? null;
+  const start = await readDownloadStartBytes(config, file);
+  recordAiPilotDownloadEvent({
+    outcome: start.receivedBytes > 0 || start.nativeResume ? 'resumed' : 'started',
+    networkType,
+    freeStorageBucket: await readLocalAiFreeStorageBucket(),
+    startPercent: file.sizeBytes ? (start.receivedBytes / file.sizeBytes) * 100 : null,
+  });
+  const startedAt = Date.now();
+  try {
+    await runWithAiPilotInFlight('download', () => downloadFile(config, file, onProgress, authorization));
+    recordAiPilotDownloadEvent({ outcome: 'completed', networkType, durationMs: Date.now() - startedAt });
+  } catch (error) {
+    recordAiPilotDownloadEvent({
+      outcome: error instanceof ModelDownloadPausedError
+        ? 'paused'
+        : error instanceof ModelDownloadCancelledError
+          ? 'cancelled'
+          : 'failed',
+      networkType,
+      durationMs: Date.now() - startedAt,
+      error,
+    });
+    throw error;
+  }
+}
+
 export async function ensureModelAvailability(
   config: LocalModelConfig,
   onProgress?: ProgressCallback,
@@ -1138,7 +1209,7 @@ export async function ensureModelAvailability(
       await clearDownloadState(config, file);
       continue;
     }
-    await downloadFile(config, file, onProgress, authorization);
+    await downloadFileWithPilotDiagnostics(config, file, onProgress, authorization);
   }
 }
 

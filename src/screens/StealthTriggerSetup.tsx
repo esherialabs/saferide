@@ -54,7 +54,7 @@ export default function StealthTriggerSetupScreen() {
       marginBottom: spacing.sm,
     },
     subtitle: {
-      ...typography.bodyS,
+      ...typography.bodyMedium,
       color: colors.textSecondary,
       textAlign: 'center',
     },
@@ -149,7 +149,7 @@ export default function StealthTriggerSetupScreen() {
   };
 
   return (
-    <Screen scrollable>
+    <Screen scrollable brandHeader>
       <View style={styles.container}>
         <View style={styles.header}>
           <FeatureHeader

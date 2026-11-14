@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fileSystemMock = vi.hoisted(() => ({
   getInfoAsync: vi.fn(),
+  bytes: vi.fn(),
 }));
+const platform = vi.hoisted(() => ({ OS: 'android' }));
+vi.mock('react-native', () => ({ Platform: platform }));
+vi.mock('expo-file-system', () => ({ File: class { bytes = fileSystemMock.bytes; } }));
 
 const authMock = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -42,6 +46,7 @@ import { draftStorage, type DraftData } from '../../utils/draftStorage';
 import {
   buildCaseSummary,
   CaseEvidenceUploadError,
+  fetchCaseDetail,
   submitCase,
 } from '../caseService';
 
@@ -117,6 +122,8 @@ beforeEach(async () => {
   vi.unstubAllGlobals();
   await draftStorage.clearAll();
   fileSystemMock.getInfoAsync.mockReset();
+  fileSystemMock.bytes.mockReset();
+  platform.OS = 'android';
   authMock.getSession.mockResolvedValue({
     data: { session: { access_token: 'owned-token' } },
     error: null,
@@ -128,6 +135,18 @@ beforeEach(async () => {
 });
 
 describe('caseService minimized pathway contracts', () => {
+  it('loads a standard server case UUID instead of treating it as an unsynced local record', async () => {
+    const id = '11111111-2222-4333-8444-555555555555';
+    httpMock.request.mockResolvedValueOnce({ case: { ...buildCaseRow(), id }, attachments: [], events: [] });
+    const detail = await fetchCaseDetail(id);
+    expect(detail.caseRecord?.id).toBe(id);
+    expect(httpMock.request).toHaveBeenCalledWith({ path: `/cases/${id}` });
+  });
+
+  it('keeps local draft identifiers off the server case-detail endpoint', async () => {
+    await expect(fetchCaseDetail('draft_1792670400000_local123')).rejects.toThrow('only available after');
+    expect(httpMock.request).not.toHaveBeenCalled();
+  });
   it('sends only provider id and channel when referral brief sharing is disabled', () => {
     const workflow = buildCaseSummary(buildDraft(), 'referral');
     expect(workflow).toEqual({
@@ -181,6 +200,7 @@ describe('caseService minimized pathway contracts', () => {
     expect(result.attachments).toEqual([]);
     expect(fileSystemMock.getInfoAsync).not.toHaveBeenCalled();
     expect(httpMock.request).toHaveBeenCalledTimes(1);
+    expect(httpMock.request.mock.calls[0][0].body).not.toHaveProperty('draftId');
     expect(httpMock.request).toHaveBeenCalledWith(expect.objectContaining({
       path: '/cases',
       method: 'POST',
@@ -223,12 +243,14 @@ describe('caseService minimized pathway contracts', () => {
     });
     await draftStorage.saveDraft(draft);
     fileSystemMock.getInfoAsync.mockResolvedValue({ exists: true, size: 1024 });
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        blob: async () => new Blob(['evidence'], { type: 'image/jpeg' }),
-      })
-      .mockResolvedValueOnce({ ok: true });
+    fileSystemMock.bytes.mockResolvedValue(new Uint8Array(1024));
+    class NativeFormData {
+      parts: Array<[string, unknown]> = [];
+      append(name: string, value: unknown) { this.parts.push([name, value]); }
+    }
+    vi.stubGlobal('FormData', NativeFormData);
+    vi.stubGlobal('Blob', class NativeBlob {}); // Native Blob has no arrayBuffer().
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
     httpMock.request.mockImplementation(async ({ path, method }: { path: string; method?: string }) => {
       if (path === '/cases/case-existing/evidence' && method === 'POST') {
@@ -274,11 +296,16 @@ describe('caseService minimized pathway contracts', () => {
     expect(result.caseRecord?.id).toBe('case-existing');
     expect(result.attachments).toHaveLength(1);
     expect(httpMock.request).not.toHaveBeenCalledWith(expect.objectContaining({ path: '/cases' }));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][0]).toBe('https://uploads.local/evidence');
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST', body: expect.any(FormData) });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://uploads.local/evidence');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST', body: expect.any(NativeFormData) });
+    expect((fetchMock.mock.calls[0][1].body as NativeFormData).parts).toContainEqual([
+      'file', { uri: draft.mediaFiles![0].uri, name: 'photo-1.jpg', type: 'image/jpeg' },
+    ]);
     const uploadRequest = httpMock.request.mock.calls.find(([call]) => call.path === '/cases/case-existing/evidence')?.[0];
     expect(uploadRequest?.body).toMatchObject({
+      sizeBytes: 1024,
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       fileName: 'photo-1.jpg',
       mimeType: 'image/jpeg',
       retentionPolicyId: 'submitted-case-pending-legal-v1',
@@ -307,6 +334,38 @@ describe('caseService minimized pathway contracts', () => {
     });
     expect(saved?.mediaFiles?.[0].storagePath).toBeUndefined();
     expect(saved?.mediaFiles?.[0].uploadError).toBeUndefined();
+  });
+
+  it.each(['android', 'web'])('uploads measured bytes with unknown picker size on %s', async os => {
+    platform.OS = os;
+    const draft = buildDraft({
+      caseId: 'case-existing',
+      pathwayConsent: { ...buildDraft().pathwayConsent!, pathway: 'escalate' },
+      mediaFiles: [{ ...buildDraft().mediaFiles![0], size: 0 }],
+    });
+    fileSystemMock.getInfoAsync.mockResolvedValue({ exists: true, size: 8 });
+    fileSystemMock.bytes.mockResolvedValue(new Uint8Array(8));
+    class NativeFormData { append() {} }
+    if (os !== 'web') vi.stubGlobal('FormData', NativeFormData);
+    const webBlob = new Blob(['evidence']);
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({ ok: true, blob: async () => webBlob }));
+    vi.stubGlobal('fetch', fetchMock);
+    httpMock.request.mockImplementation(async ({ path }: { path: string }) => path.endsWith('/complete')
+      ? { attachment: { id: 'attachment-1', status: 'uploaded', created_at: '2026-06-05T09:25:00Z' } }
+      : { attachment: { id: 'attachment-1' }, upload: { method: 'POST', url: 'https://uploads.local/evidence', fields: {} } });
+    await submitCase({ draft, pathway: 'escalate' });
+    expect(httpMock.request.mock.calls[0][0].body.sizeBytes).toBe(8);
+    expect(fetchMock).toHaveBeenCalledTimes(os === 'web' ? 2 : 1);
+    if (os === 'web') expect((fetchMock.mock.calls[1]?.[1]?.body as FormData).get('file')).toBeInstanceOf(Blob);
+  });
+
+  it.each([1024, -1, NaN])('rejects invalid or mismatched declared evidence size %s before signing', async size => {
+    const draft = buildDraft({ caseId: 'case-existing', pathwayConsent: { ...buildDraft().pathwayConsent!, pathway: 'escalate' },
+      mediaFiles: [{ ...buildDraft().mediaFiles![0], size }] });
+    fileSystemMock.getInfoAsync.mockResolvedValue({ exists: true, size: 8 });
+    fileSystemMock.bytes.mockResolvedValue(new Uint8Array(8));
+    await expect(submitCase({ draft, pathway: 'escalate' })).rejects.toBeInstanceOf(CaseEvidenceUploadError);
+    expect(httpMock.request).not.toHaveBeenCalled();
   });
 
   it('keeps anonymous-map unavailable instead of creating an account-linked case', async () => {
@@ -358,29 +417,25 @@ describe('caseService minimized pathway contracts', () => {
     expect(serialized).not.toContain(draft.id);
   });
 
-  it('blocks evidence upload when a requested privacy transform is incomplete', async () => {
+  it('does not hold evidence back for a privacy request this build cannot process', async () => {
     const draft = buildDraft({
-      privacySettings: { blurFaces: true, removeMetadata: false, encryptFiles: false },
+      privacySettings: { blurFaces: true, removeMetadata: true, encryptFiles: true },
       pathwayConsent: { ...buildDraft().pathwayConsent!, pathway: 'escalate' },
     });
     await draftStorage.saveDraft(draft);
-    await expect(submitCase({ draft, pathway: 'escalate' })).rejects.toBeInstanceOf(CaseEvidenceUploadError);
-    expect(fileSystemMock.getInfoAsync).not.toHaveBeenCalled();
-    expect(httpMock.request).toHaveBeenCalledTimes(1);
+    // The upload goes ahead (the request is recorded in privacyStatus) instead of failing before it starts.
+    await submitCase({ draft, pathway: 'escalate' }).catch(() => undefined);
+    expect(fileSystemMock.getInfoAsync).toHaveBeenCalled();
   });
 
-  it('blocks evidence upload when a requested transform is unavailable for the item', async () => {
+  it('still waits for privacy processing that is actually running', async () => {
+    const base = buildDraft();
     const draft = buildDraft({
       privacySettings: { blurFaces: true, removeMetadata: false, encryptFiles: false },
-      pathwayConsent: { ...buildDraft().pathwayConsent!, pathway: 'escalate' },
-      mediaFiles: [{
-        ...buildDraft().mediaFiles![0],
-        id: 'audio-1',
-        type: 'audio',
-        uri: 'file:///audio.m4a',
-        fileName: 'audio.m4a',
-      }],
+      pathwayConsent: { ...base.pathwayConsent!, pathway: 'escalate' },
+      mediaFiles: [{ ...base.mediaFiles![0], privacyStatus: { faceBlur: { status: 'processing' } } } as NonNullable<typeof base.mediaFiles>[number]],
     });
+
     await draftStorage.saveDraft(draft);
     await expect(submitCase({ draft, pathway: 'escalate' })).rejects.toBeInstanceOf(CaseEvidenceUploadError);
     expect(fileSystemMock.getInfoAsync).not.toHaveBeenCalled();

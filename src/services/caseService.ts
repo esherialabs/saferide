@@ -1,5 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
 import { ApiError, request, setAuthToken } from '../lib/api/httpClient';
 import { authClient } from '../lib/auth/authClient';
@@ -11,6 +13,7 @@ import {
   getPrivacySafeHttpStatus,
 } from '../utils/privacyLog';
 import { shouldIncludeDraftBriefDetails } from '../utils/referralSupport';
+import { buildHuriaPacket } from '../utils/huriaPacket';
 import { buildEvidencePrivacyStatus } from '../utils/evidencePrivacyStatus';
 import { PathwayType } from '../types/pathways';
 import {
@@ -18,6 +21,25 @@ import {
   buildEscalationPacket,
 } from '../utils/escalationPacket';
 import { assertActivePathwayConsent } from '../utils/consentLedger';
+import {
+  classifyPartnerRoutingFailure,
+  getPartnerRoutingConflictMessage,
+  getRequestedPartnerSharing,
+  hasPartnerConsentAgreement,
+  PARTNER_FOLLOW_UP_CONSENT_VERSION,
+  HURIA_PARTNER_STABLE_ID,
+  markPartnerSharingWithdrawn,
+  requirePartnerReconfirmation,
+  type PartnerRoutingConflictReason,
+  type PartnerSharingDraft,
+} from '../utils/partnerSharing';
+import { notificationCenter } from '../utils/notificationCenter';
+import { PARTNER_SHARING_COPY } from '../i18n/partnerSharingCopy';
+import {
+  ensurePartnerConsentRecords,
+  hasWithdrawnPartnerConsent,
+  releaseUnusedPartnerConsents,
+} from './partnerSharingService';
 
 type CaseStatus = 'submitted' | 'in_review' | 'referred' | 'closed';
 
@@ -108,6 +130,35 @@ export class CaseEvidenceUploadError extends Error {
   }
 }
 
+/** What happened to the survivor's optional choice to also share with HURIA. */
+export type PartnerSharingResult =
+  | { status: 'not_requested' }
+  | { status: 'routed'; reference: string; partnerStatus: string; callbackShared: boolean; callbackNotShared?: boolean }
+  | { status: 'unavailable' }
+  | { status: 'withdrawn' };
+
+type PartnerReferralResponse = {
+  partnerStableId?: unknown;
+  reference?: unknown;
+  status?: unknown;
+  callbackShared?: unknown;
+};
+
+/**
+ * The partner or a consent changed (409), or the survivor has not agreed at
+ * the current version: nothing was sent, and the survivor must confirm
+ * sharing with HURIA again (or turn it off) before the report is sent.
+ */
+export class PartnerRoutingConflictError extends Error {
+  readonly reason: PartnerRoutingConflictReason | 'confirmation_required';
+
+  constructor(reason: PartnerRoutingConflictReason | 'confirmation_required') {
+    super(getPartnerRoutingConflictMessage(reason));
+    this.name = 'PartnerRoutingConflictError';
+    this.reason = reason;
+  }
+}
+
 async function getOwnedApiToken(): Promise<string | null> {
   try {
     const { data, error } = await authClient.getSession();
@@ -178,7 +229,7 @@ function mapCaseEventRow(row: CaseEventRow): CaseEvent {
 }
 
 function isValidUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 type ReferralSelectedField = 'incident_categories' | 'time_context' | 'location_type' | 'ongoing_status';
@@ -188,7 +239,8 @@ export type CaseWorkflowPayload =
       schemaVersion: '1.0';
       workflowType: 'referral';
       providerId: string;
-      channel: 'call' | 'whatsapp' | 'sms';
+      channel: 'call' | 'whatsapp' | 'sms' | 'partner_dashboard';
+      partnerPacket?: { consentVersion: typeof PARTNER_FOLLOW_UP_CONSENT_VERSION; packet: ReturnType<typeof buildHuriaPacket> };
       supportBrief:
         | { included: false; selectedFields: [] }
         | {
@@ -211,9 +263,10 @@ export type CaseWorkflowPayload =
       };
     };
 
-function buildReferralWorkflow(draft: DraftData): CaseWorkflowPayload {
+function buildReferralWorkflow(draft: DraftData, reviewedPacket = false): CaseWorkflowPayload {
   const providerId = draft.referralSelection?.providerId ?? draft.selectedProvider;
-  const channel = draft.referralSelection?.selectedChannel ?? draft.selectedChannel;
+  const channel = draft.referralSelection?.selectedChannel ?? draft.selectedChannel ??
+    (reviewedPacket && providerId === HURIA_PARTNER_STABLE_ID ? 'partner_dashboard' : undefined);
   if (!providerId || !channel) {
     throw new Error('A selected provider and channel are required for referral submission.');
   }
@@ -256,6 +309,7 @@ function buildReferralWorkflow(draft: DraftData): CaseWorkflowPayload {
     supportBrief.isOngoing = draft.isOngoing;
   }
   if (selectedFields.length === 0) {
+    if (reviewedPacket) return { schemaVersion: '1.0', workflowType: 'referral', providerId, channel, supportBrief: { included: false, selectedFields: [] } };
     throw new Error('The selected support brief has no shareable minimized fields.');
   }
 
@@ -269,7 +323,15 @@ function buildReferralWorkflow(draft: DraftData): CaseWorkflowPayload {
 }
 
 export function buildCaseSummary(draft: DraftData, pathway: PathwayType): CaseWorkflowPayload {
-  if (pathway === 'referral') return buildReferralWorkflow(draft);
+  const sharing = getRequestedPartnerSharing(draft, pathway);
+  const reviewed = sharing && (pathway === 'referral' || pathway === 'escalate') && hasPartnerConsentAgreement(sharing, pathway);
+  const generatedAt = draft.pathwayConsent?.grantedAt ?? new Date(draft.createdAt).toISOString();
+  if (pathway === 'referral') {
+    const workflow = buildReferralWorkflow(draft, Boolean(reviewed));
+    return reviewed && workflow.workflowType === 'referral'
+      ? { ...workflow, partnerPacket: { consentVersion: PARTNER_FOLLOW_UP_CONSENT_VERSION, packet: buildHuriaPacket(draft, { generatedAt, pathway }) } }
+      : workflow;
+  }
   if (pathway === 'escalate') {
     return {
       schemaVersion: '1.0',
@@ -278,7 +340,9 @@ export function buildCaseSummary(draft: DraftData, pathway: PathwayType): CaseWo
       submission: {
         schemaVersion: '1.0',
         workflowType: 'escalation',
-        packet: buildEscalationPacket(draft),
+        // A lost response must retry the same consented packet. Queue and
+        // upload updates change updatedAt; the consent checkpoint is stable.
+        packet: reviewed ? buildHuriaPacket(draft, { generatedAt, pathway }) : buildEscalationPacket(draft, { generatedAt }),
       },
     };
   }
@@ -395,14 +459,121 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function sha256Blob(blob: Blob): Promise<string> {
-  const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, await blob.arrayBuffer());
+async function sha256Bytes(bytes: Uint8Array): Promise<string> {
+  const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, new Uint8Array(bytes));
   const hash = bytesToHex(new Uint8Array(digest));
   if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('Evidence checksum generation failed.');
   return hash;
 }
 
-async function createCaseOnApi(draft: DraftData, pathway: PathwayType): Promise<CaseRecord> {
+function validateEvidenceSize(measuredSize: number, declaredSize: number, filesystemSize?: number): void {
+  if (!Number.isSafeInteger(measuredSize) || measuredSize <= 0) {
+    throw new Error('Media item has no readable size');
+  }
+  // Zero represents unavailable picker metadata. A positive declaration must
+  // still match the bytes being hashed/uploaded rather than silently drifting.
+  if (!Number.isFinite(declaredSize) || declaredSize < 0 ||
+    (declaredSize > 0 && declaredSize !== measuredSize) ||
+    (filesystemSize !== undefined && filesystemSize !== measuredSize)) {
+    throw new Error('Evidence size does not match the readable file');
+  }
+}
+
+type PartnerRoutingPayload = {
+  partnerStableId: string;
+  consentRecordId: string;
+  callback?: { phoneNumber: string; consentRecordId: string };
+};
+
+async function postCase(params: {
+  draft: DraftData;
+  workflow: CaseWorkflowPayload;
+  partnerRouting?: PartnerRoutingPayload;
+}): Promise<{ caseRecord: CaseRecord; partnerReferral: PartnerReferralResponse | null }> {
+  const pathwayConsent = params.draft.pathwayConsent!;
+  if (params.workflow.workflowType === 'referral' && params.workflow.channel === 'partner_dashboard' && !params.partnerRouting) {
+    throw new PartnerRoutingConflictError('confirmation_required');
+  }
+  // A partner outage/withdrawal fallback keeps the original minimized referral.
+  // A reviewed HURIA packet is never silently retained in a SafeRide-only referral.
+  const workflow = !params.partnerRouting && params.workflow.workflowType === 'referral'
+    ? (({ partnerPacket: _packet, ...legacy }) => legacy)(params.workflow)
+    : params.workflow;
+  const response = await request<{ case: CaseRecordRow; partnerReferral?: PartnerReferralResponse }>({
+    path: '/cases',
+    method: 'POST',
+    body: {
+      idempotencyKey: pathwayConsent.recordId,
+      // Drafts live only on this phone. Keep their case link locally; the
+      // server draft relation must not receive an unrelated local identifier.
+      pathwayConsent: {
+        recordId: pathwayConsent.recordId,
+        purpose: pathwayConsent.purpose,
+        version: pathwayConsent.version,
+      },
+      workflow,
+      ...(params.partnerRouting ? { partnerRouting: params.partnerRouting } : {}),
+    },
+  });
+  return { caseRecord: mapCaseRow(response.case), partnerReferral: response.partnerReferral ?? null };
+}
+
+async function savePartnerSharing(draftId: string, sharing: PartnerSharingDraft, extra: Partial<DraftData> = {}): Promise<void> {
+  await draftStorage.saveDraft({ id: draftId, partnerSharing: sharing, ...extra, updatedAt: new Date() });
+}
+
+function isHttpErrorResponse(error: unknown): boolean {
+  return error instanceof ApiError && typeof error.status === 'number';
+}
+
+/**
+ * Partner sharing is unavailable (503), so the report goes to SafeRide only
+ * and the survivor is told. The outcome is saved first so a retry after a
+ * lost response repeats the same SafeRide-only request; it is rolled back
+ * only when the server clearly refused this request as well.
+ */
+async function sendToSafeRideOnly(params: {
+  draft: DraftData;
+  workflow: CaseWorkflowPayload;
+  sharing: PartnerSharingDraft;
+}): Promise<{ caseRecord: CaseRecord; partnerSharing: PartnerSharingResult }> {
+  if (params.workflow.workflowType === 'referral' && params.workflow.channel === 'partner_dashboard') {
+    // A digital HURIA referral has no independently selected external channel.
+    // Keep it on the phone if that recipient is unavailable; do not change
+    // its destination or invent a call on the survivor's behalf.
+    await savePartnerSharing(params.draft.id, requirePartnerReconfirmation(params.sharing, 'confirmation_required'), {
+      caseSubmissionError: getPartnerRoutingConflictMessage('confirmation_required'),
+    });
+    throw new PartnerRoutingConflictError('confirmation_required');
+  }
+  const unavailable: PartnerSharingDraft = {
+    partnerStableId: params.sharing.partnerStableId,
+    requested: true,
+    outcome: { status: 'unavailable', at: new Date().toISOString() },
+  };
+  await savePartnerSharing(params.draft.id, unavailable);
+  let created;
+  try {
+    created = await postCase({ draft: params.draft, workflow: params.workflow });
+  } catch (error) {
+    if (isHttpErrorResponse(error)) await savePartnerSharing(params.draft.id, params.sharing);
+    throw error;
+  }
+  await releaseUnusedPartnerConsents(params.sharing);
+  devPrivacyInfo('partner sharing unavailable; case sent to SafeRide only');
+  // Visible wherever the survivor is: the report did not reach HURIA.
+  notificationCenter.notify({
+    title: PARTNER_SHARING_COPY.errors.unavailableTitle,
+    message: PARTNER_SHARING_COPY.errors.unavailableBody,
+    variant: 'warning',
+  });
+  return { caseRecord: created.caseRecord, partnerSharing: { status: 'unavailable' } };
+}
+
+async function createCaseOnApi(
+  draft: DraftData,
+  pathway: PathwayType,
+): Promise<{ caseRecord: CaseRecord; partnerSharing: PartnerSharingResult }> {
   const pathwayConsent = draft.pathwayConsent;
   if (
     !pathwayConsent ||
@@ -413,21 +584,164 @@ async function createCaseOnApi(draft: DraftData, pathway: PathwayType): Promise<
     throw new Error('A current pathway-specific consent checkpoint is required before submission.');
   }
   const workflow = buildCaseSummary(draft, pathway);
-  const response = await request<{ case: CaseRecordRow }>({
-    path: '/cases',
-    method: 'POST',
-    body: {
-      idempotencyKey: pathwayConsent.recordId,
+  const requested = getRequestedPartnerSharing(draft, pathway);
+
+  if (!requested) {
+    const created = await postCase({ draft, workflow });
+    const withdrawnBeforeSend = Boolean(draft.partnerSharing?.requested && draft.partnerSharing.withdrawnAt);
+    return {
+      caseRecord: created.caseRecord,
+      partnerSharing: withdrawnBeforeSend ? { status: 'withdrawn' } : { status: 'not_requested' },
+    };
+  }
+  // Checked before every submit and retry, like the pathway consent: a
+  // partner consent withdrawn on this phone (even before the server has
+  // confirmed it) means this report is never routed to the partner.
+  if (await hasWithdrawnPartnerConsent(requested)) {
+    const withdrawn = markPartnerSharingWithdrawn(requested, 'follow_up');
+    await savePartnerSharing(draft.id, withdrawn);
+    await releaseUnusedPartnerConsents(requested);
+    const created = await postCase({ draft, workflow });
+    notificationCenter.notify({
+      title: PARTNER_SHARING_COPY.errors.unavailableTitle,
+      message: PARTNER_SHARING_COPY.errors.withdrawnBody,
+      variant: 'info',
+    });
+    return { caseRecord: created.caseRecord, partnerSharing: { status: 'withdrawn' } };
+  }
+  if (requested.outcome?.status === 'unavailable') {
+    const created = await postCase({ draft, workflow });
+    return { caseRecord: created.caseRecord, partnerSharing: { status: 'unavailable' } };
+  }
+  if (!hasPartnerConsentAgreement(requested, pathway as 'escalate' | 'referral')) {
+    await savePartnerSharing(draft.id, requirePartnerReconfirmation(requested, 'confirmation_required'), {
+      caseSubmissionError: getPartnerRoutingConflictMessage('confirmation_required'),
+    });
+    throw new PartnerRoutingConflictError('confirmation_required');
+  }
+
+  let sharing: PartnerSharingDraft;
+  try {
+    sharing = await ensurePartnerConsentRecords({
       draftId: draft.id,
-      pathwayConsent: {
-        recordId: pathwayConsent.recordId,
-        purpose: pathwayConsent.purpose,
-        version: pathwayConsent.version,
-      },
-      workflow,
-    },
+      sharing: requested,
+      pathway: pathway as 'escalate' | 'referral',
+    });
+  } catch (error) {
+    // 503 partner_unavailable: the purpose is not enabled. Other errors keep the choice for a retry.
+    if (classifyPartnerRoutingFailure(error)?.kind === 'unavailable') {
+      // A follow-up consent may already exist when only the callback purpose is off.
+      const latest = (await draftStorage.getDraft(draft.id))?.partnerSharing;
+      return sendToSafeRideOnly({ draft, workflow, sharing: latest ?? requested });
+    }
+    throw error;
+  }
+
+  return routeToPartner({ draft, workflow, sharing });
+}
+
+/**
+ * Sends the report with partnerRouting and handles the API's answers:
+ * - 503 partner_callback_unavailable: only the callback is off, so the
+ *   report is resent to HURIA without the number (and the survivor told);
+ * - 503 partner_unavailable: sent to SafeRide only;
+ * - 409 consent reasons: nothing was sent; the survivor confirms again;
+ * - anything else (including other 503s): thrown, the choice kept for a retry.
+ */
+async function routeToPartner(params: {
+  draft: DraftData;
+  workflow: CaseWorkflowPayload;
+  sharing: PartnerSharingDraft;
+}): Promise<{ caseRecord: CaseRecord; partnerSharing: PartnerSharingResult }> {
+  const { draft, workflow, sharing } = params;
+  const followUpId = sharing.followUpConsent?.recordId;
+  const callback = sharing.callback;
+  if (!followUpId || (callback?.requested && (!callback.consent?.recordId || !callback.phoneNumber))) {
+    throw new Error('Partner consent records are missing after creation.');
+  }
+  const partnerRouting: PartnerRoutingPayload = {
+    partnerStableId: sharing.partnerStableId,
+    consentRecordId: followUpId,
+    ...(callback?.requested
+      ? { callback: { phoneNumber: callback.phoneNumber!, consentRecordId: callback.consent!.recordId! } }
+      : {}),
+  };
+
+  let created;
+  try {
+    created = await postCase({ draft, workflow, partnerRouting });
+  } catch (error) {
+    const failure = classifyPartnerRoutingFailure(error);
+    if (failure?.kind === 'callback_unavailable' && partnerRouting.callback) {
+      // Share with HURIA as agreed, but the number cannot go: drop it and say so.
+      const withoutCallback: PartnerSharingDraft = { ...sharing, callback: undefined, callbackDropped: true };
+      await savePartnerSharing(draft.id, withoutCallback);
+      await releaseUnusedPartnerConsents({ partnerStableId: sharing.partnerStableId, requested: true, callback: sharing.callback });
+      notificationCenter.notify({
+        title: PARTNER_SHARING_COPY.errors.callbackUnavailableTitle,
+        message: PARTNER_SHARING_COPY.errors.callbackUnavailableBody,
+        variant: 'warning',
+      });
+      return routeToPartner({ draft, workflow, sharing: withoutCallback });
+    }
+    if (failure?.kind === 'unavailable') {
+      return sendToSafeRideOnly({ draft, workflow, sharing });
+    }
+    if (failure?.kind === 'conflict') {
+      // The whole submission rolled back: nothing reached SafeRide or HURIA.
+      await releaseUnusedPartnerConsents(sharing);
+      await savePartnerSharing(draft.id, requirePartnerReconfirmation(sharing, failure.reason), {
+        caseSubmissionError: getPartnerRoutingConflictMessage(failure.reason),
+      });
+      throw new PartnerRoutingConflictError(failure.reason);
+    }
+    throw error;
+  }
+
+  const referral = created.partnerReferral;
+  if (!referral || typeof referral.reference !== 'string' || referral.partnerStableId !== sharing.partnerStableId) {
+    // Created without routing: an API without #294. Keep the report, say it was not shared.
+    await savePartnerSharing(draft.id, {
+      partnerStableId: sharing.partnerStableId,
+      requested: true,
+      outcome: { status: 'unavailable', at: new Date().toISOString() },
+    });
+    await releaseUnusedPartnerConsents(sharing);
+    return { caseRecord: created.caseRecord, partnerSharing: { status: 'unavailable' } };
+  }
+
+  const result: PartnerSharingResult = {
+    status: 'routed',
+    reference: referral.reference,
+    partnerStatus: typeof referral.status === 'string' ? referral.status : 'new',
+    callbackShared: referral.callbackShared === true,
+    ...(sharing.callbackDropped ? { callbackNotShared: true } : {}),
+  };
+  // The callback number now lives sealed on the server; drop it from the phone.
+  await savePartnerSharing(draft.id, {
+    ...sharing,
+    ...(sharing.callback ? { callback: { ...sharing.callback, phoneNumber: undefined } } : {}),
+    outcome: { ...result, at: new Date().toISOString() },
   });
-  return mapCaseRow(response.case);
+  return { caseRecord: created.caseRecord, partnerSharing: result };
+}
+
+function partnerSharingResultFromDraft(draft: DraftData, pathway: PathwayType): PartnerSharingResult {
+  const outcome = draft.partnerSharing?.outcome;
+  if (draft.partnerSharing?.withdrawnAt) {
+    return draft.partnerSharing.requested ? { status: 'withdrawn' } : { status: 'not_requested' };
+  }
+  if (!getRequestedPartnerSharing(draft, pathway)) return { status: 'not_requested' };
+  if (outcome?.status === 'routed') {
+    return {
+      status: 'routed',
+      reference: outcome.reference,
+      partnerStatus: outcome.partnerStatus,
+      callbackShared: outcome.callbackShared,
+      ...(outcome.callbackNotShared ? { callbackNotShared: true } : {}),
+    };
+  }
+  return outcome?.status === 'unavailable' ? { status: 'unavailable' } : { status: 'not_requested' };
 }
 
 async function uploadAttachmentToApi(params: {
@@ -443,16 +757,15 @@ async function uploadAttachmentToApi(params: {
     throw new Error('Media item missing URI');
   }
 
+  // Only wait for processing that is actually running. A request this build
+  // cannot process (the evidence screen says so) is sent along as recorded
+  // intent in privacyStatus; blocking on it held the photo back forever.
   const privacyStatus = buildEvidencePrivacyStatus(media, privacySettings);
-  const incompletePrivacyFeatures = Object.entries(privacyStatus)
-    .filter(([, entry]) =>
-      entry.status === 'requested' ||
-      entry.status === 'processing' ||
-      entry.status === 'unavailable' ||
-      entry.status === 'failed')
+  const processingFeatures = Object.entries(privacyStatus)
+    .filter(([, entry]) => entry.status === 'processing')
     .map(([feature]) => feature);
-  if (incompletePrivacyFeatures.length > 0) {
-    throw new Error(`Evidence privacy processing is incomplete: ${incompletePrivacyFeatures.join(', ')}`);
+  if (processingFeatures.length > 0) {
+    throw new Error(`Evidence privacy processing is incomplete: ${processingFeatures.join(', ')}`);
   }
 
   const mimeType = guessMimeType(media);
@@ -481,17 +794,19 @@ async function uploadAttachmentToApi(params: {
       uploadMetadata.privacyRequests = escalationDescriptor.metadata.privacyRequests;
     }
   }
-  const fileInfo = await FileSystem.getInfoAsync(media.uri);
-  const { blob, size: blobSize } = await readFileAsBlob(media.uri);
-  const sizeBytes =
-    media.size ??
-    (fileInfo.exists && typeof fileInfo.size === 'number' ? fileInfo.size : undefined) ??
-    blobSize;
-
-  if (!sizeBytes || sizeBytes <= 0) {
-    throw new Error('Media item has no readable size');
+  const isWeb = Platform.OS === 'web';
+  const webBlob = isWeb ? (await readFileAsBlob(media.uri)).blob : null;
+  const fileInfo = isWeb ? null : await FileSystem.getInfoAsync(media.uri);
+  if (fileInfo && (!fileInfo.exists || fileInfo.isDirectory)) {
+    throw new Error('Evidence file is unavailable');
   }
-  const sha256 = await sha256Blob(blob);
+  const bytes = webBlob
+    ? new Uint8Array(await webBlob.arrayBuffer())
+    : await new File(media.uri).bytes();
+  const sizeBytes = bytes.byteLength;
+  validateEvidenceSize(sizeBytes, media.size,
+    fileInfo?.exists && typeof fileInfo.size === 'number' ? fileInfo.size : undefined);
+  const sha256 = await sha256Bytes(bytes);
 
   const signed = await request<{
     attachment: AttachmentRow;
@@ -518,7 +833,12 @@ async function uploadAttachmentToApi(params: {
   for (const [key, value] of Object.entries(signed.upload.fields)) {
     uploadBody.append(key, value);
   }
-  uploadBody.append('file', blob, displayName);
+  if (webBlob) {
+    uploadBody.append('file', webBlob, displayName);
+  } else {
+    // React Native FormData serializes file URIs, not browser Blob objects.
+    uploadBody.append('file', { uri: media.uri, name: displayName, type: mimeType } as any);
+  }
 
   const uploadResponse = await fetch(signed.upload.url, {
     method: signed.upload.method,
@@ -581,7 +901,7 @@ export async function submitCase({
 }: {
   draft: DraftData;
   pathway: PathwayType;
-}): Promise<{ caseRecord: CaseRecord | null; attachments: CaseAttachment[] }> {
+}): Promise<{ caseRecord: CaseRecord | null; attachments: CaseAttachment[]; partnerSharing: PartnerSharingResult }> {
   const includeDraftDetails = pathway === 'escalate';
 
   devPrivacyInfo('case submission started', {
@@ -599,6 +919,7 @@ export async function submitCase({
     return {
       caseRecord: null,
       attachments: [],
+      partnerSharing: { status: 'not_requested' },
     };
   }
 
@@ -628,17 +949,21 @@ export async function submitCase({
   const storedCaseId = typeof draft.caseId === 'string' && draft.caseId.trim()
     ? draft.caseId.trim()
     : null;
-  const caseRecord = storedCaseId
+  const created = storedCaseId
     ? {
-        id: storedCaseId,
-        draftId: draft.id,
-        pathway,
-        status: 'submitted' as const,
-        summary: buildCaseSummary(draft, pathway),
-        createdAt: draft.createdAt,
-        updatedAt: new Date(),
+        caseRecord: {
+          id: storedCaseId,
+          draftId: draft.id,
+          pathway,
+          status: 'submitted' as const,
+          summary: buildCaseSummary(draft, pathway),
+          createdAt: draft.createdAt,
+          updatedAt: new Date(),
+        },
+        partnerSharing: partnerSharingResultFromDraft(draft, pathway),
       }
     : await createCaseOnApi(draft, pathway);
+  const { caseRecord, partnerSharing } = created;
 
   await draftStorage.saveDraft({
     id: draft.id,
@@ -715,9 +1040,10 @@ export async function submitCase({
 
   devPrivacyInfo('case submission completed through API', {
     attachments: attachments.length,
+    partnerSharing: partnerSharing.status,
   });
 
-  return { caseRecord, attachments };
+  return { caseRecord, attachments, partnerSharing };
 }
 
 export async function fetchCases(): Promise<CaseRecord[]> {

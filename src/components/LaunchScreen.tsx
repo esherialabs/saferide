@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { spacing, typography } from '../theme/tokens';
+import { BrandWordmark } from './BrandWordmark';
 
 type LaunchScreenProps = {
   message?: string;
@@ -113,7 +114,7 @@ export default function LaunchScreen({ message = 'Preparing SafeRide' }: LaunchS
   const styles = StyleSheet.create({
     container: {
       alignItems: 'center',
-      backgroundColor: colors.primary,
+      backgroundColor: colors.canvas,
       flex: 1,
       justifyContent: 'center',
       paddingHorizontal: spacing.xl,
@@ -126,7 +127,7 @@ export default function LaunchScreen({ message = 'Preparing SafeRide' }: LaunchS
       width: 156,
     },
     orbit: {
-      borderColor: 'rgba(255,248,243,0.22)',
+      borderColor: colors.border,
       borderRadius: 64,
       borderWidth: 1,
       height: 128,
@@ -165,12 +166,12 @@ export default function LaunchScreen({ message = 'Preparing SafeRide' }: LaunchS
     },
     message: {
       ...typography.label,
-      color: 'rgba(255,248,243,0.88)',
+      color: colors.textSecondary,
       marginTop: spacing.xs,
       textAlign: 'center',
     },
     progressTrack: {
-      backgroundColor: 'rgba(255,248,243,0.18)',
+      backgroundColor: colors.divider,
       borderRadius: 999,
       height: 4,
       marginTop: spacing.lg,
@@ -178,7 +179,7 @@ export default function LaunchScreen({ message = 'Preparing SafeRide' }: LaunchS
       width: 148,
     },
     progressFill: {
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
       borderRadius: 999,
       height: 4,
       width: 148,
@@ -219,6 +220,7 @@ export default function LaunchScreen({ message = 'Preparing SafeRide' }: LaunchS
           />
         </View>
       </Animated.View>
+      <BrandWordmark width={200} />
       <Text style={styles.message}>{message}</Text>
       <View style={styles.progressTrack}>
         <Animated.View

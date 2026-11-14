@@ -67,6 +67,14 @@ const legacyModelConfig = {
   },
 } as unknown as LocalModelConfig;
 
+function pilotModelConfig(): LocalModelConfig {
+  return {
+    ...GEMMA_4_E2B_LITERTLM_CONFIG,
+    manifestId: GEMMA_4_E2B_LITERTLM_CONFIG.manifestId ?? 'synthetic-pilot-manifest',
+    files: GEMMA_4_E2B_LITERTLM_CONFIG.files.map(file => ({ ...file, sha256: file.sha256 ?? 'e'.repeat(64) })),
+  };
+}
+
 function flushAsyncWork(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
@@ -109,6 +117,85 @@ describe('localGemmaEngine', () => {
       { temperature: 0, maxOutputTokens: 4 },
     );
     expect(localModelEngine.isReady(GEMMA_4_E2B_LITERTLM_CONFIG)).toBe(true);
+  });
+
+  it('records content-free QA diagnostics at the load, readiness, and reply call sites', async () => {
+    liteRtBridgeMock.load.mockResolvedValueOnce({
+      state: 'loaded',
+      runtimeAvailable: true,
+      mockMode: false,
+      artifactValidated: true,
+      realRuntimeLoaded: true,
+      activeBackend: 'gpu',
+    } as never);
+    liteRtBridgeMock.generate
+      .mockResolvedValueOnce({ content: 'ready', mockMode: false })
+      .mockResolvedValueOnce({
+        content: 'SYNTHETIC-SECRET-REPLY You can call 1195 for support.',
+        mockMode: false,
+        activeBackend: 'gpu',
+      } as never);
+    const pilot = await import('./pilotDiagnostics');
+    const device = await import('./pilotDeviceProfile');
+    device.__setLocalAiDeviceProvidersForTests({
+      deviceFacts: async () => ({ totalMemory: 7.4 * 1024 ** 3 }),
+      freeStorage: async () => 9e9,
+    });
+    pilot.__configureAiPilotDiagnosticsForTests({ enabled: true });
+    const { localModelEngine } = await import('./localGemmaEngine');
+
+    await localModelEngine.generateResponse(
+      pilotModelConfig(),
+      [{ role: 'user', content: 'SYNTHETIC-SECRET-PROMPT' }],
+      { allowRealLiteRtLmRuntime: true },
+    );
+    await pilot.flushAiPilotDiagnosticsWrites();
+
+    const store = await pilot.getAiPilotDiagnosticsStore();
+    const qa = store.events.flatMap(event => (event.kind === 'qa' ? [event] : []));
+    expect(qa.map(event => event.diagnostic.phase)).toEqual(['load', 'readiness-probe', 'generation']);
+    expect(qa.map(event => event.diagnostic.result.status)).toEqual(['passed', 'passed', 'passed']);
+    expect(qa[0]).toMatchObject({ diagnostic: { backend: 'gpu', realRuntimeLoaded: true } });
+    expect(qa[2]).toMatchObject({
+      diagnostic: { backend: 'gpu', throughput: { estimatedOutputTokens: expect.any(Number) } },
+      replySignals: { refusalLike: false, emergencyGuidanceLike: true },
+    });
+    expect(JSON.stringify(store)).not.toContain('SYNTHETIC-SECRET');
+    expect(JSON.stringify(store)).not.toContain('Say ready');
+    pilot.__resetAiPilotDiagnosticsForTests();
+    device.__setLocalAiDeviceProvidersForTests();
+  });
+
+  it('records a failed local reply with an allowlisted code only', async () => {
+    liteRtBridgeMock.generate
+      .mockResolvedValueOnce({ content: 'ready', mockMode: false })
+      .mockRejectedValueOnce(Object.assign(
+        new Error('LiteRT-LM bridge generation failed. SYNTHETIC-SECRET'),
+        { code: 'ERR_LITERT_GENERATE_FAILED' },
+      ));
+    const pilot = await import('./pilotDiagnostics');
+    const device = await import('./pilotDeviceProfile');
+    device.__setLocalAiDeviceProvidersForTests({ deviceFacts: async () => ({}), freeStorage: async () => 9e9 });
+    pilot.__configureAiPilotDiagnosticsForTests({ enabled: true });
+    const { localModelEngine } = await import('./localGemmaEngine');
+
+    await expect(localModelEngine.generateResponse(
+      pilotModelConfig(),
+      [{ role: 'user', content: 'SYNTHETIC-SECRET-PROMPT' }],
+      { allowRealLiteRtLmRuntime: true },
+    )).rejects.toThrow('generation failed');
+    await pilot.flushAiPilotDiagnosticsWrites();
+
+    const store = await pilot.getAiPilotDiagnosticsStore();
+    expect(store.events.at(-1)).toMatchObject({
+      kind: 'qa',
+      failureCode: 'GENERATION_FAILED',
+      replySignals: null,
+      diagnostic: { phase: 'generation', result: { status: 'failed', errorCode: 'GENERATION_FAILED' } },
+    });
+    expect(JSON.stringify(store)).not.toContain('SYNTHETIC-SECRET');
+    pilot.__resetAiPilotDiagnosticsForTests();
+    device.__setLocalAiDeviceProvidersForTests();
   });
 
   it('generates replies through LiteRT-LM after readiness proof', async () => {

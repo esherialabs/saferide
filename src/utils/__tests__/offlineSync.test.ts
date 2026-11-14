@@ -26,8 +26,21 @@ const httpMock = vi.hoisted(() => ({
   setAuthToken: vi.fn(),
 }));
 
+const gateMock = vi.hoisted(() => ({
+  enabled: true as boolean | 'real',
+}));
+
 const caseServiceMock = vi.hoisted(() => ({
   submitCase: vi.fn(),
+  PartnerRoutingConflictError: class PartnerRoutingConflictError extends Error {
+    reason: string;
+
+    constructor(reason: string) {
+      super(`partner routing needs confirmation: ${reason}`);
+      this.name = 'PartnerRoutingConflictError';
+      this.reason = reason;
+    }
+  },
 }));
 
 vi.mock('../netinfoShim', () => ({
@@ -46,8 +59,18 @@ vi.mock('../../lib/api/httpClient', () => ({
   setAuthToken: httpMock.setAuthToken,
 }));
 
+vi.mock('../../config/runtime/caseSubmissionGate', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../config/runtime/caseSubmissionGate')>();
+  return {
+    ...actual,
+    // 'real' uses the actual fail-closed gate over the (bundled) runtime config.
+    isCaseSubmissionEnabled: () => (gateMock.enabled === 'real' ? actual.isCaseSubmissionEnabled() : gateMock.enabled),
+  };
+});
+
 vi.mock('../../services/caseService', () => ({
   submitCase: caseServiceMock.submitCase,
+  PartnerRoutingConflictError: caseServiceMock.PartnerRoutingConflictError,
 }));
 
 vi.mock('../privacyLog', () => ({
@@ -86,6 +109,7 @@ describe('offlineSyncManager submit queue', () => {
     authMock.signOut.mockResolvedValue({ data: null, error: null });
     httpMock.request.mockResolvedValue(undefined);
     caseServiceMock.submitCase.mockResolvedValue({ caseRecord: null, attachments: [] });
+    gateMock.enabled = true;
     await offlineSyncManager.reset();
   });
 
@@ -511,4 +535,126 @@ describe('offlineSyncManager submit queue', () => {
       blockedReason: 'max_retries',
     });
   });
+
+  it('holds a HURIA consent conflict for the survivor instead of retrying it', async () => {
+    const draft = buildDraft({ id: 'draft-partner-conflict', selectedPathway: 'escalate' });
+    await draftStorage.saveDraft(draft);
+    caseServiceMock.submitCase.mockRejectedValue(
+      new caseServiceMock.PartnerRoutingConflictError('partner_consent_missing'),
+    );
+
+    const syncFinished = new Promise<'error'>((resolve) => {
+      const unsubscribe = offlineSyncManager.addSyncCallback((status) => {
+        if (status === 'error') {
+          unsubscribe();
+          resolve(status);
+        }
+      });
+    });
+
+    await offlineSyncManager.addToSyncQueue({
+      id: 'submit-draft-partner-conflict',
+      type: 'submit',
+      data: { draftId: draft.id, pathway: 'escalate' },
+      timestamp: new Date('2026-10-21T08:50:00.000Z'),
+      maxRetries: 3,
+    });
+
+    await expect(syncFinished).resolves.toBe('error');
+    expect(offlineSyncManager.getSyncQueueItems()[0]).toMatchObject({
+      id: 'submit-draft-partner-conflict',
+      retryCount: 0,
+      blockedReason: 'needs_confirmation',
+    });
+    expect(buildSyncQueueRecoveryMessage(offlineSyncManager.getSyncQueueItems())).toContain('confirm sharing with HURIA');
+
+    caseServiceMock.submitCase.mockClear();
+    await offlineSyncManager.startSync();
+    expect(caseServiceMock.submitCase).not.toHaveBeenCalled();
+  });
+
 });
+
+describe('offlineSyncManager and the server switch (features.caseSubmission)', () => {
+  beforeEach(async () => {
+    netInfoMock.emit({ isConnected: true });
+    authMock.getSession.mockResolvedValue({ data: { session: { access_token: 'owned-token' } }, error: null });
+    caseServiceMock.submitCase.mockReset();
+    caseServiceMock.submitCase.mockResolvedValue({ caseRecord: null, attachments: [] });
+    gateMock.enabled = true;
+    await offlineSyncManager.reset();
+  });
+
+  async function queueSubmit(draftId: string) {
+    await draftStorage.saveDraft(buildDraft({ id: draftId }));
+    await offlineSyncManager.addToSyncQueue({
+      id: `submit-${draftId}`,
+      type: 'submit',
+      data: { draftId, pathway: 'referral' },
+      timestamp: new Date('2026-10-22T08:00:00.000Z'),
+      maxRetries: 3,
+    });
+  }
+
+  it('flag off: queued reports are paused and nothing is sent', async () => {
+    gateMock.enabled = false;
+    await queueSubmit('draft-switch-off');
+    await offlineSyncManager.startSync(true);
+
+    expect(caseServiceMock.submitCase).not.toHaveBeenCalled();
+    expect(offlineSyncManager.getSyncQueueItems()[0]).toMatchObject({ blockedReason: 'sending_paused', retryCount: 0 });
+    expect(buildSyncQueueRecoveryMessage(offlineSyncManager.getSyncQueueItems())).toContain('Sending to SafeRide is paused');
+  });
+
+  it('flag on: queued reports are sent', async () => {
+    const synced = new Promise<void>(resolve => {
+      const unsubscribe = offlineSyncManager.addSyncCallback(status => {
+        if (status === 'success') {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+    await queueSubmit('draft-switch-on'); // online and on: queueing starts sending at once
+    await synced;
+
+    expect(caseServiceMock.submitCase).toHaveBeenCalledTimes(1);
+    expect(offlineSyncManager.getSyncQueueItems()).toHaveLength(0);
+  });
+
+  it('flag turning off mid-queue: the remaining reports pause and are not sent', async () => {
+    gateMock.enabled = false;
+    await queueSubmit('draft-mid-1');
+    await queueSubmit('draft-mid-2');
+    await queueSubmit('draft-mid-3');
+    caseServiceMock.submitCase.mockImplementationOnce(async () => {
+      gateMock.enabled = false; // the server switch goes off while the first report is sending
+      return { caseRecord: null, attachments: [] };
+    });
+
+    gateMock.enabled = true;
+    await offlineSyncManager.startSync(true);
+
+    expect(caseServiceMock.submitCase).toHaveBeenCalledTimes(1);
+    const remaining = offlineSyncManager.getSyncQueueItems();
+    expect(remaining).toHaveLength(2);
+    expect(remaining.every(item => item.blockedReason === 'sending_paused' && item.retryCount === 0)).toBe(true);
+
+    // Switched back on: the paused reports go out.
+    gateMock.enabled = true;
+    await offlineSyncManager.startSync(true);
+    expect(caseServiceMock.submitCase).toHaveBeenCalledTimes(3);
+    expect(offlineSyncManager.getSyncQueueItems()).toHaveLength(0);
+  });
+
+  it('missing runtime config: the real gate keeps everything on the phone', async () => {
+    gateMock.enabled = false;
+    await queueSubmit('draft-no-config');
+    gateMock.enabled = 'real';
+    await offlineSyncManager.startSync(true);
+
+    expect(caseServiceMock.submitCase).not.toHaveBeenCalled();
+    expect(offlineSyncManager.getSyncQueueItems()[0]).toMatchObject({ blockedReason: 'sending_paused' });
+  });
+});
+

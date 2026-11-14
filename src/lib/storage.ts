@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { devPrivacyError, getPrivacySafeErrorReason } from '../utils/privacyLog';
 import { normalizeThemePreference, type ThemePreference } from '../theme/tokens';
+import { normalizeVisualStyle, type VisualStyle } from '../theme/visualStyles';
 
 export interface IncidentDraft {
   id: string;
@@ -40,6 +41,7 @@ export interface AppSettings {
     relationship: string;
   }[];
   theme: ThemePreference;
+  visualStyle: VisualStyle;
   notifications: boolean;
   autoLocation: boolean;
   autoBackup: boolean;
@@ -86,6 +88,7 @@ async function deleteSecureItem(key: string): Promise<void> {
 }
 
 export class Storage {
+  private static settingsSaveQueue: Promise<void> = Promise.resolve();
   static async saveDraft(draft: IncidentDraft): Promise<void> {
     try {
       const existingDrafts = await this.getDrafts();
@@ -138,6 +141,12 @@ export class Storage {
   }
 
   static async saveSettings(settings: Partial<AppSettings>): Promise<void> {
+    const save = this.settingsSaveQueue.then(() => this.writeSettings(settings));
+    this.settingsSaveQueue = save.catch(() => undefined);
+    return save;
+  }
+
+  private static async writeSettings(settings: Partial<AppSettings>): Promise<void> {
     try {
       const currentSettings = await this.getSettings();
       const updatedSettings = { ...currentSettings, ...settings };
@@ -161,7 +170,8 @@ export class Storage {
         stealthHapticsEnabled: true,
         stealthAutoRecordEnabled: true,
         emergencyContacts: [],
-        theme: 'system',
+        theme: 'light',
+        visualStyle: 'warm',
         notifications: true,
         autoLocation: true,
         autoBackup: false,
@@ -175,7 +185,8 @@ export class Storage {
       return {
         ...defaultSettings,
         ...parsed,
-        theme: normalizeThemePreference(parsed.theme),
+        theme: normalizeThemePreference(parsed.theme, defaultSettings.theme),
+        visualStyle: normalizeVisualStyle(parsed.visualStyle),
       };
     } catch (error) {
       devPrivacyError('settings read failed', { reason: getPrivacySafeErrorReason(error) });
@@ -184,7 +195,8 @@ export class Storage {
         stealthHapticsEnabled: true,
         stealthAutoRecordEnabled: true,
         emergencyContacts: [],
-        theme: 'system',
+        theme: 'light',
+        visualStyle: 'warm',
         notifications: true,
         autoLocation: true,
         autoBackup: false,

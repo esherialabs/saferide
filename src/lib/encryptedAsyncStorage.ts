@@ -320,7 +320,9 @@ export function isEncryptedActivePersistenceKey(key: string): boolean {
     key === storageKeys.MEASUREMENT_CONSENT_KEY ||
     key === storageKeys.MEASUREMENT_SESSION_KEY ||
     key === storageKeys.MEASUREMENT_EVENTS_KEY ||
-    key === storageKeys.MEASUREMENT_ISSUES_KEY;
+    key === storageKeys.MEASUREMENT_ISSUES_KEY ||
+    key === storageKeys.AI_PILOT_DIAGNOSTICS_KEY ||
+    key === storageKeys.AI_PILOT_INFLIGHT_KEY;
 }
 
 export function isEncryptedAsyncStorageEnvelope(raw: string | null): boolean {

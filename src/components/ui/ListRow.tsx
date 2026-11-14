@@ -73,17 +73,17 @@ export function ListRow({
       ) : null)}
       <View style={styles.textWrap}>
         <View style={styles.titleLine}>
-          <Text style={[styles.title, { color: disabled ? colors.textTertiary : colors.foreground }]} numberOfLines={2}>
+          <Text style={[styles.title, { color: disabled ? colors.textTertiary : colors.foreground }]}>
             {title}
           </Text>
           {meta ? (
-            <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.meta, { color: colors.textSecondary }]}>
               {meta}
             </Text>
           ) : null}
         </View>
         {description ? (
-          <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={3}>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>
             {description}
           </Text>
         ) : null}
@@ -123,7 +123,7 @@ export function ListRow({
 const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
-    borderRadius: radii.sm,
+    borderRadius: radii.card,
     borderWidth: borders.standard,
     flexDirection: 'row',
     gap: spacing.sm,
@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
   titleLine: {
     alignItems: 'flex-start',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
   },
   title: {
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...typography.caption,
-    flexShrink: 0,
+    flexShrink: 1,
     maxWidth: 96,
   },
   description: {

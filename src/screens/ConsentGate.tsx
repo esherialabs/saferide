@@ -1,15 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { getReportNavigationStyles } from '../components/report/reportNavigationStyles';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ReportWizardProgress } from '../components/report/ReportWizardProgress';
 import Screen from '../components/ui/Screen';
 import Button from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
+import { ChoiceCard } from '../components/ui/ChoiceCard';
+import { ReportStepHeader } from '../components/report/ReportStepHeader';
 import { Alert as AlertComponent } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
 import { Chip } from '../components/ui/Chip';
@@ -17,10 +19,11 @@ import { Checkbox } from '../components/ui/Checkbox';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
 import { useReportWizardBack } from '../navigation/reportWizardBack';
-import { navigateToMainTab, navigateToReportRoute, resetReportStackToRoute } from '../navigation/reportNavigation';
+import { exitCompletedReportToCases, navigateToMainTab, navigateToReportRoute, resetReportStackToRoute, resetReportToWorkspace } from '../navigation/reportNavigation';
 import type { PathwayType } from '../types/pathways';
 import { useToast } from '../components/ui/Toast';
 import { useReportDraftIdentity } from '../hooks/useReportDraftIdentity';
+import { useCompletedReportRedirect } from '../hooks/useCompletedReportRedirect';
 import { draftStorage, type DraftData } from '../utils/draftStorage';
 import { getLatestEditableReportDraft } from '../utils/reportDraftSelection';
 import { offlineSyncManager } from '../utils/offlineSync';
@@ -58,6 +61,28 @@ import {
   captureMeasurementEvent,
   captureReportCompletion,
 } from '../lib/measurement/localEventStore';
+import { usePartnerSharingAvailability } from '../hooks/usePartnerSharingAvailability';
+import { isCaseSubmissionEnabled } from '../config/runtime/caseSubmissionGate';
+import { CASE_SUBMISSION_COPY } from '../i18n/caseSubmissionCopy';
+import { authClient } from '../lib/auth/authClient';
+import { confirmCenter } from '../utils/confirmCenter';
+import {
+  buildCaseSubmissionToast,
+  planCaseSubmission,
+  type CaseSubmissionPlan,
+} from '../utils/caseSubmissionFlow';
+import { formatPartnerCopy, PARTNER_SHARING_COPY } from '../i18n/partnerSharingCopy';
+import { buildHuriaPacket } from '../utils/huriaPacket';
+import {
+  buildPartnerCallbackParagraphs,
+  buildPartnerConsentParagraphs,
+  buildPartnerSharingChoice,
+  formatKenyanMobileForDisplay,
+  getPartnerSharingFormState,
+  getRequestedPartnerSharing,
+  withPartnerConsentAgreement,
+  type PartnerSharingDraft,
+} from '../utils/partnerSharing';
 
 type ConsentGateNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ConsentGate'>;
 type ConsentGateRouteProp = RouteProp<RootStackParamList, 'ConsentGate'>;
@@ -150,16 +175,28 @@ function normalizeStoredPathway(value: unknown): PathwayType | null {
     : null;
 }
 
+/** True when this phone holds a SafeRide API session (a local guest has none). */
+async function hasOwnedApiSession(): Promise<boolean> {
+  try {
+    const { data, error } = await authClient.getSession();
+    return !error && Boolean(data.session?.access_token);
+  } catch {
+    return false;
+  }
+}
+
 export default function ConsentGateScreen() {
   const navigation = useNavigation<ConsentGateNavigationProp>();
   const route = useRoute<ConsentGateRouteProp>();
   const { colors } = useTheme();
   const toast = useToast();
-  const insets = useSafeAreaInsets();
 
   const [consentChecked, setConsentChecked] = useState(false);
+  const [partnerConsentChecked, setPartnerConsentChecked] = useState(false);
+  const [callbackConsentChecked, setCallbackConsentChecked] = useState(false);
+  const partnerAvailability = usePartnerSharingAvailability();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isOnline } = useOnline();
+  const { isOnline, enqueueSubmit } = useOnline();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [consentSummary, setConsentSummary] = useState<ConsentSummaryModel | null>(null);
   const [isConsentDataLoaded, setIsConsentDataLoaded] = useState(false);
@@ -179,6 +216,7 @@ export default function ConsentGateScreen() {
   } = useReportDraftIdentity(routeDraftId, { initialStep: 'ConsentGate' });
   const routePathway = route.params?.pathway;
   const isEditingCompleted = route.params?.editCompleted === true;
+  useCompletedReportRedirect(navigation, draftData, { enabled: !isEditingCompleted && !isSubmitting });
   const goBackToEvidence = useReportWizardBack(navigation, draftId ? {
     route: 'EvidenceDetail',
     params: { draftId, ...(isEditingCompleted ? { editCompleted: true } : {}) },
@@ -187,6 +225,7 @@ export default function ConsentGateScreen() {
   const [showKeyPoints, setShowKeyPoints] = useState(false);
 
   const styles = StyleSheet.create({
+    ...getReportNavigationStyles(colors),
     screenRoot: {
       flex: 1,
     },
@@ -196,13 +235,16 @@ export default function ConsentGateScreen() {
       paddingTop: spacing.md,
     },
     scrollContent: {
-      paddingBottom: Math.max(spacing.massive, insets.bottom + spacing.massive),
+      paddingBottom: spacing.md,
     },
     sectionTitle: {
       ...typography.titleSmall,
       color: colors.foreground,
       marginBottom: spacing.xs,
       marginTop: spacing.md,
+    },
+    pathwaySection: {
+      marginBottom: spacing.md,
     },
     pathwayList: {
       gap: spacing.xs,
@@ -216,53 +258,6 @@ export default function ConsentGateScreen() {
     compactCardContent: {
       gap: spacing.xs,
       paddingTop: spacing.md,
-    },
-    pathwayRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      minHeight: 72,
-      overflow: 'hidden',
-      paddingHorizontal: spacing.sm,
-      paddingLeft: spacing.md,
-      paddingVertical: spacing.sm,
-      borderWidth: borders.hairline,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      backgroundColor: colors.surface,
-    },
-    pathwayRowSelected: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primaryMuted,
-    },
-    pathwayRowDisabled: {
-      opacity: 0.5,
-    },
-    pathwayChoiceAccent: {
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
-    },
-    pathwayIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surfaceAlt,
-    },
-    pathwayIconSelected: {
-      backgroundColor: colors.primary,
-    },
-    pathwayTitle: {
-      ...typography.label,
-      color: colors.foreground,
-    },
-    pathwayBlurb: {
-      ...typography.caption,
-      color: colors.mutedForeground,
     },
     choosePrompt: {
       ...typography.bodySmall,
@@ -352,14 +347,6 @@ export default function ConsentGateScreen() {
       overflow: 'hidden',
       position: 'relative',
     },
-    cardAccentLeft: {
-      backgroundColor: colors.primary,
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
-    },
     disclosureToggle: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -399,21 +386,12 @@ export default function ConsentGateScreen() {
       borderColor: colors.destructive + '30',
       borderRadius: radii.card,
     },
-    navigationButtons: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    navigationDock: {
-      backgroundColor: colors.background,
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-    },
     cancelButton: {
+      alignSelf: 'stretch',
       flex: 1,
     },
     confirmButton: {
+      alignSelf: 'stretch',
       flex: 2,
     },
     editGrid: {
@@ -512,6 +490,7 @@ export default function ConsentGateScreen() {
       // (every wizard step writes locally first), so consent reviews exactly
       // what will be saved rather than a possibly-stale synced server copy.
       const draft = await draftStorage.getDraft(draftId);
+      if (!navigation.isFocused()) return;
       if (!draft) {
         setDraftData(null);
         setConsentChecked(false);
@@ -535,7 +514,6 @@ export default function ConsentGateScreen() {
             variant: 'info',
           });
         }
-        navigation.navigate('Cases');
         return;
       }
 
@@ -639,6 +617,8 @@ export default function ConsentGateScreen() {
     if (next === pathway) return;
     const previousPathway = pathway;
     setConsentChecked(false);
+    setPartnerConsentChecked(false);
+    setCallbackConsentChecked(false);
     setExpandedItems(new Set());
 
     try {
@@ -668,9 +648,21 @@ export default function ConsentGateScreen() {
     }
   };
 
-  const navigateAfterConsent = (selectedPathway: PathwayType) => {
+  const navigateAfterConsent = (selectedPathway: PathwayType, submissionPlan: CaseSubmissionPlan = 'stay_on_phone') => {
+    if (selectedPathway === 'escalate' && submissionPlan === 'queue' && draftId) {
+      // Queued to send: show its status (read from the local draft as it syncs).
+      resetReportToWorkspace(navigation);
+      navigation.navigate('EscalationConfirmation', {
+        isOffline: !isOnline,
+        caseId: draftId,
+        contactMethod: draftData?.escalationData?.contactPreference === 'alias' ? 'Alias' : 'No contact',
+        draftId,
+      });
+      return;
+    }
     switch (selectedPathway) {
       case 'referral':
+        resetReportToWorkspace(navigation);
         if (draftId) {
           navigation.navigate('ReferralPicker', {
             draftId,
@@ -682,17 +674,18 @@ export default function ConsentGateScreen() {
         }
         return;
       case 'escalate':
-        navigation.navigate('Cases');
+        exitCompletedReportToCases(navigation);
         return;
       case 'save-private':
       case 'anonymous-map':
       default:
+        resetReportToWorkspace(navigation);
         navigateToMainTab(navigation, 'Home');
     }
   };
 
   const handleReturnToReportWorkspace = () => {
-    navigateToReportRoute(navigation, 'ReportHome', undefined);
+    resetReportToWorkspace(navigation);
   };
 
   const handleStartFreshDraft = async () => {
@@ -805,7 +798,6 @@ export default function ConsentGateScreen() {
             <Text style={styles.checklistValue}>{item.value}</Text>
             {hasDetails && expandedItems.has(key) && (
               <View style={styles.detailsContent}>
-                <View pointerEvents="none" style={styles.cardAccentLeft} />
                 <Text style={{ fontSize: 12, color: colors.mutedForeground, lineHeight: 16 }}>
                   {item.details!.join('\n')}
                 </Text>
@@ -818,71 +810,41 @@ export default function ConsentGateScreen() {
   };
 
   const renderPathwayChooser = () => (
-    <Card variant="outlined" accentColor={colors.consent} style={styles.sectionCard}>
-      <CardHeader>
-        <CardTitle>Choose what happens next</CardTitle>
-        <CardDescription>Nothing leaves this phone until you choose and confirm.</CardDescription>
-      </CardHeader>
-      <CardContent style={styles.sectionCardContent}>
-        <View
-          style={styles.pathwayList}
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Choose one report pathway"
-        >
-          {PATHWAY_CHOICES.map(choice => {
-            const selected = pathway === choice.type;
-            const disabled = isResolvingDraftId || !isConsentDataLoaded || !draftId || loadFailed;
-            return (
-              <TouchableOpacity
-                key={choice.type}
-                activeOpacity={0.8}
-                disabled={disabled}
-                onPress={() => {
-                  void handleSelectPathway(choice.type);
-                }}
-                style={[
-                  styles.pathwayRow,
-                  selected && styles.pathwayRowSelected,
-                  disabled && styles.pathwayRowDisabled,
-                ]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled }}
-                accessibilityLabel={`${choice.title}. ${choice.blurb}`}
-                accessibilityHint={selected ? 'Selected pathway' : 'Selects this pathway and updates the consent summary'}
-              >
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.pathwayChoiceAccent,
-                    { backgroundColor: selected ? colors.primary : colors.divider },
-                  ]}
-                />
-                <View style={[styles.pathwayIcon, selected && styles.pathwayIconSelected]}>
-                  <Ionicons
-                    name={choice.icon}
-                    size={18}
-                    color={selected ? colors.primaryForeground : colors.primary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pathwayTitle}>{choice.title}</Text>
-                  <Text style={styles.pathwayBlurb}>{choice.blurb}</Text>
-                </View>
-                <Ionicons
-                  name={selected ? 'checkmark-circle' : 'chevron-forward'}
-                  size={20}
-                  color={selected ? colors.primary : colors.mutedForeground}
-                />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </CardContent>
-    </Card>
+    <View style={styles.pathwaySection}>
+      <ReportStepHeader
+        title="Choose what happens next"
+        helper="Nothing leaves this phone until you choose and confirm."
+      />
+      <View
+        style={styles.pathwayList}
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Choose one report pathway"
+      >
+        {PATHWAY_CHOICES.map(choice => {
+          const selected = pathway === choice.type;
+          const disabled = isResolvingDraftId || !isConsentDataLoaded || !draftId || loadFailed;
+          return (
+            <ChoiceCard
+              key={choice.type}
+              title={choice.title}
+              description={choice.blurb}
+              icon={choice.icon}
+              selected={selected}
+              disabled={disabled}
+              onPress={() => {
+                void handleSelectPathway(choice.type);
+              }}
+              accessibilityLabel={`${choice.title}. ${choice.blurb}`}
+              accessibilityHint={selected ? 'Selected pathway' : 'Selects this pathway and updates the consent summary'}
+            />
+          );
+        })}
+      </View>
+    </View>
   );
 
   const renderMissingDraftRecovery = () => (
-    <Card variant="outlined" accentColor={colors.warning} style={styles.sectionCard}>
+    <Card variant="outlined" style={styles.sectionCard}>
       <CardHeader>
         <View style={styles.noticeTitleRow}>
           <View style={styles.noticeTitleContent}>
@@ -935,7 +897,7 @@ export default function ConsentGateScreen() {
     if (!needsPathwayDetails) return null;
     const isReferral = needsReferralDetails;
     return (
-      <Card variant="outlined" accentColor={colors.consent} style={styles.sectionCard}>
+      <Card variant="outlined" style={styles.sectionCard}>
         <CardHeader>
           <CardTitle>{isReferral ? 'Choose provider first' : 'Add escalation details first'}</CardTitle>
           <CardDescription>
@@ -1003,7 +965,7 @@ export default function ConsentGateScreen() {
     if (!consentSummary?.redactionChips?.length) return null;
 
     return (
-      <Card variant="outlined" accentColor={colors.privacy} style={styles.sectionCard}>
+      <Card variant="outlined" style={styles.sectionCard}>
         <CardHeader>
           <CardTitle>Privacy and redaction status</CardTitle>
         </CardHeader>
@@ -1095,6 +1057,54 @@ export default function ConsentGateScreen() {
     return saved;
   };
 
+  // HURIA sharing chosen in the escalation or referral step, for this pathway.
+  const requestedPartnerSharing = draftData && pathway ? getRequestedPartnerSharing(draftData, pathway) : null;
+  const partnerReviewActive = Boolean(requestedPartnerSharing && partnerAvailability.routing);
+  const partnerCallbackReview = Boolean(
+    partnerReviewActive && partnerAvailability.callback && requestedPartnerSharing?.callback?.requested,
+  );
+  const partnerConsentMissing = partnerReviewActive &&
+    (!partnerConsentChecked || (partnerCallbackReview && !callbackConsentChecked));
+
+  // The separate HURIA consent: recorded only when ticked; a choice the
+  // server no longer offers is turned off so the report goes to SafeRide only.
+  const resolvePartnerSharingForConfirm = (): { ok: true; sharing: PartnerSharingDraft | null } | { ok: false } => {
+    if (!requestedPartnerSharing) return { ok: true, sharing: null };
+    if (!partnerReviewActive) {
+      return { ok: true, sharing: { partnerStableId: requestedPartnerSharing.partnerStableId, requested: false } };
+    }
+    const rebuilt = buildPartnerSharingChoice(
+      requestedPartnerSharing,
+      getPartnerSharingFormState(requestedPartnerSharing),
+      partnerAvailability,
+    );
+    if (!rebuilt.ok) return { ok: false };
+    return { ok: true, sharing: withPartnerConsentAgreement(rebuilt.sharing, pathway === 'referral' ? 'referral' : 'escalate') };
+  };
+
+  const handleDeclinePartnerSharing = async () => {
+    if (!draftId || !requestedPartnerSharing) return;
+    try {
+      await draftStorage.saveDraft({
+        id: draftId,
+        partnerSharing: { partnerStableId: requestedPartnerSharing.partnerStableId, requested: false },
+        updatedAt: new Date(),
+      });
+      const saved = await draftStorage.getDraft(draftId);
+      if (saved) setDraftData(saved);
+      setPartnerConsentChecked(false);
+      setCallbackConsentChecked(false);
+      toast.show({
+        title: PARTNER_SHARING_COPY.review.turnedOffToastTitle,
+        message: PARTNER_SHARING_COPY.review.turnedOffToastBody,
+        variant: 'info',
+      });
+    } catch (error) {
+      devPrivacyWarn('partner sharing opt-out save failed', { reason: getPrivacySafeErrorReason(error) });
+      toast.show({ title: 'Save failed', message: 'SafeRide could not save that choice yet. Try again.', variant: 'error' });
+    }
+  };
+
   const handleConfirm = async () => {
     if (isSubmitting) {
       return;
@@ -1129,6 +1139,37 @@ export default function ConsentGateScreen() {
       return;
     }
 
+    if (partnerConsentMissing) {
+      toast.show({
+        title: PARTNER_SHARING_COPY.review.consentRequiredTitle,
+        message: PARTNER_SHARING_COPY.review.consentRequiredBody,
+        variant: 'error',
+      });
+      return;
+    }
+    const partnerResolution = resolvePartnerSharingForConfirm();
+    if (!partnerResolution.ok) {
+      toast.show({
+        title: PARTNER_SHARING_COPY.review.consentRequiredTitle,
+        message: PARTNER_SHARING_COPY.review.callbackInvalidBody,
+        variant: 'error',
+      });
+      return;
+    }
+    const partnerSharingChosen = partnerResolution.sharing?.requested === true;
+
+    // A referral with no contact channel can only be sent to HURIA's dashboard
+    // with sharing on; queueing it otherwise fails on every retry.
+    const referralChannel = draftData?.referralSelection?.selectedChannel ?? draftData?.selectedChannel;
+    if (pathway === 'referral' && !referralChannel && !partnerSharingChosen) {
+      toast.show({
+        title: 'Turn on sharing with HURIA',
+        message: 'In this pilot, a support referral is sent only to HURIA with sharing on. Go back and turn it on.',
+        variant: 'error',
+      });
+      return;
+    }
+
     const selectedPathway = pathway;
     let externalSignalAccepted = false;
 
@@ -1136,6 +1177,9 @@ export default function ConsentGateScreen() {
       setIsSubmitting(true);
       devPrivacyInfo('consent confirmation started', { pathway: selectedPathway, online: isOnline });
 
+      if (partnerResolution.sharing) {
+        await draftStorage.saveDraft({ id: draftId, partnerSharing: partnerResolution.sharing, updatedAt: new Date() });
+      }
       const consentRecord = await recordPathwayConsent({ pathway: selectedPathway });
       const rsiDecision = selectedPathway === 'anonymous-map' ? getMobileRsiSignalDecision() : null;
       let savedDraft = await saveConsentCheckpoint(selectedPathway, consentRecord, !rsiDecision?.enabled);
@@ -1173,6 +1217,29 @@ export default function ConsentGateScreen() {
         }
       }
 
+      // Referral and escalation reports leave the phone only while the server
+      // switch is on and the survivor has a SafeRide session; otherwise they
+      // stay here exactly as before, and the wording says so.
+      let submissionPlan: CaseSubmissionPlan = 'stay_on_phone';
+      if (selectedPathway === 'referral' || selectedPathway === 'escalate') {
+        const submissionEnabled = isCaseSubmissionEnabled();
+        submissionPlan = planCaseSubmission({
+          pathway: selectedPathway,
+          submissionEnabled,
+          hasOwnedSession: submissionEnabled ? await hasOwnedApiSession() : false,
+        });
+        if (submissionPlan === 'needs_sign_in') {
+          await confirmCenter.request({
+            title: CASE_SUBMISSION_COPY.signInTitle,
+            message: `${CASE_SUBMISSION_COPY.signInBody}\n\n${CASE_SUBMISSION_COPY.signInHint}`,
+            actions: [{ id: 'keep', label: CASE_SUBMISSION_COPY.signInKeep }],
+          });
+        } else if (submissionPlan === 'queue') {
+          const queued = await enqueueSubmit({ draftId, pathway: selectedPathway });
+          if (queued !== 'queued') submissionPlan = 'stay_on_phone';
+        }
+      }
+
       switch (selectedPathway) {
         case 'save-private':
           toast.show({
@@ -1199,7 +1266,12 @@ export default function ConsentGateScreen() {
         case 'referral': {
           const referralChannel = savedDraft.referralSelection?.selectedChannel ?? savedDraft.selectedChannel;
           toast.show({
-            title: 'Referral saved',
+            title: buildCaseSubmissionToast({
+              pathway: 'referral',
+              plan: submissionPlan,
+              isOnline,
+              partnerSharingChosen,
+            }).title,
             message: referralChannel
               ? isOnline
                 ? 'Provider and channel are saved. Choose the contact action on the next screen.'
@@ -1210,18 +1282,17 @@ export default function ConsentGateScreen() {
           break;
         }
         case 'escalate':
-          toast.show({
-            title: 'Escalation packet saved',
-            message: isOnline
-              ? 'Saved locally. Secure intake can be connected without making sign-in compulsory.'
-              : 'Saved locally. Go online before sending to an action service.',
-            variant: 'warning',
-          });
+          toast.show(buildCaseSubmissionToast({
+            pathway: 'escalate',
+            plan: submissionPlan,
+            isOnline,
+            partnerSharingChosen,
+          }));
           break;
       }
 
       captureReportCompletion();
-      navigateAfterConsent(selectedPathway);
+      navigateAfterConsent(selectedPathway, submissionPlan);
     } catch (error) {
       captureMeasurementEvent({
         name: 'error_outcome',
@@ -1269,11 +1340,94 @@ export default function ConsentGateScreen() {
     !pathway ||
     needsPathwayDetails ||
     !consentChecked ||
+    partnerConsentMissing ||
     Boolean(hasValidationError) ||
     !isConsentDataLoaded;
 
+  const partnerParagraphStyle = {
+    ...typography.bodyS,
+    color: colors.foreground,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  };
+
+  const renderPartnerReview = (sharing: PartnerSharingDraft) => {
+    const level = draftData?.escalationData?.redactionLevel ?? 'light';
+    const redactionLabel = level.charAt(0).toUpperCase() + level.slice(1);
+    const phone = sharing.callback?.phoneNumber ? formatKenyanMobileForDisplay(sharing.callback.phoneNumber) : null;
+    const packet = draftData ? buildHuriaPacket(draftData, { pathway: pathway === 'referral' ? 'referral' : 'escalate' }) : null;
+    const fields = packet ? [
+      ['Contact preference', packet.contact.label],
+      ['When', packet.content.timeRange], ['Place in words', packet.content.location],
+      ['What happened', packet.content.incidentDescription], ['Statement', packet.content.statement],
+      ['Impact', packet.content.impactSummary], ['Witness details', packet.content.witnessDetails],
+      ['Tags', packet.content.tags.join(', ')], ['Patterns', packet.content.patterns.join(', ')],
+      ['Vehicle details', packet.content.transportIdentifiers.join(', ')],
+    ].filter((entry): entry is [string, string] => Boolean(entry[1])) : [];
+    return (
+      <Card variant="elevated" style={{ marginBottom: spacing.md }}>
+        <CardHeader>
+          <CardTitle>{PARTNER_SHARING_COPY.review.cardTitle}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {buildPartnerConsentParagraphs({
+            pathway: pathway === 'referral' ? 'referral' : 'escalate',
+            redactionLabel,
+          }).map(paragraph => (
+            <Text key={paragraph} style={partnerParagraphStyle}>{paragraph}</Text>
+          ))}
+          {packet ? <View style={{ marginBottom: spacing.md }} accessibilityLabel="HURIA packet preview">
+            <Text style={[partnerParagraphStyle, { fontWeight: '600' }]}>Report packet HURIA will see</Text>
+            {fields.map(([label, value]) => <View key={label} style={{ marginBottom: spacing.sm }}>
+              <Text style={[partnerParagraphStyle, { fontWeight: '600', marginBottom: 2 }]}>{label}</Text>
+              <Text style={partnerParagraphStyle}>{value}</Text>
+            </View>)}
+            <Text style={[partnerParagraphStyle, { fontWeight: '600' }]}>Evidence list and text only</Text>
+            {packet.evidenceManifest.length ? packet.evidenceManifest.map((item, index) => <View key={`${item.type}-${index}`}>
+              <Text style={partnerParagraphStyle}>{item.label}</Text>
+              {item.description ? <Text style={partnerParagraphStyle}>{item.description}</Text> : null}
+              {item.transcript ? <Text style={partnerParagraphStyle}>{item.transcript}</Text> : null}
+            </View>) : <Text style={partnerParagraphStyle}>No evidence descriptions or transcripts included.</Text>}
+            <Text style={partnerParagraphStyle}>Evidence files and exact map coordinates are not shared with HURIA.</Text>
+          </View> : null}
+          <Checkbox
+            checked={partnerConsentChecked}
+            onCheckedChange={checked => setPartnerConsentChecked(checked === true)}
+            label={PARTNER_SHARING_COPY.review.consentCheckbox}
+            accessibilityLabel={PARTNER_SHARING_COPY.review.consentCheckbox}
+            accessibilityHint="Required to share this report with HURIA"
+          />
+          {partnerCallbackReview && phone ? (
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={[partnerParagraphStyle, { fontWeight: '600' }]}>
+                {`${PARTNER_SHARING_COPY.review.callbackNumberLabel}: ${phone}`}
+              </Text>
+              {buildPartnerCallbackParagraphs().map(paragraph => (
+                <Text key={paragraph} style={partnerParagraphStyle}>{paragraph}</Text>
+              ))}
+              <Checkbox
+                checked={callbackConsentChecked}
+                onCheckedChange={checked => setCallbackConsentChecked(checked === true)}
+                label={formatPartnerCopy(PARTNER_SHARING_COPY.review.callbackCheckbox, { phone })}
+                accessibilityLabel={formatPartnerCopy(PARTNER_SHARING_COPY.review.callbackCheckbox, { phone })}
+                accessibilityHint="Required to share your callback number with HURIA"
+              />
+            </View>
+          ) : null}
+          <Button
+            title={PARTNER_SHARING_COPY.review.turnOff}
+            variant="ghost"
+            onPress={() => void handleDeclinePartnerSharing()}
+            style={{ marginTop: spacing.sm }}
+          />
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
-    <Screen>
+    // BottomTabs already reserves the bottom safe area for the report stack.
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.screenRoot}>
         <ScrollView
           style={styles.container}
@@ -1314,7 +1468,7 @@ export default function ConsentGateScreen() {
           {!hasMissingDraftFailure && showSummary && consentSummary && (
             <>
               <Text style={styles.sectionTitle}>{consentSummary.checklistTitle}</Text>
-              <Card variant="elevated" accentColor={colors.consent} style={{ marginBottom: spacing.sm }}>
+              <Card variant="elevated" style={{ marginBottom: spacing.sm }}>
                 <CardContent>
                   {consentSummary.checklistItems.map((item, index) => (
                     renderExpandableRow(item, `checklist-${index}`)
@@ -1345,7 +1499,7 @@ export default function ConsentGateScreen() {
                 </CardContent>
               </Card>
               {showKeyPoints && (
-                <Card variant="elevated" accentColor={colors.consent} style={{ marginBottom: spacing.md }}>
+                <Card variant="elevated" style={{ marginBottom: spacing.md }}>
                   <CardContent>
                     {consentSummary.keyPoints.map((item, index) => (
                       renderExpandableRow(item, `key-${index}`)
@@ -1359,14 +1513,21 @@ export default function ConsentGateScreen() {
 
               <AlertComponent variant="warning" style={{ marginBottom: 24 }}>
                 <View>
-                  <Text style={{ fontWeight: '600', marginBottom: 4 }}>
+                  <Text style={{ color: colors.foreground, fontWeight: '600', marginBottom: 4 }}>
                     {consentSummary.retentionNoticeTitle}
                   </Text>
-                  <Text style={{ fontSize: 14, lineHeight: 20 }}>
+                  <Text style={{ color: colors.foreground, fontSize: 14, lineHeight: 20 }}>
                     {consentSummary.retentionNotice}
                   </Text>
                 </View>
               </AlertComponent>
+
+              {partnerReviewActive && requestedPartnerSharing ? renderPartnerReview(requestedPartnerSharing) : null}
+              {requestedPartnerSharing && !partnerReviewActive ? (
+                <AlertComponent variant="info" style={{ marginBottom: 16 }}>
+                  <Text style={{ color: colors.foreground }}>{PARTNER_SHARING_COPY.review.unavailableNotice}</Text>
+                </AlertComponent>
+              ) : null}
 
               {hasValidationError && validation && !validation.valid && (
                 <View style={styles.validationError}>
@@ -1383,7 +1544,6 @@ export default function ConsentGateScreen() {
 
               <View style={styles.consentSection}>
                 <View style={styles.consentContainer}>
-                  <View pointerEvents="none" style={styles.cardAccentLeft} />
                   <Checkbox
                     checked={consentChecked}
                     onCheckedChange={(checked) => setConsentChecked(checked === true)}
@@ -1407,7 +1567,7 @@ export default function ConsentGateScreen() {
         </ScrollView>
 
         {pathway && showSummary && !hasMissingDraftFailure && (
-          <View style={[styles.navigationDock, { paddingBottom: Math.max(spacing.sm, insets.bottom + spacing.sm) }]}>
+          <View style={styles.navigationDock}>
             <View style={styles.navigationButtons}>
               <Button
                 title="Cancel"
