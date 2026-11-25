@@ -631,9 +631,38 @@ describe('localAssistantService', () => {
       percent: 100,
       modelDownloaded: true,
       resumable: false,
-      error: 'The model is saved, but SafeRide could not start it. Try again.',
+      error: 'Model failed to start: The AI model could not start on this phone. Try again. '
+        + 'The model file is still saved on this phone.',
     });
     expect(serviceMock.localModelEngine.unload).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps generic setup guidance when a preparation failure cannot be classified', async () => {
+    serviceMock.localModelEngine.ensureReady.mockRejectedValue(new Error('synthetic unclassified failure'));
+    const service = await import('../localAssistantService');
+
+    await expect(service.prepareLocalAssistant()).rejects.toThrow('synthetic unclassified failure');
+
+    expect(service.getLocalAssistantStatus()).toMatchObject({
+      state: 'error',
+      error: 'The model is saved, but SafeRide could not start it. Try again.',
+    });
+  });
+
+  it('names a storage shortfall instead of the generic setup failure', async () => {
+    serviceMock.getModelAvailability.mockResolvedValue(serviceMock.partialAvailability);
+    serviceMock.localModelEngine.ensureReady.mockRejectedValue(
+      new Error('Not enough device storage for model.litertlm. Free at least 400 MB and resume.'),
+    );
+    const service = await import('../localAssistantService');
+
+    await expect(service.prepareLocalAssistant()).rejects.toThrow('Not enough device storage');
+
+    expect(service.getLocalAssistantStatus()).toMatchObject({
+      state: 'error',
+      modelDownloaded: false,
+      error: 'Not enough storage: There is not enough free storage for the AI model. Free up space, then resume.',
+    });
   });
 
   it('can recover a downloaded model from a runtime error state without redownloading', async () => {

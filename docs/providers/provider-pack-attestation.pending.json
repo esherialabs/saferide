@@ -5,7 +5,7 @@
   "kind": "release-attestation",
   "status": "pending",
   "packId": "ke-support-directory",
-  "packVersion": "1.0.0-candidate.2",
+  "packVersion": "1.0.0-candidate.4",
   "packSha256": null,
   "organizationId": null,
   "reviewerId": null,

@@ -38,7 +38,6 @@ export function organizationSchema(): JsonLdNode {
     '@type': 'Organization',
     '@id': PARENT_ORG.schemaId,
     name: PARENT_ORG.name,
-    legalName: PARENT_ORG.legalName,
     url: PARENT_ORG.url,
     email: SITE.contactEmail,
     contactPoint: [

@@ -42,7 +42,7 @@ export function navigateToReportRoute<RouteName extends ReportRouteName>(
       screen: routeName,
       params,
     },
-  });
+  }, { pop: true });
 }
 
 export function pushReportRoute<RouteName extends ReportRouteName>(
@@ -88,7 +88,7 @@ export function resetReportStackToRoute<RouteName extends ReportRouteName>(
     params: {
       state: reportState,
     },
-  });
+  }, { pop: true });
 }
 
 export function navigateToMainTab(
@@ -101,5 +101,25 @@ export function navigateToMainTab(
     return;
   }
 
-  navigation.navigate('MainTabs', { screen: tabName });
+  navigation.navigate('MainTabs', { screen: tabName }, { pop: true });
+}
+
+export function resetReportToWorkspace(navigation: NavigationLike) {
+  let current: NavigationLike | undefined = navigation;
+  const visited = new Set<NavigationLike>();
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    if (ownsRoute(current, 'ReportHome') && current.dispatch) {
+      current.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'ReportHome' }] }));
+      return;
+    }
+    current = current.getParent?.();
+  }
+}
+
+// Remove completed editor routes before showing Cases. Otherwise Back reveals
+// the old report screen, which immediately redirects to Cases again.
+export function exitCompletedReportToCases(navigation: NavigationLike) {
+  resetReportToWorkspace(navigation);
+  navigation.navigate('Cases', undefined, { pop: true });
 }

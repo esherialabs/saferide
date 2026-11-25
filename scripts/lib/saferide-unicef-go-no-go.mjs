@@ -37,7 +37,7 @@ const SAFE_COMMAND_PREFIXES = Object.freeze(['npm run ', 'node ', 'npx vitest ',
 const PROHIBITED_COMMAND_PATTERN = /(?:local:reset|docker\s+compose[^\n]*\sdown|\beas(?:-cli)?\b|\baws\b|git\s+(?:push|merge|reset|clean)|rm\s+-rf|production\s+deploy)/i;
 const CANDIDATE_STATUSES = new Set(['satisfied', 'satisfied-disabled']);
 const RESOLVED_HANDOFF_STATUSES = new Set(['passed', 'superseded']);
-export const LOCAL_VERIFICATION_OWNER_STATEMENT = 'GitHub Actions intentionally disabled by project-owner decision; verification performed locally.';
+export const LOCAL_VERIFICATION_OWNER_STATEMENT = 'GitHub Actions are enabled, but PR #209 jobs did not start because the organization billing or spending limit blocked hosted execution; local verification was completed.';
 const REQUIREMENT_PREFIX_BY_UNIT = Object.freeze({
   'AI-GOVERNANCE': 'GOV-',
   'V04-DATA': 'DATA-',

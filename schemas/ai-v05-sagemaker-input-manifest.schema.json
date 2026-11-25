@@ -20,10 +20,10 @@
   "properties": {
     "schema": { "const": "com.saferide.ai.v05-sagemaker-input-manifest" },
     "schemaVersion": { "const": 1 },
-    "manifestId": { "type": "string", "pattern": "^saferide-v05-sagemaker-input-[a-z0-9.-]{8,96}$" },
+    "manifestId": { "type": "string", "pattern": "^saferide-v05(?:1|2|3)?-sagemaker-input-[a-z0-9.-]{8,96}$" },
     "createdAt": { "type": "string", "format": "date-time" },
     "sourceCommit": { "$ref": "#/$defs/commit" },
-    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.0" },
+    "datasetId": { "enum": ["saferide-synthetic-guidance-v0.5.0", "saferide-synthetic-guidance-v0.5.1", "saferide-synthetic-guidance-v0.5.2", "saferide-synthetic-guidance-v0.5.3"] },
     "region": { "const": "eu-central-1" },
     "trainingArchive": { "$ref": "#/$defs/stagedObject" },
     "baseModel": {
@@ -50,7 +50,7 @@
       "required": ["bucket", "prefix", "versioning", "serverSideEncryption", "publicAccessBlocked"],
       "properties": {
         "bucket": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$" },
-        "prefix": { "type": "string", "pattern": "^saferide/v05/sagemaker/[a-z0-9./_-]+/$" },
+        "prefix": { "type": "string", "pattern": "^saferide/v05(?:1|2|3)?/sagemaker/[a-z0-9./_-]+/$" },
         "versioning": { "const": "Enabled" },
         "serverSideEncryption": { "const": "AES256" },
         "publicAccessBlocked": { "const": true }
@@ -95,7 +95,7 @@
         "sha256": { "$ref": "#/$defs/sha256" },
         "sizeBytes": { "type": "integer", "minimum": 1 },
         "packageManifestSha256": { "$ref": "#/$defs/sha256" },
-        "topLevelDirectory": { "type": "string", "pattern": "^saferide-v05-sagemaker-input-[a-f0-9]{12}$" },
+        "topLevelDirectory": { "type": "string", "pattern": "^saferide-v05(?:1|2|3)?-sagemaker-input-[a-f0-9]{12}$" },
         "s3Uri": { "$ref": "#/$defs/s3Uri" },
         "versionId": { "type": "string", "minLength": 1 },
         "etag": { "type": "string", "minLength": 3 }

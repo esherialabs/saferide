@@ -33,6 +33,13 @@ import {
   getAssistantLanguageInstruction,
 } from '../i18n/appLanguage';
 import { devPrivacyError, devPrivacyWarn, getPrivacySafeErrorReason } from '../utils/privacyLog';
+import { getCachedLocalAiDeviceFacts } from '../lib/localAssistant/pilotDeviceProfile';
+import {
+  categorizeLocalAiFailure,
+  classifyLocalAiFailure,
+  type LocalAiFailureCategory,
+} from '../lib/localAssistant/pilotFailureReasons';
+import { getLocalAiPilotCopy } from '../i18n/localAiPilotCopy';
 
 type AssistantState =
   | 'idle'
@@ -344,6 +351,20 @@ async function unloadLocalAssistantRuntime(logLabel: string): Promise<void> {
       reason: getPrivacySafeErrorReason(error),
     });
   }
+}
+
+function localAssistantFailureCategory(error: unknown): LocalAiFailureCategory {
+  return categorizeLocalAiFailure(classifyLocalAiFailure(error), {
+    ramClassGb: getCachedLocalAiDeviceFacts()?.ramClassGb ?? null,
+  });
+}
+
+/** A short reason category for the status panel; unclassified errors keep the generic guidance. */
+function describeLocalAssistantFailure(error: unknown, modelSaved: boolean, genericMessage: string): string {
+  const category = localAssistantFailureCategory(error);
+  return category === 'unknown'
+    ? genericMessage
+    : getLocalAiPilotCopy().failure.statusMessage(category, modelSaved);
 }
 
 function emitState(payload: StatePayload) {
@@ -683,9 +704,13 @@ async function performLocalAssistantPreparation(
       resumable,
       receivedBytes: lastReceivedBytes,
       totalBytes: lastTotalBytes,
-      error: modelDownloaded
-        ? 'The model is saved, but SafeRide could not start it. Try again.'
-        : 'Model setup failed. Check connection and storage, then try again.',
+      error: describeLocalAssistantFailure(
+        error,
+        modelDownloaded,
+        modelDownloaded
+          ? 'The model is saved, but SafeRide could not start it. Try again.'
+          : 'Model setup failed. Check connection and storage, then try again.',
+      ),
     });
     throw error;
   } finally {
@@ -960,7 +985,9 @@ export async function generateLocalAssistantReply(
         percent: 100,
         modelDownloaded: true,
         resumable: false,
-        error: 'Reply stopped. Try again or send a shorter message.',
+        error: localAssistantFailureCategory(error) === 'memory'
+          ? getLocalAiPilotCopy().failure.statusMessage('memory', true)
+          : 'Reply stopped. Try again or send a shorter message.',
       });
       throw error;
     }
@@ -971,9 +998,13 @@ export async function generateLocalAssistantReply(
       percent: lastModelDownloaded ? 100 : lastPercent,
       modelDownloaded: lastModelDownloaded,
       resumable: lastResumable,
-      error: lastModelDownloaded
-        ? 'The model is saved, but the reply failed. Try again.'
-        : 'Model setup failed. Check connection and storage, then try again.',
+      error: describeLocalAssistantFailure(
+        error,
+        lastModelDownloaded,
+        lastModelDownloaded
+          ? 'The model is saved, but the reply failed. Try again.'
+          : 'Model setup failed. Check connection and storage, then try again.',
+      ),
     });
     throw error;
   } finally {

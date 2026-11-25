@@ -243,47 +243,27 @@ export default function LearnScreen() {
           paddingBottom: spacing.xxl,
         },
         controlsPanel: {
-          backgroundColor: colors.surface,
-          borderColor: colors.divider,
-          borderRadius: radii.card,
-          borderWidth: borders.hairline,
+          // Controls sit on the canvas under the title, not in a boxed panel.
           gap: spacing.sm,
-          overflow: 'hidden',
-          padding: spacing.sm,
-          position: 'relative',
-          ...elevation.card,
-        },
-        cardAccentTop: {
-          backgroundColor: colors.primary,
-          height: 4,
-          left: 0,
-          position: 'absolute',
-          right: 0,
-          top: 0,
         },
         sourceSegment: {
           backgroundColor: colors.surfaceAlt,
-          borderColor: colors.divider,
-          borderRadius: radii.input,
-          borderWidth: borders.hairline,
+          borderRadius: radii.round,
           flexDirection: 'row',
           gap: spacing.xxxs,
           padding: spacing.xxxs,
         },
         sourceOption: {
           alignItems: 'center',
-          borderColor: 'transparent',
-          borderRadius: radii.sm,
-          borderWidth: borders.hairline,
+          borderRadius: radii.round,
           flex: 1,
           justifyContent: 'center',
-          minHeight: 40,
+          minHeight: 44,
           paddingHorizontal: spacing.xs,
           paddingVertical: spacing.xxxs,
         },
         sourceOptionActive: {
-          backgroundColor: colors.surface,
-          borderColor: colors.primary,
+          backgroundColor: colors.primary,
         },
         sourceOptionPressed: {
           backgroundColor: colors.chipPressedOverlay,
@@ -333,7 +313,7 @@ export default function LearnScreen() {
           alignItems: 'center',
           flexDirection: 'row',
           gap: spacing.xxxs,
-          minHeight: 36,
+          minHeight: 48,
           paddingHorizontal: spacing.xs,
         },
         clearButtonText: {
@@ -341,23 +321,7 @@ export default function LearnScreen() {
           color: colors.primary,
         },
         featuredPanel: {
-          backgroundColor: colors.surface,
-          borderColor: colors.divider,
-          borderRadius: radii.card,
-          borderWidth: borders.hairline,
           gap: spacing.xs,
-          overflow: 'hidden',
-          padding: spacing.sm,
-          position: 'relative',
-          ...elevation.card,
-        },
-        featuredPanelAccent: {
-          backgroundColor: colors.support,
-          height: 4,
-          left: 0,
-          position: 'absolute',
-          right: 0,
-          top: 0,
         },
         sectionHeader: {
           alignItems: 'center',
@@ -376,19 +340,17 @@ export default function LearnScreen() {
         sectionIconBox: {
           alignItems: 'center',
           backgroundColor: colors.supportMuted,
-          borderColor: colors.divider,
-          borderRadius: radii.card,
-          borderWidth: borders.hairline,
-          height: 34,
+          borderRadius: radii.round,
+          height: 32,
           justifyContent: 'center',
-          width: 34,
+          width: 32,
         },
         sectionTitleCopy: {
           flex: 1,
           minWidth: 0,
         },
         sectionTitle: {
-          ...typography.titleSmall,
+          ...typography.titleMedium,
           color: colors.foreground,
         },
         sectionMeta: {
@@ -696,7 +658,6 @@ export default function LearnScreen() {
         />
 
         <View style={styles.controlsPanel}>
-          <View pointerEvents="none" style={styles.cardAccentTop} />
 
           <View style={styles.sourceSegment}>
             {SOURCE_OPTIONS.map(option => {
@@ -717,12 +678,12 @@ export default function LearnScreen() {
                     <Ionicons
                       name={option.icon}
                       size={18}
-                      color={isActive ? colors.primary : colors.textSecondary}
+                      color={isActive ? colors.primaryForeground : colors.textSecondary}
                     />
                     <Text
                       style={[
                         styles.sourceOptionLabel,
-                        { color: isActive ? colors.foreground : colors.textSecondary },
+                        { color: isActive ? colors.primaryForeground : colors.textSecondary },
                       ]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
@@ -852,7 +813,6 @@ export default function LearnScreen() {
 
         {featuredEntries.length > 0 ? (
           <View style={styles.featuredPanel}>
-            <View pointerEvents="none" style={styles.featuredPanelAccent} />
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <View style={styles.sectionIconBox}>
@@ -987,10 +947,6 @@ export default function LearnScreen() {
                 <Card
                   key={entry.id}
                   accessibilityLabel={`Open ${entry.title}`}
-                  accentColor={
-                    entry.format === 'Video' ? colors.consent : colors.support
-                  }
-                  accentPosition={isVideo ? 'top' : 'left'}
                   onPress={() => handleOpenEntry(entry)}
                   style={styles.entryCard}
                   surfaceStyle={styles.entrySurface}

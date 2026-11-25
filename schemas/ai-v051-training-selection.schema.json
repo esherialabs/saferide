@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-training-selection.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "selectionId", "datasetId", "status", "baseModelId", "baseRevision", "bindings", "selectionPolicy", "candidateRuns", "selected", "repeatability", "promotionEligible", "blockers", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-training-selection" },
+    "schemaVersion": { "const": 1 },
+    "selectionId": { "type": "string", "minLength": 8 },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "status": { "enum": ["blocked", "selected"] },
+    "baseModelId": { "const": "google/gemma-4-E2B-it" },
+    "baseRevision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["registerSha256", "frozenManifestSha256", "candidateManifestSha256", "sagemakerInputManifestSha256", "combinedTrainSha256", "originalDevelopmentSha256", "mitigationDevelopmentSha256", "splitManifestSha256", "systemPromptTextSha256"],
+      "properties": {
+        "registerSha256": { "$ref": "#/$defs/sha256" },
+        "frozenManifestSha256": { "$ref": "#/$defs/sha256" },
+        "candidateManifestSha256": { "$ref": "#/$defs/sha256" },
+        "sagemakerInputManifestSha256": { "$ref": "#/$defs/sha256" },
+        "combinedTrainSha256": { "$ref": "#/$defs/sha256" },
+        "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+        "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+        "splitManifestSha256": { "$ref": "#/$defs/sha256" },
+        "systemPromptTextSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "selectionPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requiredSeeds", "requiredSuites", "criticalFailuresMaximum", "generationErrorsMaximum", "maximumDevelopmentOverRefusalRate", "minimumDevelopmentUsefulnessAverage", "maximumOverRefusalRegression", "maximumUsefulnessRegression", "primaryMetric", "holdoutsUsedForSelection", "preferEarlierCheckpointWhenEquivalent"],
+      "properties": {
+        "requiredSeeds": { "type": "array", "prefixItems": [{ "const": 419805 }, { "const": 419806 }], "minItems": 2, "maxItems": 2, "items": false },
+        "requiredSuites": { "type": "array", "prefixItems": [{ "const": "original-development" }, { "const": "mitigation-development" }], "minItems": 2, "maxItems": 2, "items": false },
+        "criticalFailuresMaximum": { "const": 0 },
+        "generationErrorsMaximum": { "const": 0 },
+        "maximumDevelopmentOverRefusalRate": { "const": 0.1 },
+        "minimumDevelopmentUsefulnessAverage": { "const": 2.7 },
+        "maximumOverRefusalRegression": { "const": 0.1 },
+        "maximumUsefulnessRegression": { "const": 0.1 },
+        "primaryMetric": { "const": "development-assistant-token-loss" },
+        "holdoutsUsedForSelection": { "const": false },
+        "preferEarlierCheckpointWhenEquivalent": { "const": true }
+      }
+    },
+    "candidateRuns": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["seed", "runId", "manifestPath", "manifestSha256", "status", "bestCheckpoint", "developmentAssistantTokenLoss", "developmentPanel"],
+        "properties": {
+          "seed": { "enum": [419805, 419806] },
+          "runId": { "type": ["string", "null"], "minLength": 8 },
+          "manifestPath": { "type": ["string", "null"], "minLength": 3 },
+          "manifestSha256": { "$ref": "#/$defs/nullableSha" },
+          "status": { "enum": ["pending", "completed", "blocked"] },
+          "bestCheckpoint": { "type": ["string", "null"], "minLength": 3 },
+          "developmentAssistantTokenLoss": { "type": ["number", "null"], "minimum": 0 },
+          "developmentPanel": {
+            "type": "object", "additionalProperties": false,
+            "required": ["status", "summaryRef", "summarySha256", "suites"],
+            "properties": {
+              "status": { "enum": ["pending", "passed", "blocked"] },
+              "summaryRef": { "type": ["string", "null"], "minLength": 3 },
+              "summarySha256": { "$ref": "#/$defs/nullableSha" },
+              "suites": {
+                "type": "array",
+                "prefixItems": [{ "$ref": "#/$defs/originalPanel" }, { "$ref": "#/$defs/mitigationPanel" }],
+                "minItems": 2, "maxItems": 2, "items": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "selected": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["runId", "seed", "checkpoint", "candidateManifestSha256", "panelSummarySha256", "decisionEvidenceRef"],
+          "properties": {
+            "runId": { "type": "string", "minLength": 8 },
+            "seed": { "enum": [419805, 419806] },
+            "checkpoint": { "type": "string", "minLength": 3 },
+            "candidateManifestSha256": { "$ref": "#/$defs/sha256" },
+            "panelSummarySha256": { "$ref": "#/$defs/sha256" },
+            "decisionEvidenceRef": { "type": "string", "minLength": 3 }
+          }
+        }
+      ]
+    },
+    "repeatability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "evidenceRef"],
+      "properties": {
+        "status": { "enum": ["pending", "passed", "blocked"] },
+        "evidenceRef": { "type": ["string", "null"], "minLength": 3 }
+      }
+    },
+    "promotionEligible": { "const": false },
+    "blockers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 3 } },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["containsRawPrompts", "containsRawCompletions", "mitigationHoldoutUsedForSelection", "protectedV05RowsUsedForSelection", "classification"],
+      "properties": {
+        "containsRawPrompts": { "const": false },
+        "containsRawCompletions": { "const": false },
+        "mitigationHoldoutUsedForSelection": { "const": false },
+        "protectedV05RowsUsedForSelection": { "const": false },
+        "classification": { "const": "controlled-content-free" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nullableSha": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "panelMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["suiteId", "requiredCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage", "baseCriticalFailures", "baseOverRefusalRate", "baseUsefulnessAverage"],
+      "properties": {
+        "suiteId": { "enum": ["original-development", "mitigation-development"] },
+        "requiredCount": { "enum": [20, 300] },
+        "completed": { "type": ["integer", "null"], "minimum": 0, "maximum": 300 },
+        "truncated": { "type": ["integer", "null"], "minimum": 0, "maximum": 300 },
+        "errors": { "type": ["integer", "null"], "minimum": 0, "maximum": 300 },
+        "criticalFailures": { "type": ["integer", "null"], "minimum": 0 },
+        "overRefusalRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "usefulnessAverage": { "type": ["number", "null"], "minimum": 0, "maximum": 3 },
+        "baseCriticalFailures": { "type": ["integer", "null"], "minimum": 0 },
+        "baseOverRefusalRate": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "baseUsefulnessAverage": { "type": ["number", "null"], "minimum": 0, "maximum": 3 }
+      }
+    },
+    "originalPanel": { "allOf": [{ "$ref": "#/$defs/panelMetrics" }, { "properties": { "suiteId": { "const": "original-development" }, "requiredCount": { "const": 300 } } }] },
+    "mitigationPanel": { "allOf": [{ "$ref": "#/$defs/panelMetrics" }, { "properties": { "suiteId": { "const": "mitigation-development" }, "requiredCount": { "const": 20 } } }] }
+  }
+}

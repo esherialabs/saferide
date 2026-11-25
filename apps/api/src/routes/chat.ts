@@ -24,7 +24,7 @@ const messageSchema = z.object({
   role: z.enum(['user', 'assistant']).default('user'),
   content: z.string().min(1).max(8000),
   mode: z.string().min(1).default('legal-aid'),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const sessionSchema = z.object({

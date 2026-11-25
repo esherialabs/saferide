@@ -18,7 +18,9 @@ const CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https:",
-  "frame-src 'none'",
+  // The Spice FM clip is a click-to-load Facebook player. Nothing is requested
+  // from either host until a visitor presses play (see src/lib/media.ts).
+  "frame-src https://www.facebook.com",
   "frame-ancestors 'none'",
   "upgrade-insecure-requests",
 ].join('; ');
@@ -27,7 +29,9 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'accelerometer=(), ambient-light-sensor=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), usb=(), xr-spatial-tracking=()' },
+  // autoplay and fullscreen are limited to this origin and the one host that
+  // needs them: the click-to-load Spice FM player (src/lib/media.ts).
+  { key: 'Permissions-Policy', value: 'accelerometer=(), autoplay=(self "https://www.facebook.com"), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self "https://www.facebook.com"), geolocation=(), gyroscope=(), interest-cohort=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), usb=(), xr-spatial-tracking=()' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Content-Security-Policy', value: CSP },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },

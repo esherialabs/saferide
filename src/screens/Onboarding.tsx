@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, ScrollView, ViewStyle } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import PagerView, { PagerViewHandle } from '../utils/pagerViewShim';
@@ -9,16 +8,18 @@ import Button from '../components/ui/Button';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
 import AppLogo from '../components/AppLogo';
+import { BrandBar } from '../components/BrandWordmark';
 import { useOnboarding } from '../context/OnboardingProvider';
-import { spacing, typography, fontFamilies } from '../theme/tokens';
+import { spacing, typography, fontFamilies, radii } from '../theme/tokens';
 import { devPrivacyWarn, getPrivacySafeErrorReason } from '../utils/privacyLog';
+import { SafetyIllustration, type SafetyIllustrationKind } from '../components/ui/SafetyIllustration';
+import { Ionicons } from '@expo/vector-icons';
 
 type OnboardingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 
 const BUTTON_HEIGHT = 56;
 const BUTTON_RADIUS = BUTTON_HEIGHT / 2;
 
-const backgroundImage = require('../../saferide.png');
 
 const onboardingData = [
   {
@@ -60,7 +61,7 @@ const onboardingData = [
 
 export default function OnboardingScreen() {
   const navigation = useNavigation<OnboardingNavigationProp>();
-  const { colors } = useTheme();
+  const { colors, colorScheme } = useTheme();
   const { markStepComplete, state: onboardingState } = useOnboarding();
   const [currentPage, setCurrentPage] = useState(0);
   const pagerRef = useRef<PagerViewHandle | null>(null);
@@ -90,59 +91,55 @@ export default function OnboardingScreen() {
       zIndex: 1,
     },
     contentPanel: {
-      alignItems: 'center',
-      backgroundColor: 'rgba(18, 11, 16, 0.72)',
-      borderColor: 'rgba(255, 255, 255, 0.16)',
-      borderRadius: 28,
-      borderWidth: 1,
+      alignItems: 'stretch',
+      backgroundColor: colors.background,
+      borderColor: colors.divider,
+      borderRadius: radii.card,
+      borderWidth: 0,
       maxWidth: 560,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.lg,
       width: '100%',
     },
     brandContainer: {
-      alignItems: 'center',
-      marginBottom: spacing.xl,
-    },
-    heroLogoContainer: {
+      alignItems: 'flex-start',
       marginBottom: spacing.md,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     logoContainer: {
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+      backgroundColor: colors.primaryMuted,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: spacing.xl,
       borderWidth: 3,
-      borderColor: 'rgba(255, 255, 255, 0.22)',
+      borderColor: colors.divider,
     },
     emoji: {
       fontSize: 60,
     },
     title: {
-      ...typography.titleL,
-      color: '#FFFFFF',
-      textAlign: 'center',
+      ...typography.displaySmall,
+      color: colors.foreground,
+      textAlign: 'left',
+      letterSpacing: -0.6,
       marginBottom: spacing.sm,
     },
     description: {
-      ...typography.bodyS,
-      color: 'rgba(255, 255, 255, 0.84)',
-      textAlign: 'center',
+      ...typography.bodyMedium,
+      color: colors.textSecondary,
+      textAlign: 'left',
       marginBottom: spacing.xl,
-      lineHeight: 22,
+      lineHeight: 24,
     },
     featuresContainer: {
       width: '100%',
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: 0,
     },
     featureItem: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       marginBottom: spacing.sm,
       paddingVertical: spacing.xs,
     },
@@ -150,63 +147,56 @@ export default function OnboardingScreen() {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.primaryMuted,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: spacing.sm,
     },
     featureText: {
-      ...typography.bodyS,
-      color: '#FFFFFF',
+      ...typography.bodyMedium,
+      color: colors.foreground,
       flex: 1,
     },
     tagline: {
       ...typography.bodyS,
-      color: 'rgba(255, 255, 255, 0.82)',
+      color: colors.textSecondary,
       marginTop: spacing.xs,
       fontStyle: 'italic',
       fontFamily: fontFamilies.text,
     },
     footer: {
-      backgroundColor: 'rgba(14, 9, 13, 0.78)',
-      borderTopColor: 'rgba(255, 255, 255, 0.12)',
-      borderTopWidth: StyleSheet.hairlineWidth,
       paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.xxl,
-      zIndex: 3,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
     },
-    pagination: {
+    progressRow: {
+      alignItems: 'center',
       flexDirection: 'row',
-      justifyContent: 'center',
-      marginBottom: spacing.xxl,
-      gap: spacing.xs,
+      gap: spacing.sm,
+      paddingLeft: spacing.xl,
+      paddingRight: spacing.sm,
     },
-    paginationDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+    progressTrack: {
+      flex: 1,
+      flexDirection: 'row',
+      gap: spacing.xxs,
     },
-    activeDot: {
-      backgroundColor: colors.primary,
+    progressSegment: {
+      borderRadius: radii.round,
+      flex: 1,
+      height: 4,
     },
-    inactiveDot: {
-      backgroundColor: 'rgba(255, 255, 255, 0.42)',
+    progressLabel: {
+      ...typography.labelMedium,
+      color: colors.textSecondary,
     },
     buttonContainer: {
       gap: spacing.sm,
     },
     buttonPill: {
-      height: BUTTON_HEIGHT,
-      borderRadius: BUTTON_RADIUS,
+      minHeight: BUTTON_HEIGHT,
+      borderRadius: radii.button,
       justifyContent: 'center',
-    },
-    primaryShadow: {
-      shadowColor: '#000',
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 3,
     },
   });
 
@@ -271,24 +261,34 @@ export default function OnboardingScreen() {
 
   return (
     <Screen edges={['top', 'bottom']}>
-      <View style={styles.container}>
-        <ImageBackground
-          source={backgroundImage}
-          style={styles.backgroundImage}
-          resizeMode="cover"
+      <BrandBar><AppLogo width={168} height={40} inverted={colorScheme === 'dark'} animated={false} /></BrandBar>
+      <View style={styles.progressRow}>
+        <View
+          style={styles.progressTrack}
+          accessible
+          accessibilityLabel={`Introduction ${currentPage + 1} of ${onboardingData.length}`}
         >
-          <LinearGradient
-            colors={[
-              'rgba(17, 10, 15, 0.48)',
-              'rgba(17, 10, 15, 0.72)',
-              'rgba(17, 10, 15, 0.92)',
-            ]}
-            locations={[0, 0.56, 1]}
-            style={styles.backgroundScrim}
-            pointerEvents="none"
-          />
-        </ImageBackground>
-
+          {onboardingData.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressSegment,
+                { backgroundColor: index <= currentPage ? colors.primary : colors.divider },
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={styles.progressLabel} importantForAccessibility="no" accessibilityElementsHidden>
+          {currentPage + 1} of {onboardingData.length}
+        </Text>
+        <Button
+          title="Skip"
+          onPress={handleSkip}
+          variant="ghost"
+          size="sm"
+        />
+      </View>
+      <View style={styles.container}>
         <PagerView
           ref={pagerRef}
           style={styles.pagerView}
@@ -298,64 +298,43 @@ export default function OnboardingScreen() {
           {onboardingData.map((item, index) => {
             const isFirstSlide = index === 0;
             return (
-              <View key={index} style={styles.page}>
+              <View key={index} style={{ flex: 1 }}>
+                <ScrollView contentContainerStyle={[styles.page, { flexGrow: 1, flex: undefined, paddingVertical: spacing.md }]} showsVerticalScrollIndicator={false}>
                 <View style={styles.contentPanel}>
+                  <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
+                    <SafetyIllustration size={136} kind={(['journey', 'privacy', 'privacy', 'evidence', 'support'] as SafetyIllustrationKind[])[index]} />
+                  </View>
                   {isFirstSlide ? (
                     <View style={styles.brandContainer}>
-                      <View style={styles.heroLogoContainer}>
-                        <AppLogo width={220} height={72} />
-                      </View>
                       <Text style={styles.tagline}>Your Safety Companion</Text>
                     </View>
-                  ) : (
-                    <View style={styles.logoContainer}>
-                      <Text style={styles.emoji}>{item.emoji}</Text>
-                    </View>
-                  )}
+                  ) : null}
 
-                  <Text style={styles.title}>{item.title}</Text>
+                  <Text accessibilityRole="header" style={styles.title}>{item.title}</Text>
                   <Text style={styles.description}>{item.description}</Text>
 
                   <View style={styles.featuresContainer}>
                     {item.features.map((feature, featureIndex) => (
                       <View key={featureIndex} style={styles.featureItem}>
                         <View style={styles.featureIcon}>
-                          <Text style={{ color: colors.background, fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                          <Ionicons name="checkmark" size={15} color={colors.primary} />
                         </View>
                         <Text style={styles.featureText}>{feature}</Text>
                       </View>
                     ))}
                   </View>
                 </View>
+                </ScrollView>
               </View>
             );
           })}
         </PagerView>
 
         <View style={styles.footer}>
-          <View style={styles.pagination}>
-            {onboardingData.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === currentPage ? styles.activeDot : styles.inactiveDot,
-                ]}
-              />
-            ))}
-          </View>
-
           <View style={styles.buttonContainer}>
             <Button
               title={currentPage === onboardingData.length - 1 ? 'Start Using SafeRide' : 'Continue'}
               onPress={handleNext}
-              fullWidth
-              style={[styles.buttonPill, styles.primaryShadow]}
-            />
-            <Button
-              title="Skip"
-              onPress={handleSkip}
-              variant="secondary"
               fullWidth
               style={styles.buttonPill}
             />

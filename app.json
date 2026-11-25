@@ -3,26 +3,31 @@
     "name": "Safe Ride",
     "slug": "saferide",
     "scheme": "saferide",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/df299186-b444-414a-bae3-1e2c263c6927"
+      "enabled": false,
+      "checkAutomatically": "NEVER"
     },
     "orientation": "portrait",
     "icon": "./assets/adaptive-icon.png",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.esheria.saferide.app",
-      "versionCode": 2,
+      "versionCode": 23,
       "icon": "./assets/adaptive-icon.png",
+      "allowBackup": false,
       "permissions": [
         "RECORD_AUDIO",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE",
         "ACCESS_COARSE_LOCATION",
         "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -96,15 +101,18 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#793A5E",
+          "backgroundColor": "#FFF9F2",
+          "dark": { "backgroundColor": "#261C18" },
           "android": {
             "drawable": {
               "icon": "./assets/splashscreen-blank.xml"
             },
-            "backgroundColor": "#793A5E"
+            "backgroundColor": "#FFF9F2",
+            "dark": { "backgroundColor": "#261C18" }
           },
           "ios": {
-            "backgroundColor": "#793A5E"
+            "backgroundColor": "#FFF9F2",
+            "dark": { "backgroundColor": "#261C18" }
           }
         }
       ],

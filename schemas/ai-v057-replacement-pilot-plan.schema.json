@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-replacement-pilot-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "planId", "issue", "status", "datasetId", "startingCommit", "sourceCommit", "historicalDecision", "invalidatedAttempt", "replacementAuthorization", "pilotExecution", "dataset", "fixedSuites", "recipe", "generation", "runtime", "codeBindings", "scope", "strictDecision"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-replacement-pilot-plan"},
+    "schemaVersion": {"const": 1},
+    "planId": {"type": "string", "pattern": "^saferide-v057-replacement-pilot-[a-f0-9]{16}$"},
+    "issue": {"const": "ESH-4198"},
+    "status": {"enum": ["code-fixed-panel-authorization-pending", "code-fixed-panel-run-authorized"]},
+    "datasetId": {"const": "saferide-synthetic-guidance-v0.5.7"},
+    "startingCommit": {"const": "b0daece87da497a50613dca329ca57814f20d4a7"},
+    "sourceCommit": {"const": "c2d8afc6f392b90c81ebbbef3856406ccc299902"},
+    "historicalDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decision", "v054ResultSha256", "v055ResultSha256", "v056ResultSha256", "invalidV057AttemptResultSha256", "rewritten"],
+      "properties": {
+        "decision": {"const": "NO-GO"},
+        "v054ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "v055ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "v056ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "invalidV057AttemptResultSha256": {"const": "1afa5ddf1de5153f8431119ca231bec86ed90152e30c455abbf36a668f1e3c90"},
+        "rewritten": {"const": false}
+      }
+    },
+    "invalidatedAttempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attemptCount", "trainingStepsObserved", "soleInvalidationReason", "eligibleForReuse", "evidenceRewritten"],
+      "properties": {
+        "attemptCount": {"const": 1}, "trainingStepsObserved": {"const": 13},
+        "soleInvalidationReason": {"const": "post-training-wrapper-namespace-omitted-run-kind"},
+        "eligibleForReuse": {"const": false}, "evidenceRewritten": {"const": false}
+      }
+    },
+    "replacementAuthorization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pilotRunsAuthorized", "pilotRunsPerformed", "automaticRetryAllowed", "panelConditionalOnValidPilot", "panelRunsAuthorized", "panelRunsPerformed", "panelRunsRemaining", "panelRunAuthorization", "fullCandidateTrainingAuthorized", "holdoutAccessAuthorized"],
+      "properties": {
+        "pilotRunsAuthorized": {"const": 1}, "pilotRunsPerformed": {"const": 1}, "automaticRetryAllowed": {"const": false},
+        "panelConditionalOnValidPilot": {"const": true},
+        "panelRunsAuthorized": {"enum": [1, 2, 3]}, "panelRunsPerformed": {"enum": [1, 2, 3]}, "panelRunsRemaining": {"enum": [0, 1]},
+        "panelRunAuthorization": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["runId", "referenceSha256", "authorizedAt"],
+              "properties": {
+                "runId": {"type": "string", "pattern": "^saferide-v057-panel-s419805-[a-z0-9-]+$"},
+                "referenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                "authorizedAt": {"type": "string", "minLength": 20}
+              }
+            }
+          ]
+        },
+        "fullCandidateTrainingAuthorized": {"const": false}, "holdoutAccessAuthorized": {"const": false}
+      }
+    },
+    "pilotExecution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["valid", "attempts", "executionCommit", "planSha256", "runId", "completedAt", "launchReceiptSha256", "metadataSha256", "adapterTensorSha256", "adapterInventorySha256", "checkpointInventorySha256", "sampleOrderSha256", "globalSteps", "rowsSeen", "epochsCompleted", "holdoutRowsRead", "metadataCompleteAndSanitized"],
+      "properties": {
+        "valid": {"const": true}, "attempts": {"const": 1},
+        "executionCommit": {"const": "002d8af1a18cfdb0b04f5dc8a4e044273dc61aee"},
+        "planSha256": {"const": "7a33b1fc1762aa5ad986dd997c12cc3de9d5c3bcc27ce2c9e980df19ae9dfbbf"},
+        "runId": {"const": "saferide-v057-pilot-s419805-replacement-002d8af"},
+        "completedAt": {"type": "string"},
+        "launchReceiptSha256": {"const": "e57c4616588494d7fd51bfb4d1ce272585ea79f51eb2e8b38d71531fb86a88bc"},
+        "metadataSha256": {"const": "d986621b0457892e0de71f074ef85ce2f7002bdebf31ed31d9dec0a4af801d43"},
+        "adapterTensorSha256": {"const": "d200779ec5d6e1d54e192dc645e8159dde71732da9cf480b3ddbab361470ff6d"},
+        "adapterInventorySha256": {"const": "2d66755fb9f03f18d3b29b37d45b419651c7aac770beaccc8e0e256ab4d55685"},
+        "checkpointInventorySha256": {"const": "6b3be7e948210fd06c31b8b1c668c7bfdf363df68cb25dfb6bf7e0944f5f254d"},
+        "sampleOrderSha256": {"const": "c902922f16eb37cfed5e897a5922b08e3cfa973db27fb745ca752a26a0fbc76c"},
+        "globalSteps": {"const": 13}, "rowsSeen": {"const": 104}, "epochsCompleted": {"const": 1},
+        "holdoutRowsRead": {"const": 0}, "metadataCompleteAndSanitized": {"const": true}
+      }
+    },
+    "dataset": {"type": "object", "additionalProperties": true, "required": ["frozenManifestSha256", "weightedTrainSha256", "uniqueTrainSha256", "newMitigationTrainSha256", "trainingRecipeSha256", "datasetAuditSha256", "semanticReportSha256", "tokenizationReportSha256", "registerSha256", "sampleOrderSha256", "uniqueRows", "weightedExamples", "newRows", "newFamilies"]},
+    "fixedSuites": {"type": "object", "additionalProperties": true, "required": ["originalDevelopment", "mitigationDevelopment", "sealedHoldout"]},
+    "recipe": {
+      "type": "object", "additionalProperties": true,
+      "required": ["initialization", "initialAdapterTensorSha256", "initialAdapterInventorySha256", "initialAdapterFileCount", "initialAdapterTotalBytes", "seed", "epochs", "learningRate", "optimizerSteps", "weightedExamples", "assistantOnlyLoss", "singlePilotOnly", "retryAllowed"],
+      "properties": {
+        "initialAdapterInventorySha256": {"const": "7f5715a366c323bbf6da67f8e1ed5c219d697af83ab3a126c52b1366561656f1"},
+        "initialAdapterFileCount": {"const": 6},
+        "initialAdapterTotalBytes": {"const": 80584074}
+      }
+    },
+    "generation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxNewTokens", "terminatorIds", "terminatorSource", "zeroTruncationRequired"],
+      "properties": {
+        "maxNewTokens": {"const": 192}, "terminatorIds": {"const": [1, 106, 50]},
+        "terminatorSource": {"const": "pinned-model-generation-config"}, "zeroTruncationRequired": {"const": true}
+      }
+    },
+    "runtime": {"type": "object", "additionalProperties": true, "required": ["baseModel", "image"]},
+    "codeBindings": {
+      "type": "array", "minItems": 12, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+        "properties": {"path": {"type": "string", "minLength": 2}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+      }
+    },
+    "scope": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "strictDecision": {"enum": ["NO-GO-PANEL-AUTHORIZATION-PENDING", "NO-GO-ONE-FROZEN-PANEL-AUTHORIZED"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "code-fixed-panel-authorization-pending"}}},
+      "then": {
+        "properties": {
+          "replacementAuthorization": {
+            "properties": {
+              "panelRunsRemaining": {"const": 0}, "panelRunAuthorization": {"type": "null"}
+            },
+            "oneOf": [
+              {"properties": {"panelRunsAuthorized": {"const": 1}, "panelRunsPerformed": {"const": 1}}},
+              {"properties": {"panelRunsAuthorized": {"const": 2}, "panelRunsPerformed": {"const": 2}}},
+              {"properties": {"panelRunsAuthorized": {"const": 3}, "panelRunsPerformed": {"const": 3}}}
+            ]
+          },
+          "strictDecision": {"const": "NO-GO-PANEL-AUTHORIZATION-PENDING"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "code-fixed-panel-run-authorized"}}},
+      "then": {
+        "properties": {
+          "replacementAuthorization": {
+            "properties": {
+              "panelRunsAuthorized": {"const": 3}, "panelRunsPerformed": {"const": 2},
+              "panelRunsRemaining": {"const": 1}, "panelRunAuthorization": {"type": "object"}
+            }
+          },
+          "strictDecision": {"const": "NO-GO-ONE-FROZEN-PANEL-AUTHORIZED"}
+        }
+      }
+    }
+  ]
+}

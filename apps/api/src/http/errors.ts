@@ -2,6 +2,8 @@ export class AppError extends Error {
   statusCode: number;
   code: string;
   details?: unknown;
+  /** Sent as Retry-After by error handlers that support it (the partner scope). */
+  retryAfterSeconds?: number;
 
   constructor(statusCode: number, code: string, message: string, details?: unknown) {
     super(message);

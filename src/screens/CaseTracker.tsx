@@ -1,12 +1,14 @@
 import React from 'react';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, ActivityIndicator, Platform, AppState } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/ui/Screen';
 import Button from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { SafetyIllustration } from '../components/ui/SafetyIllustration';
+import { FeatureHeader } from '../components/ui/FeatureHeader';
 import { Input } from '../components/ui/Input';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
@@ -29,6 +31,7 @@ import {
 } from '../utils/casePresentation';
 
 import { devPrivacyWarn, getPrivacySafeErrorReason, getPrivacySafeHttpStatus } from '../utils/privacyLog';
+import { startForegroundCaseRefresh } from '../utils/foregroundCaseRefresh';
 
 type CaseTrackerNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -106,6 +109,18 @@ export default function CaseTrackerScreen() {
       refreshData();
     }, [refreshData]),
   );
+
+  useFocusEffect(useCallback(() => {
+    if (!isOnline) return;
+    const polling = startForegroundCaseRefresh({
+      active: () => AppState.currentState === 'active' && !isRefreshingRef.current,
+      fetch: fetchCases,
+      apply: cases => { setRemoteCases(cases); setRemoteFetchError(null); },
+      unavailable: () => setRemoteFetchError('Online case statuses may be out of date. Reconnect or refresh to check the latest updates.'),
+    });
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') void polling.refresh(); });
+    return () => { listener.remove(); polling.stop(); };
+  }, [isOnline]));
 
   // Reload local drafts when any writer commits a change while this screen is
   // mounted. The ref guard prevents our own refresh (which may replace the
@@ -743,7 +758,6 @@ export default function CaseTrackerScreen() {
 
     return (
       <View style={styles.emptyPanel}>
-        <View pointerEvents="none" style={styles.cardAccentTop} />
         <View style={styles.emptyIcon}>
           <Ionicons name="folder-open-outline" size={28} color={colors.primary} />
         </View>
@@ -766,27 +780,19 @@ export default function CaseTrackerScreen() {
     searchPanel: {
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
+      gap: spacing.sm,
     },
     searchBox: {
       position: 'relative',
     },
-    searchInput: {
-      paddingLeft: 40,
-      paddingRight: 40,
-    },
-    searchIcon: {
-      left: spacing.sm,
-      position: 'absolute',
-      top: 13,
+    searchField: {
+      marginBottom: 0,
     },
     clearSearchButton: {
       alignItems: 'center',
-      height: 36,
+      height: 48,
       justifyContent: 'center',
-      position: 'absolute',
-      right: spacing.xs,
-      top: 5,
-      width: 36,
+      width: 48,
     },
     sortBar: {
       alignItems: 'center',
@@ -830,37 +836,25 @@ export default function CaseTrackerScreen() {
       color: colors.primary,
     },
     tabsContainer: {
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radii.round,
       flexDirection: 'row',
+      gap: spacing.xxxs,
       marginHorizontal: spacing.md,
-      marginTop: spacing.md,
-      borderRadius: radii.card,
-      backgroundColor: colors.surface,
-      borderColor: colors.divider,
-      borderWidth: borders.hairline,
-      overflow: 'hidden',
-      padding: spacing.xs,
-      position: 'relative',
-      ...elevation.card,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
+      marginTop: spacing.sm,
+      padding: spacing.xxxs,
     },
     tab: {
       alignItems: 'center',
-      borderRadius: radii.card,
+      borderRadius: radii.round,
       flex: 1,
-      minHeight: 40,
+      minHeight: 44,
       justifyContent: 'center',
       paddingHorizontal: spacing.xs,
       paddingVertical: spacing.xs,
     },
     activeTab: {
-      backgroundColor: colors.primaryMuted,
+      backgroundColor: colors.primary,
     },
     tabText: {
       ...typography.labelMedium,
@@ -868,7 +862,7 @@ export default function CaseTrackerScreen() {
       textAlign: 'center',
     },
     activeTabText: {
-      color: colors.primary,
+      color: colors.primaryForeground,
     },
     caseCard: {
       marginBottom: spacing.sm,
@@ -1065,17 +1059,9 @@ export default function CaseTrackerScreen() {
     },
     emptyPanel: {
       alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderColor: colors.divider,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      gap: spacing.sm,
-      marginTop: spacing.sm,
-      overflow: 'hidden',
-      paddingHorizontal: spacing.lg,
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.xl,
-      position: 'relative',
-      ...elevation.card,
     },
     emptyIcon: {
       alignItems: 'center',
@@ -1086,7 +1072,7 @@ export default function CaseTrackerScreen() {
       width: 56,
     },
     emptyTitle: {
-      ...typography.titleSmall,
+      ...typography.headlineSmall,
       color: colors.foreground,
       textAlign: 'center',
     },
@@ -1100,29 +1086,25 @@ export default function CaseTrackerScreen() {
 
   const searchPanel = (
     <View style={styles.searchPanel}>
+      <FeatureHeader eyebrow="Your records" title="Cases & drafts" description="Review saved drafts, follow case updates, and return when you are ready." icon="folder-open-outline" tone="evidence" />
       <View style={styles.searchBox}>
         <Input
           placeholder="Search cases, locations, tags..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          style={styles.searchInput}
+          containerStyle={styles.searchField}
+          startAdornment={<Ionicons accessible={false} name="search" size={18} color={colors.textSecondary} />}
+          endAdornment={searchQuery ? (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              style={styles.clearSearchButton}
+              accessibilityRole="button"
+              accessibilityLabel="Clear case search"
+            >
+              <Ionicons name="close" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : undefined}
         />
-        <Ionicons
-          name="search"
-          size={18}
-          color={colors.textSecondary}
-          style={styles.searchIcon}
-        />
-        {searchQuery ? (
-          <TouchableOpacity
-            onPress={() => setSearchQuery('')}
-            style={styles.clearSearchButton}
-            accessibilityRole="button"
-            accessibilityLabel="Clear case search"
-          >
-            <Ionicons name="close" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-        ) : null}
       </View>
     </View>
   );
@@ -1141,13 +1123,11 @@ export default function CaseTrackerScreen() {
   if (drafts.length === 0 && activeCases.length === 0 && closed.length === 0) {
     return (
       <Screen edges={['left', 'right']}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         {searchPanel}
-        <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+        <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
           <View style={styles.emptyPanel}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
-            <View style={styles.emptyIcon}>
-              <Ionicons name="folder-open-outline" size={28} color={colors.primary} />
-            </View>
+            <SafetyIllustration kind="evidence" size={88} />
             <Text style={styles.emptyTitle}>No cases yet</Text>
             <Text style={styles.emptyText}>
               Saved drafts, local records, and synced cases will appear here with clear next steps.
@@ -1155,14 +1135,21 @@ export default function CaseTrackerScreen() {
             <Button title="Start a report" onPress={startNewDraft} />
           </View>
         </View>
+        </ScrollView>
       </Screen>
     );
   }
 
   return (
     <Screen edges={['left', 'right']}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: spacing.md }}
+        refreshControl={Platform.OS === 'web' ? undefined : (
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} tintColor={colors.primary} />
+        )}
+      >
       {searchPanel}
-
       <View style={styles.sortBar}>
         <Text style={styles.sortLabel}>Sort by</Text>
         <View style={styles.sortOptions}>
@@ -1171,6 +1158,7 @@ export default function CaseTrackerScreen() {
               key={key}
               onPress={() => setSortBy(key)}
               style={[styles.sortButton, sortBy === key && styles.sortButtonActive]}
+              hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
               accessibilityRole="button"
               accessibilityState={{ selected: sortBy === key }}
             >
@@ -1182,8 +1170,7 @@ export default function CaseTrackerScreen() {
         </View>
       </View>
 
-      <View style={styles.tabsContainer}>
-        <View pointerEvents="none" style={styles.cardAccentTop} />
+      <View style={styles.tabsContainer} accessibilityRole="tablist">
         {[
           { key: 'drafts' as const, label: `Drafts ${drafts.length}` },
           { key: 'active' as const, label: `Active ${activeCases.length}` },
@@ -1193,6 +1180,8 @@ export default function CaseTrackerScreen() {
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}
@@ -1201,20 +1190,7 @@ export default function CaseTrackerScreen() {
         ))}
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16 }}
-        refreshControl={Platform.OS === 'web'
-          ? undefined
-          : (
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-              />
-            )}
-      >
+      <View style={{ padding: spacing.md }}>
         {activeTab === 'drafts' && (
           drafts.length > 0 ? (
             <View style={{ gap: 12 }}>
@@ -1254,6 +1230,7 @@ export default function CaseTrackerScreen() {
             </Text>
           </View>
         )}
+      </View>
       </ScrollView>
     </Screen>
   );

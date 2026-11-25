@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { LEGAL_PUBLISHED_ON } from '@/content/legal';
 import { INTERIOR_PAGES } from '@/lib/pages';
 import { SITE, canonicalUrl } from '@/lib/site';
 
@@ -8,10 +9,13 @@ export const dynamic = 'force-static';
 // web/SEO_REMEDIATION_PLAN.md P0-2 / P4-4). Interior pages carry their own
 // updatedAt in INTERIOR_PAGES; blog posts use their reviewed update date.
 const staticEntries = [
-  { route: '/', updatedAt: '2026-07-28', priority: 1, changeFrequency: 'weekly' as const, image: '/og.png' },
-  { route: '/blog', updatedAt: '2026-07-28', priority: 0.7, changeFrequency: 'weekly' as const, image: '/images/press/businessday-unicef-femtech-ventures.webp' },
-  { route: '/download', updatedAt: '2026-07-28', priority: 0.8, changeFrequency: 'monthly' as const, image: '/og.png' },
-  { route: '/contact', updatedAt: '2026-07-28', priority: 0.65, changeFrequency: 'monthly' as const, image: '/og.png' },
+  { route: '/', updatedAt: '2026-11-05', priority: 1, changeFrequency: 'weekly' as const, image: '/og.png' },
+  { route: '/blog', updatedAt: '2026-11-01', priority: 0.7, changeFrequency: 'weekly' as const, image: '/images/press/businessday-unicef-femtech-ventures.webp' },
+  { route: '/pilot', updatedAt: '2026-11-05', priority: 0.7, changeFrequency: 'monthly' as const, image: '/images/pilot/pilot-demo-banner.webp' },
+  { route: '/download', updatedAt: '2026-10-22', priority: 0.8, changeFrequency: 'monthly' as const, image: '/og.png' },
+  { route: '/contact', updatedAt: '2026-11-01', priority: 0.65, changeFrequency: 'monthly' as const, image: '/og.png' },
+  { route: '/privacy', updatedAt: LEGAL_PUBLISHED_ON, priority: 0.4, changeFrequency: 'monthly' as const, image: '/og.png' },
+  { route: '/terms', updatedAt: LEGAL_PUBLISHED_ON, priority: 0.4, changeFrequency: 'monthly' as const, image: '/og.png' },
 ] as const;
 
 const interiorEntries = Object.keys(INTERIOR_PAGES).map((slug) => {

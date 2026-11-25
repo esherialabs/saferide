@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { decodePartnerKey } from './partnerKey.js';
+import { parseTrustedProxyCidrs } from './partnerNetwork.js';
+
 const placeholderPattern = /^(replace|change|your|todo|example|placeholder|xxx)/i;
 
 const requiredString = z
@@ -44,6 +47,50 @@ function databaseUrlFromParts(): string | undefined {
   return `postgres://${credentials}@${process.env.DATABASE_HOST.trim()}:${port}/${database}${query}`;
 }
 
+function isLocalHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+/** A bare https origin (http only for localhost), e.g. https://partners.example.org */
+export function isPartnerOrigin(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  const secure = url.protocol === 'https:' || (url.protocol === 'http:' && isLocalHostname(url.hostname));
+  return secure && url.origin === value && !url.username && !url.password;
+}
+
+const optionalPartnerOrigin = z
+  .string()
+  .trim()
+  .optional()
+  .transform(value => (value ? value : undefined))
+  .refine(value => value === undefined || isPartnerOrigin(value), 'must be a bare https origin');
+
+const optionalPartnerKey = z
+  .string()
+  .trim()
+  .optional()
+  .transform(value => (value ? value : undefined))
+  .refine(value => value === undefined || decodePartnerKey(value) !== null, 'must be a 32-byte key (hex or base64)');
+
+const optionalTrustedProxyCidrs = z
+  .string()
+  .trim()
+  .optional()
+  .transform(value => (value ? value : undefined))
+  .refine(value => {
+    try {
+      parseTrustedProxyCidrs(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'must be a comma-separated list of CIDRs');
+
 const envSchema = z
   .object({
     nodeEnv: z.enum(['development', 'test', 'production']).default('development'),
@@ -67,9 +114,35 @@ const envSchema = z
     s3AccessKeyId: z.string().trim().optional(),
     s3SecretAccessKey: z.string().trim().optional(),
     corsOrigins: z.string().default('*'),
+    partnerPublicOrigin: optionalPartnerOrigin,
+    partnerTotpKey: optionalPartnerKey,
+    partnerCallbackKey: optionalPartnerKey,
+    partnerTrustedProxyCidrs: optionalTrustedProxyCidrs,
+    // Partner evidence downloads hand out raw originals (EXIF GPS, device
+    // make/model) until a metadata-stripped derivative pipeline exists, so
+    // they are off unless explicitly set, and `originals` is refused outside
+    // development and test.
+    partnerEvidenceDownload: z.enum(['disabled', 'originals']).default('disabled'),
+    // clamd (ClamAV) for evidence malware scanning. Unset: no scanner, so
+    // evidence ingestion stays refused and nothing is ever released.
+    clamdHost: z
+      .string()
+      .trim()
+      .optional()
+      .transform(value => (value ? value : undefined)),
+    clamdPort: z.coerce.number().int().min(1).max(65535).default(3310),
+    // Scans the API runs at once (in-process worker); 1 or 2.
+    evidenceScanConcurrency: z.coerce.number().int().min(1).max(2).default(1),
     logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   })
   .superRefine((value, ctx) => {
+    if (value.partnerEvidenceDownload === 'originals' && !['development', 'test'].includes(value.appEnvironment)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['partnerEvidenceDownload'],
+        message: 'originals may only be served to partners with APP_ENV=development or test',
+      });
+    }
     if (value.s3CredentialMode === 'iam') return;
 
     if (!usableSecret(value.s3AccessKeyId)) {
@@ -111,6 +184,14 @@ export const env = envSchema.parse({
   s3AccessKeyId: process.env.S3_ACCESS_KEY_ID,
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   corsOrigins: process.env.CORS_ORIGINS,
+  partnerPublicOrigin: process.env.PARTNER_PUBLIC_ORIGIN,
+  partnerTotpKey: process.env.PARTNER_TOTP_KEY,
+  partnerCallbackKey: process.env.PARTNER_CALLBACK_KEY,
+  partnerTrustedProxyCidrs: process.env.PARTNER_TRUSTED_PROXY_CIDRS,
+  partnerEvidenceDownload: process.env.PARTNER_EVIDENCE_DOWNLOAD?.trim() || undefined,
+  clamdHost: process.env.CLAMD_HOST,
+  clamdPort: process.env.CLAMD_PORT?.trim() || undefined,
+  evidenceScanConcurrency: process.env.EVIDENCE_SCAN_CONCURRENCY?.trim() || undefined,
   logLevel: process.env.LOG_LEVEL,
 });
 

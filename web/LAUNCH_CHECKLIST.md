@@ -1,11 +1,13 @@
 ﻿# SafeRide Website Launch Readiness Checklist
 
+> **Status (1 Nov 2026):** historical note. The first-party SafeRide API is live and the HURIA pilot runs on it; text below describing a Supabase prototype or a planned API is out of date.
+
 This checklist tracks the implementation state for the SafeRide Public Website Launch project.
 
 ## Verified In This Branch
 
 - Homepage implements the Mozilla Foundation-inspired editorial structure: sticky white navigation, accordion hero, editorial pillar cards, impact band, community spotlight, CTA, and footer.
-- Public routes render concrete content for `/what-we-do`, `/how-it-works`, `/for-survivors`, `/open-source`, `/route-safety-index`, `/partners`, `/story`, `/impact`, and `/privacy-safety-trust`.
+- Public routes render concrete content for `/what-we-do`, `/how-it-works`, `/for-survivors`, `/open-source`, `/partner-dashboard`, `/partners`, `/story`, `/impact`, and `/privacy-safety-trust`.
 - Website copy has been re-audited against repo evidence: `README.md`, mobile screens in `src/screens/`, local data packs in `assets/data/`, `src/lib/localAssistant/modelRegistry.ts`, `SUPABASE_HANDOFF.md`, and the current Next.js site.
 - `/blog` and `/download` now render launch-specific content instead of generic `Coming soon` stubs.
 - Route stubs have been removed from launch-critical pages; Playwright checks assert these pages do not show `Coming soon`.

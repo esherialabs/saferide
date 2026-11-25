@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 704" role="img" aria-labelledby="t">
+  <title id="t">Mombasa, October 2026: a supervised pilot with HURIA.</title>
+  <rect width="1400" height="704" fill="#F88539"/>
+  <rect y="500" width="1400" height="204" fill="#0D1B12"/>
+  <g stroke="#0D1B12" stroke-width="10">
+    <rect x="110" y="100" width="500" height="300" fill="#F7EC36"/>
+    <rect x="660" y="100" width="300" height="300" fill="#FFFFFF"/>
+    <rect x="1010" y="100" width="280" height="300" fill="#53E17C"/>
+  </g>
+  <g fill="#0D1B12" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle">
+    <text x="360" y="272" font-size="96">Mombasa</text>
+    <text x="810" y="236" font-size="52">October</text>
+    <text x="810" y="304" font-size="52">2026</text>
+    <text x="1150" y="236" font-size="52">With</text>
+    <text x="1150" y="304" font-size="52">HURIA</text>
+  </g>
+  <text x="110" y="610" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="48">A supervised pilot.</text>
+</svg>

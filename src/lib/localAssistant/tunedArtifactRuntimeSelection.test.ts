@@ -81,7 +81,7 @@ describe('tuned artifact runtime selection', () => {
   it('does not create a rollout assignment while checked-in controls are disabled', async () => {
     await expect(hydrateTunedArtifactRolloutBucket()).resolves.toBeNull();
     await expect(AsyncStorage.getItem(TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY)).resolves.toBeNull();
-    expect(resolveTunedArtifactRuntimeSelection()).toMatchObject({
+    expect(resolveTunedArtifactRuntimeSelection({ now: new Date('2026-07-30T00:00:00.000Z') })).toMatchObject({
       selectionRequired: false,
       config: null,
       decision: { enabled: false, reason: 'controls-disabled' },
@@ -168,5 +168,25 @@ describe('tuned artifact runtime selection', () => {
       config: null,
       decision: { reason: 'controls-disabled' },
     });
+  });
+
+  it.each([
+    ['before', -1, 'enabled'],
+    ['at', 0, 'enabled'],
+    ['after', 1, 'controls-expired'],
+  ] as const)('enforces the existing expiry boundary %s expiry', (_label, offset, reason) => {
+    const { manifest, controls, runtime } = releaseReadyFixture();
+    const selected = resolveTunedArtifactRuntimeSelection({
+      manifest,
+      manifestSha256: 'd'.repeat(64),
+      bundledControls: controls,
+      runtime,
+      appVersion: '1.0.0',
+      cohortBucket: 0,
+      now: new Date(Date.parse(controls.expiresAt) + offset),
+    });
+    expect(selected.decision.reason).toBe(reason);
+    expect(selected.decision.enabled).toBe(offset <= 0);
+    expect(Boolean(selected.config)).toBe(offset <= 0);
   });
 });

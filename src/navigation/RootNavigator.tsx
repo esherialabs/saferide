@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NavigationContainer, NavigationState, LinkingOptions, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Linking, Text, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from './routes';
 import { BottomTabs } from './BottomTabs';
 import { useTheme } from '../theme/SimpleThemeProvider';
@@ -15,10 +14,12 @@ import { resetToCalculatorDecoyIfUnlockable } from './quickExitNavigation';
 import { borders, fontFamilies, spacing, typography } from '../theme/tokens';
 import { getRootRouteTitle } from '../i18n/appLanguage';
 import { draftStorage } from '../utils/draftStorage';
+import { isFinalReportDraftState } from './reportPathwayFlow';
 import { devPrivacyInfo, devPrivacyWarn, getPrivacySafeErrorReason } from '../utils/privacyLog';
 import { withStartupFallback } from '../utils/startupBudget';
+import { encryptedAsyncStorage } from '../lib/encryptedAsyncStorage';
 import {
-  PERSISTENCE_KEY,
+  createNavigationStatePersister,
   normalizeRestoredNavigationState,
 } from './navigationStatePersistence';
 
@@ -44,6 +45,7 @@ import CalculatorScreen from '../screens/Calculator';
 import LandingScreen from '../screens/Landing';
 import AuthScreen from '../screens/Auth';
 import LaunchScreen from '../components/LaunchScreen';
+import { BrandWordmark } from '../components/BrandWordmark';
 import { getMeasurementModeDecision } from '../lib/measurement/measurementConfig';
 import { getModeratedTestCopy } from '../i18n/languageAccessibilityCopy';
 
@@ -132,6 +134,11 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const quickExitManager = useMemo(() => QuickExitManager.getInstance(), []);
   const decoyPinManager = useMemo(() => DecoyPinManager.getInstance(), []);
+  // Saved history carries draft IDs, so it is stored encrypted like drafts.
+  const navigationStatePersister = useMemo(
+    () => createNavigationStatePersister(encryptedAsyncStorage),
+    [],
+  );
   const quickExitPanHandlers = quickExitManager.getPanResponder()?.panHandlers ?? {};
   const routeTitle = useCallback(
     (routeName: keyof RootStackParamList) => getRootRouteTitle(routeName, languageCode),
@@ -179,7 +186,7 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
 
         if (initialUrl == null) {
           const savedStateString = await withStartupFallback(
-            AsyncStorage.getItem(PERSISTENCE_KEY),
+            navigationStatePersister.load(),
             NAVIGATION_STATE_RESTORE_BUDGET_MS,
             null,
             () => {
@@ -201,8 +208,9 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
               )
             : [];
           const availableDraftIds = new Set(localDrafts.map(draft => draft.id));
+          const completedDraftIds = new Set(localDrafts.filter(isFinalReportDraftState).map(draft => draft.id));
           const state = savedStateString
-            ? normalizeRestoredNavigationState(JSON.parse(savedStateString), availableDraftIds) as NavigationState | undefined
+            ? normalizeRestoredNavigationState(JSON.parse(savedStateString), availableDraftIds, completedDraftIds) as NavigationState | undefined
             : undefined;
           if (isMounted) {
             setInitialState(state);
@@ -227,13 +235,13 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
     return () => {
       isMounted = false;
     };
-  }, [shouldUsePersistence, navigationKey]);
+  }, [navigationStatePersister, shouldUsePersistence, navigationKey]);
 
   useEffect(() => {
     if (!shouldUsePersistence) {
-      AsyncStorage.removeItem(PERSISTENCE_KEY).catch(() => {});
+      void navigationStatePersister.clear();
     }
-  }, [shouldUsePersistence]);
+  }, [navigationStatePersister, shouldUsePersistence]);
 
   useEffect(() => {
     let isMounted = true;
@@ -268,17 +276,17 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
     const previousUserId = previousUserIdRef.current;
 
     if (previousUserId && previousUserId !== currentUserId) {
-      AsyncStorage.removeItem(PERSISTENCE_KEY).catch(() => {});
+      void navigationStatePersister.clear();
       setInitialState(undefined);
     }
 
     if (!currentUserId) {
-      AsyncStorage.removeItem(PERSISTENCE_KEY).catch(() => {});
+      void navigationStatePersister.clear();
       setInitialState(undefined);
     }
 
     previousUserIdRef.current = currentUserId;
-  }, [session, isLocalGuest, isAuthHydrated]);
+  }, [navigationStatePersister, session, isLocalGuest, isAuthHydrated]);
 
   if (!isAuthHydrated || !isOnboardingHydrated || !hasRestoredState) {
     return (
@@ -299,7 +307,7 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
       }}
       onStateChange={(state) => {
         if (shouldUsePersistence) {
-          AsyncStorage.setItem(PERSISTENCE_KEY, JSON.stringify(state)).catch(() => {});
+          void navigationStatePersister.save(state);
         }
       }}
     >
@@ -328,10 +336,13 @@ export function RootNavigator({ onReady }: RootNavigatorProps) {
             backgroundColor: colors.background,
           },
           headerTintColor: colors.foreground,
+          headerRight: () => <BrandWordmark width={80} animated={false} />,
           headerTitleStyle: {
             fontFamily: fontFamilies.text,
+            fontSize: typography.titleMedium.fontSize,
             fontWeight: '700',
           },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         {!session && !isLocalGuest ? (

@@ -2,14 +2,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
+import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { Platform } from 'react-native';
 import { devPrivacyWarn, getPrivacySafeErrorReason } from './privacyLog';
+import { DECOY_PIN_ATTEMPTS_STORE_KEY, DECOY_PIN_STORE_KEY } from './storageKeys';
+
+export const DECOY_PIN_KDF = 'pbkdf2-sha256' as const;
 
 export interface DecoyPinConfig {
   hashedPin: string;
   requireToExit: boolean;
   salt: string;
   createdAt: number;
+  /** Absent on verifiers written before PBKDF2, which are a single salted SHA-256. */
+  kdf?: typeof DECOY_PIN_KDF;
+  iterations?: number;
+}
+
+interface DecoyPinAttemptState {
+  failedAttempts: number;
+  lastFailedAt: number;
 }
 
 export interface DecoyPinStorageStatus {
@@ -33,9 +46,64 @@ interface CalculatorState {
   isNewInput: boolean;
 }
 
-const DECOY_PIN_KEY = 'safe_ride_decoy_pin';
+const DECOY_PIN_KEY = DECOY_PIN_STORE_KEY;
+const DECOY_PIN_ATTEMPTS_KEY = DECOY_PIN_ATTEMPTS_STORE_KEY;
 const CALCULATOR_STATE_KEY = 'calculator_state';
 const SALT_BYTES = 16;
+const PIN_PATTERN = /^\d{4,8}$/;
+// The KDF runs in JS (Hermes has no JIT) once per "=" press, so the count is
+// bounded by on-device latency and must be timed on a low-end Android. No
+// phone-friendly count makes a 4-8 digit PIN expensive to brute-force offline;
+// the verifier's main protection is SecureStore plus the attempt throttle.
+// Verifiers record their own count and are rehashed on the next successful
+// entry whenever this value is raised.
+const PIN_KDF_ITERATIONS = 5_000;
+const MIN_PIN_KDF_ITERATIONS = 1_000;
+const MAX_PIN_KDF_ITERATIONS = 1_000_000;
+const PIN_KDF_KEY_BYTES = 32;
+// Survivor safety outranks guess resistance: a locked-out survivor cannot get
+// back from the calculator to SOS, so the lockout stays short and silent.
+const FREE_FAILED_ATTEMPTS = 5;
+const LOCKOUT_BASE_MS = 15_000;
+const LOCKOUT_MAX_MS = 60_000;
+const MAX_RECORDED_FAILED_ATTEMPTS = 10_000;
+// "=" presses that are not PIN submissions still run one KDF over this fixed
+// input, so every "=" costs the same whether or not it was a PIN attempt.
+const EQUALIZER_INPUT = '00000000';
+const EQUALIZER_SALT = 'saferide-decoy-equalizer';
+
+function isIntegerInRange(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
+}
+
+function needsVerifierUpgrade(config: DecoyPinConfig): boolean {
+  return config.kdf !== DECOY_PIN_KDF || (config.iterations ?? 0) < PIN_KDF_ITERATIONS;
+}
+
+/** 0 for the first four failures, then 15 s, 30 s and at most 60 s. */
+function lockoutDurationMs(failedAttempts: number): number {
+  if (failedAttempts < FREE_FAILED_ATTEMPTS) return 0;
+  return Math.min(LOCKOUT_BASE_MS * 2 ** (failedAttempts - FREE_FAILED_ATTEMPTS), LOCKOUT_MAX_MS);
+}
+
+/**
+ * Elapsed-time check against the last failure. Callers clamp a future
+ * failure time to now first, so a lockout can never last longer than
+ * LOCKOUT_MAX_MS from any moment, whichever way the clock moves.
+ */
+function isLockedOut(state: DecoyPinAttemptState, now: number): boolean {
+  const lockoutMs = lockoutDurationMs(state.failedAttempts);
+  return lockoutMs > 0 && now - state.lastFailedAt < lockoutMs;
+}
+
+async function pbkdf2Hex(pin: string, salt: string, iterations: number): Promise<string> {
+  const derived = await pbkdf2Async(sha256, pin, salt, {
+    c: iterations,
+    dkLen: PIN_KDF_KEY_BYTES,
+    asyncTick: 10,
+  });
+  return bytesToHex(derived);
+}
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
@@ -65,11 +133,20 @@ export class DecoyPinManager {
     return DecoyPinManager.instance;
   }
 
-  private async hashPin(pin: string, salt: string): Promise<string> {
-    const pinWithSalt = pin + salt;
+  private verification: Promise<unknown> = Promise.resolve();
+
+  private async hashPin(
+    pin: string,
+    verifier: Pick<DecoyPinConfig, 'salt' | 'kdf' | 'iterations'>,
+  ): Promise<string> {
+    if (verifier.kdf === DECOY_PIN_KDF && verifier.iterations !== undefined) {
+      return pbkdf2Hex(pin, verifier.salt, verifier.iterations);
+    }
+
+    // Verifiers written before PBKDF2; only read so they can be migrated.
     return await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      pinWithSalt,
+      pin + verifier.salt,
       { encoding: Crypto.CryptoEncoding.HEX }
     );
   }
@@ -77,6 +154,22 @@ export class DecoyPinManager {
   private async generateSalt(): Promise<string> {
     const bytes = await Crypto.getRandomBytesAsync(SALT_BYTES);
     return bytesToHex(bytes);
+  }
+
+  private async createVerifier(
+    pin: string,
+    requireToExit: boolean,
+    createdAt: number,
+  ): Promise<DecoyPinConfig> {
+    const verifier = {
+      requireToExit,
+      salt: await this.generateSalt(),
+      createdAt,
+      kdf: DECOY_PIN_KDF,
+      iterations: PIN_KDF_ITERATIONS,
+    };
+
+    return { ...verifier, hashedPin: await this.hashPin(pin, verifier) };
   }
 
   async getStorageStatus(): Promise<DecoyPinStorageStatus> {
@@ -132,18 +225,94 @@ export class DecoyPinManager {
         typeof parsed.salt === 'string' &&
         typeof parsed.createdAt === 'number'
       ) {
-        return {
+        const config: DecoyPinConfig = {
           hashedPin: parsed.hashedPin,
           requireToExit: !!parsed.requireToExit,
           salt: parsed.salt,
           createdAt: parsed.createdAt,
         };
+        if (parsed.kdf === undefined) {
+          return config;
+        }
+        if (
+          parsed.kdf === DECOY_PIN_KDF &&
+          isIntegerInRange(parsed.iterations, MIN_PIN_KDF_ITERATIONS, MAX_PIN_KDF_ITERATIONS)
+        ) {
+          return { ...config, kdf: DECOY_PIN_KDF, iterations: parsed.iterations };
+        }
       }
     } catch {
       return null;
     }
 
     return null;
+  }
+
+  /**
+   * Failures are never forgotten by elapsed time, only by a correct entry or
+   * a new or cleared PIN, so moving the clock forward cannot reset the count.
+   * A failure time in the future (clock moved back) is clamped to now and
+   * saved, so it cannot stretch a lockout past LOCKOUT_MAX_MS.
+   */
+  private async readAttemptState(now: number): Promise<DecoyPinAttemptState> {
+    const fresh: DecoyPinAttemptState = { failedAttempts: 0, lastFailedAt: 0 };
+
+    try {
+      const raw = await SecureStore.getItemAsync(DECOY_PIN_ATTEMPTS_KEY);
+      if (!raw) return fresh;
+
+      const parsed = JSON.parse(raw) as Partial<DecoyPinAttemptState>;
+      if (
+        !isIntegerInRange(parsed.failedAttempts, 0, MAX_RECORDED_FAILED_ATTEMPTS) ||
+        !isIntegerInRange(parsed.lastFailedAt, 0, Number.MAX_SAFE_INTEGER)
+      ) {
+        return fresh;
+      }
+
+      const state: DecoyPinAttemptState = {
+        failedAttempts: parsed.failedAttempts,
+        lastFailedAt: parsed.lastFailedAt,
+      };
+      if (state.lastFailedAt > now) {
+        state.lastFailedAt = now;
+        await this.writeAttemptState(state);
+      }
+      return state;
+    } catch (error) {
+      devPrivacyWarn('decoy pin attempt state read failed', {
+        reason: getPrivacySafeErrorReason(error),
+      });
+      return fresh;
+    }
+  }
+
+  private async writeAttemptState(state: DecoyPinAttemptState): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(DECOY_PIN_ATTEMPTS_KEY, JSON.stringify(state), {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+      });
+    } catch (error) {
+      devPrivacyWarn('decoy pin attempt state write failed', {
+        reason: getPrivacySafeErrorReason(error),
+      });
+    }
+  }
+
+  private async recordFailedAttempt(state: DecoyPinAttemptState, now: number): Promise<void> {
+    await this.writeAttemptState({
+      failedAttempts: Math.min(state.failedAttempts + 1, MAX_RECORDED_FAILED_ATTEMPTS),
+      lastFailedAt: now,
+    });
+  }
+
+  private async clearAttemptState(): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(DECOY_PIN_ATTEMPTS_KEY);
+    } catch (error) {
+      devPrivacyWarn('decoy pin attempt state clear failed', {
+        reason: getPrivacySafeErrorReason(error),
+      });
+    }
   }
 
   private async readSecureConfig(): Promise<DecoyPinConfig | null> {
@@ -200,17 +369,14 @@ export class DecoyPinManager {
       }
     }
 
-    const salt = await this.generateSalt();
-    const hashedPin = await this.hashPin(pin, salt);
-    
-    const config: DecoyPinConfig = {
-      hashedPin,
-      requireToExit,
-      salt,
-      createdAt: Date.now(),
-    };
+    if (!PIN_PATTERN.test(pin)) {
+      throw new Error('Decoy PIN must be 4 to 8 digits.');
+    }
+
+    const config = await this.createVerifier(pin, requireToExit, Date.now());
 
     await this.writeSecureConfig(config);
+    await this.clearAttemptState();
     await AsyncStorage.removeItem(DECOY_PIN_KEY);
   }
 
@@ -310,16 +476,89 @@ export class DecoyPinManager {
     return exitAuthStatus.available;
   }
 
-  async verifyPin(inputPin: string): Promise<boolean> {
-    const config = await this.getPinConfig();
-    if (!config) return false;
+  /**
+   * Checks one explicit calculator submission (the "=" key). `entry` is the
+   * digit run typed since the last clear, operator or "="; it is null when the
+   * press finished a calculation or the entry is not a plain 4-8 digit run, and
+   * such presses never count as attempts. Every press while a PIN is set runs
+   * exactly one PBKDF2 pass, so its cost does not reveal whether it was a PIN
+   * attempt, its length, or a lockout. Checks are serialized so concurrent
+   * presses cannot lose a failed attempt. While locked out, submissions are
+   * rejected without any hint: the calculator disguise must not reveal that a
+   * PIN exists.
+   */
+  async verifyPin(entry: string | null): Promise<boolean> {
+    const result = this.verification.then(() => this.verifyPinNow(entry));
+    this.verification = result.catch(() => undefined);
+    return result;
+  }
 
-    const hashedInput = await this.hashPin(inputPin, config.salt);
-    return constantTimeEquals(hashedInput, config.hashedPin);
+  private async verifyPinNow(entry: string | null): Promise<boolean> {
+    try {
+      const config = await this.getPinConfig();
+      if (!config) return false;
+
+      const now = Date.now();
+      const attempts = await this.readAttemptState(now);
+      const candidate = entry !== null && PIN_PATTERN.test(entry) ? entry : null;
+      if (candidate === null || isLockedOut(attempts, now)) {
+        await this.runEqualizer(config);
+        return false;
+      }
+
+      if (!(await this.matches(candidate, config))) {
+        await this.recordFailedAttempt(attempts, now);
+        return false;
+      }
+
+      if (attempts.failedAttempts > 0) {
+        await this.clearAttemptState();
+      }
+      if (needsVerifierUpgrade(config)) {
+        await this.upgradeVerifier(candidate, config);
+      }
+      return true;
+    } catch (error) {
+      devPrivacyWarn('decoy pin verification failed', {
+        reason: getPrivacySafeErrorReason(error),
+      });
+      return false;
+    }
+  }
+
+  private async matches(candidate: string, config: DecoyPinConfig): Promise<boolean> {
+    const hashed = await this.hashPin(candidate, config);
+    if (config.kdf !== DECOY_PIN_KDF) {
+      // Legacy SHA-256 is near-instant; pay the PBKDF2 cost anyway.
+      await this.runEqualizer(config);
+    }
+    return constantTimeEquals(hashed, config.hashedPin);
+  }
+
+  private async runEqualizer(config: DecoyPinConfig): Promise<void> {
+    await pbkdf2Hex(
+      EQUALIZER_INPUT,
+      config.kdf === DECOY_PIN_KDF ? config.salt : EQUALIZER_SALT,
+      config.kdf === DECOY_PIN_KDF && config.iterations !== undefined ? config.iterations : PIN_KDF_ITERATIONS,
+    );
+  }
+
+  /** Rehash an older verifier with the entered PIN once it has been proven correct. */
+  private async upgradeVerifier(pin: string, config: DecoyPinConfig): Promise<void> {
+    try {
+      await this.writeSecureConfig(
+        await this.createVerifier(pin, config.requireToExit, config.createdAt),
+      );
+    } catch (error) {
+      devPrivacyWarn('decoy pin verifier upgrade failed', {
+        reason: getPrivacySafeErrorReason(error),
+      });
+    }
   }
 
   async clearPinConfig(): Promise<void> {
     await this.deleteSecureConfig();
+    await this.clearAttemptState();
     await AsyncStorage.removeItem(DECOY_PIN_KEY);
   }
 
@@ -333,7 +572,12 @@ export class DecoyPinManager {
 export class DecoyCalculator {
   private static instance: DecoyCalculator;
   private state: CalculatorState;
-  private pinBuffer: string = '';
+  /**
+   * Digits typed since the last clear, operator or "=". Null once the entry
+   * stops being a plain digit run (a decimal point). Only this whole entry,
+   * submitted with "=" and no pending operation, is ever checked as a PIN.
+   */
+  private entry: string | null = '';
   private listeners: Array<(state: CalculatorState) => void> = [];
   
   static getInstance(): DecoyCalculator {
@@ -384,26 +628,12 @@ export class DecoyCalculator {
     this.listeners.forEach(listener => listener({ ...this.state }));
   }
 
-  async inputNumber(digit: string): Promise<{ shouldUnlock: boolean }> {
-    // Add to pin buffer for decoy pin checking
-    this.pinBuffer += digit;
-    
-    // Check if pin buffer matches decoy pin
-    const pinManager = DecoyPinManager.getInstance();
-    if (this.pinBuffer.length >= 4) {
-      const isValidPin = await pinManager.verifyPin(this.pinBuffer);
-      if (isValidPin) {
-        this.pinBuffer = '';
-        return { shouldUnlock: true };
-      }
-      
-      // Reset buffer if it gets too long without matching
-      if (this.pinBuffer.length > 8) {
-        this.pinBuffer = '';
-      }
+  /** Digits never unlock on their own; see submit(). */
+  async inputNumber(digit: string): Promise<void> {
+    if (this.entry !== null) {
+      this.entry += digit;
     }
 
-    // Normal calculator operation
     if (this.state.isNewInput) {
       this.state.display = digit;
       this.state.isNewInput = false;
@@ -413,10 +643,10 @@ export class DecoyCalculator {
 
     this.notifyListeners();
     await this.saveState();
-    return { shouldUnlock: false };
   }
 
   inputOperation(op: string): void {
+    this.entry = '';
     if (this.state.operation && !this.state.isNewInput) {
       this.calculate();
     }
@@ -431,6 +661,7 @@ export class DecoyCalculator {
 
   inputDecimal(): void {
     if (this.state.display.includes('.')) return;
+    this.entry = null;
     
     if (this.state.isNewInput) {
       this.state.display = '0.';
@@ -441,6 +672,24 @@ export class DecoyCalculator {
     
     this.notifyListeners();
     this.saveState();
+  }
+
+  /**
+   * The "=" key. Finishes any pending calculation and, only when there was no
+   * pending operation, submits the whole digit entry as a PIN attempt. The
+   * display updates before the check, which never blocks it.
+   */
+  async submit(): Promise<{ shouldUnlock: boolean }> {
+    const entry = this.state.operation ? null : this.entry;
+    this.entry = '';
+    this.calculate();
+
+    const shouldUnlock = await DecoyPinManager.getInstance().verifyPin(entry);
+    if (shouldUnlock) {
+      // Do not leave the PIN on the persisted calculator display.
+      this.clear();
+    }
+    return { shouldUnlock };
   }
 
   calculate(): void {
@@ -483,13 +732,16 @@ export class DecoyCalculator {
       previousValue: null,
       isNewInput: true,
     };
-    this.pinBuffer = '';
+    this.entry = '';
     
     this.notifyListeners();
     this.saveState();
   }
 
   backspace(): void {
+    if (this.entry !== null) {
+      this.entry = this.entry.slice(0, -1);
+    }
     if (this.state.display.length > 1) {
       this.state.display = this.state.display.slice(0, -1);
     } else {

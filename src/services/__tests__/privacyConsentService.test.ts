@@ -12,7 +12,10 @@ const ledger = vi.hoisted(() => ({
 const http = vi.hoisted(() => ({ request: vi.fn(), setAuthToken: vi.fn() }));
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }));
 
-vi.mock('../../utils/consentLedger', () => ledger);
+vi.mock('../../utils/consentLedger', async importOriginal => ({
+  requiresRemoteWithdrawal: (await importOriginal<typeof import('../../utils/consentLedger')>()).requiresRemoteWithdrawal,
+  ...ledger,
+}));
 vi.mock('../../lib/api/httpClient', () => http);
 vi.mock('../../lib/auth/authClient', () => ({ authClient: { getSession: auth.getSession } }));
 
@@ -71,5 +74,17 @@ describe('consent withdrawal coordination', () => {
     );
     expect(ledger.withdrawConsent).toHaveBeenCalledWith(aggregateConsent.id);
     expect(ledger.confirmRemoteConsentWithdrawal).not.toHaveBeenCalled();
+  });
+
+  it.each(['partner_follow_up', 'partner_callback'])('withdraws a %s consent on the server too', async purpose => {
+    const partnerConsent = { ...aggregateConsent, purpose };
+    ledger.withdrawConsent.mockResolvedValue(partnerConsent);
+    http.request.mockResolvedValue({ withdrawal: { status: 'withdrawn' } });
+    ledger.confirmRemoteConsentWithdrawal.mockResolvedValue({ ...partnerConsent, remoteWithdrawalStatus: 'confirmed' });
+    await expect(withdrawConsentForFutureProcessing(partnerConsent.id)).resolves.toMatchObject({ remote: 'confirmed' });
+    expect(http.request).toHaveBeenCalledWith({
+      path: `/privacy/consents/${partnerConsent.id}/withdraw`,
+      method: 'POST',
+    });
   });
 });

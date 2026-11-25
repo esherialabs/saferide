@@ -27,14 +27,14 @@
   "properties": {
     "schema": { "const": "com.saferide.ai.v05-sagemaker-launch-plan" },
     "schemaVersion": { "const": 1 },
-    "launchId": { "type": "string", "pattern": "^saferide-v05-sagemaker-launch-[a-z0-9.-]{8,96}$" },
+    "launchId": { "type": "string", "pattern": "^saferide-v05(?:1|2|3)?-sagemaker-launch-[a-z0-9.-]{8,96}$" },
     "createdAt": { "type": "string", "format": "date-time" },
     "launcherSourceCommit": { "$ref": "#/$defs/commit" },
     "datasetSourceCommit": { "$ref": "#/$defs/commit" },
-    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.0" },
+    "datasetId": { "enum": ["saferide-synthetic-guidance-v0.5.0", "saferide-synthetic-guidance-v0.5.1", "saferide-synthetic-guidance-v0.5.2", "saferide-synthetic-guidance-v0.5.3"] },
     "status": { "const": "ready" },
     "runKind": { "enum": ["preflight", "pilot", "candidate"] },
-    "runId": { "type": "string", "pattern": "^saferide-v05-[a-z0-9](?:[a-z0-9-]{6,49}[a-z0-9])$", "maxLength": 63 },
+    "runId": { "type": "string", "pattern": "^saferide-v05(?:1|2|3)?-[a-z0-9](?:[a-z0-9-]{6,48}[a-z0-9])$", "maxLength": 63 },
     "region": { "const": "eu-central-1" },
     "roleArn": { "type": "string", "pattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]{1,128}$" },
     "image": {
@@ -77,7 +77,7 @@
         "learningRate": { "enum": [0.00001, 0.00002] },
         "epochs": { "const": 1 },
         "maxSteps": { "type": ["integer", "null"], "minimum": 1 },
-        "pairedRunId": { "type": ["string", "null"], "pattern": "^saferide-v05-[a-z0-9-]{8,96}$" }
+        "pairedRunId": { "type": ["string", "null"], "pattern": "^saferide-v05(?:1|2|3)?-[a-z0-9-]{8,96}$" }
       }
     },
     "output": {

@@ -33,6 +33,14 @@ npm run secrets:scan
 npm test
 ```
 
+## Verification without GitHub Actions
+
+GitHub Actions is unavailable for the organisation, so the required checks are run
+on the maintainers' server with `scripts/public-verify.mjs` and reported as commit
+statuses. You can run the same gates yourself:
+`npm run verify:public -- --snapshot . --out ../saferide-verify`.
+See [local verification](local-verification.md).
+
 ## Coverage gates
 
 ```bash
@@ -41,8 +49,8 @@ npm run coverage:check:public
 
 The checked-in policy requires at least 15% global branch/function/line/
 statement coverage and at least 80% per-file coverage for named critical
-privacy and safety modules. CI uploads the LCOV and JSON summaries as public
-workflow artifacts. The current dated summary is stored in
+privacy and safety modules. The workflow uploads the LCOV and JSON summaries as public
+workflow artifacts when Actions is available; the local run keeps `coverage-summary.json` in its evidence folder. The current dated summary is stored in
 `docs/open-source/evidence/coverage-report-2026-08-18.md` with a machine-readable
 JSON companion.
 

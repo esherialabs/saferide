@@ -1,28 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { isSafeRequestId, resolveRequestId } from '../requestId.js';
+import { REQUEST_ID_OPTIONS, generateRequestId } from '../requestId.js';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe('request ID boundary', () => {
-  const generated = 'server-generated-request-id';
-
-  it('preserves short identifiers made only from the approved character set', () => {
-    expect(resolveRequestId('trace-01:span_02.example', () => generated)).toBe('trace-01:span_02.example');
+  it('generates a fresh random UUID for every request', () => {
+    const first = generateRequestId();
+    expect(first).toMatch(UUID);
+    expect(generateRequestId()).not.toBe(first);
   });
 
-  it.each([
-    '',
-    'survivor narrative must not enter logs',
-    'exact/location/value',
-    'line\nbreak',
-    '<script>',
-    'éxternal-id',
-    `a${'b'.repeat(96)}`,
-  ])('replaces unsafe client input instead of returning or persisting it: %j', value => {
-    expect(isSafeRequestId(value)).toBe(false);
-    expect(resolveRequestId(value, () => generated)).toBe(generated);
-  });
-
-  it('rejects duplicate header arrays rather than choosing an ambiguous client value', () => {
-    expect(resolveRequestId(['first', 'second'], () => generated)).toBe(generated);
+  it('configures Fastify to ignore request-id headers and generate ids server-side', () => {
+    expect(REQUEST_ID_OPTIONS.requestIdHeader).toBe(false);
+    expect(REQUEST_ID_OPTIONS.genReqId()).toMatch(UUID);
   });
 });

@@ -13,22 +13,22 @@ import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-n
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import {
-  ActionSheet,
   Button,
   DashboardTemplate,
   InfoModal,
   InfoModalBullet,
   InfoModalSection,
 } from '../components/ui';
+import { EmergencyHelpSheet } from '../components/ui/EmergencyHelpSheet';
+import { SafetyIllustration } from '../components/ui/SafetyIllustration';
 import { RootStackParamList, MainTabParamList } from '../navigation/routes';
 import { resetReportStackToRoute } from '../navigation/reportNavigation';
 import { useStealthMode } from '../hooks/useStealthMode';
 import { useToast } from '../components/ui/Toast';
 import { useTheme } from '../theme/SimpleThemeProvider';
-import { borders, elevation, radii, spacing, typography } from '../theme/tokens';
+import { borders, radii, spacing, typography } from '../theme/tokens';
 import { draftStorage, type DraftData } from '../utils/draftStorage';
 import { getReportWizardProgress, getReportWizardResumeTarget } from '../navigation/reportPathwayFlow';
 import { getEditableReportDrafts } from '../utils/reportDraftSelection';
@@ -48,11 +48,19 @@ type HomeNavigationProp = CompositeNavigationProp<
 
 type DraftStepRoute = 'WhatHappened' | 'WhereWhen' | 'EvidenceDetail';
 type HomeInfoTopic = 'report' | 'support' | 'cases' | 'learn' | 'immediate' | 'tips' | 'privacy';
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const REPORT_START_STEP: DraftStepRoute = 'WhatHappened';
-const HORIZONTAL_PADDING = 24;
-const TILE_GUTTER = 12;
+const HORIZONTAL_PADDING = spacing.md;
+const SECTION_GAP = spacing.xs;
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function getGreeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 function formatUpdatedAt(value?: Date) {
   if (!value || Number.isNaN(value.getTime())) {
@@ -66,8 +74,8 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNavigationProp>();
   const { quickExit, quickExitAvailable } = useStealthMode();
   const toast = useToast();
-  const { colors, mode, isHighContrast } = useTheme();
-  const { width } = useWindowDimensions();
+  const { colors, mode } = useTheme();
+  const { width, fontScale } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
   const [latestDraft, setLatestDraft] = useState<DraftData | null>(null);
   const [draftCount, setDraftCount] = useState(0);
@@ -79,9 +87,11 @@ export default function HomeScreen() {
   const [supportCatalogError, setSupportCatalogError] = useState<string | null>(null);
   const [isSupportCatalogLoading, setIsSupportCatalogLoading] = useState(false);
 
-  const tileWidth = useMemo(() => {
-    return Math.max(124, Math.floor((width - HORIZONTAL_PADDING * 2 - TILE_GUTTER) / 2));
-  }, [width]);
+  // The card art appears only where it does not squeeze the title onto two lines.
+  const showReportArt = width >= 400 && fontScale < 1.3;
+  // Enlarged text keeps whole words: the decorative icon steps aside, then the info control moves below.
+  const emergencyWithoutIcon = width < 350 || fontScale >= 1.3;
+  const emergencyInfoBelow = fontScale >= 1.6 || (width < 350 && fontScale >= 1.3);
 
   const loadDrafts = useCallback(async () => {
     const drafts = await draftStorage.getAllDrafts();
@@ -135,6 +145,11 @@ export default function HomeScreen() {
         isActive = false;
       };
     }, [loadDrafts, toast]),
+  );
+
+  const latestDraftProgress = useMemo(
+    () => (latestDraft ? getReportWizardProgress(latestDraft) : null),
+    [latestDraft],
   );
 
   const latestDraftStatus = useMemo(() => {
@@ -279,118 +294,37 @@ export default function HomeScreen() {
       return;
     }
 
+    if (query.includes('report')) {
+      handleContinueDraft();
+      return;
+    }
+
     toast.show({
       title: 'No quick match',
       message: 'Use the cards below to open the main journeys.',
       variant: 'info',
     });
-  }, [navigation, searchQuery, toast]);
+  }, [handleContinueDraft, navigation, searchQuery, toast]);
 
   const isDarkMode = mode === 'dark';
-  const inverseMutedText = isDarkMode ? 'rgba(16,9,8,0.72)' : 'rgba(255,248,243,0.88)';
-  const inverseArtwork = isDarkMode ? 'rgba(16,9,8,0.18)' : 'rgba(255,248,243,0.22)';
-  const inverseControlBackground = isDarkMode ? 'rgba(16,9,8,0.10)' : 'rgba(255,255,255,0.16)';
-  const inverseControlBorder = isDarkMode ? 'rgba(16,9,8,0.16)' : 'rgba(255,255,255,0.22)';
-  const inverseAccent = isDarkMode ? 'rgba(16,9,8,0.18)' : 'rgba(255,255,255,0.28)';
-
-  const cardGradients = useMemo(() => {
-    if (isHighContrast) {
-      return {
-        status: [colors.surface, colors.surface] as const,
-        emergency: [colors.critical, colors.critical] as const,
-        tips: [colors.surface, colors.surface] as const,
-      };
-    }
-
-    if (mode === 'dark') {
-      return {
-        status: [colors.surfaceAlt, colors.surface] as const,
-        emergency: [colors.critical, '#FFD5CF'] as const,
-        tips: [colors.surfaceAlt, colors.primaryMuted] as const,
-      };
-    }
-
-    return {
-      status: [colors.surface, colors.safetyMuted] as const,
-      emergency: [colors.critical, '#5F1422'] as const,
-      tips: [colors.surface, colors.primaryMuted] as const,
-    };
-  }, [colors, isHighContrast, mode]);
-
-  const tileThemes = useMemo(() => {
-    if (isHighContrast) {
-      return {
-        report: {
-          gradient: [colors.primary, colors.primary] as const,
-          shadow: colors.primary,
-          icon: 'document-text-outline' as IoniconName,
-        },
-        support: {
-          gradient: [colors.support, colors.support] as const,
-          shadow: colors.support,
-          icon: 'chatbubbles-outline' as IoniconName,
-        },
-        cases: {
-          gradient: [colors.evidence, colors.evidence] as const,
-          shadow: colors.evidence,
-          icon: 'folder-open' as IoniconName,
-        },
-        learn: {
-          gradient: [colors.consent, colors.consent] as const,
-          shadow: colors.consent,
-          icon: 'play-circle-outline' as IoniconName,
-        },
-      };
-    }
-
-    if (mode === 'dark') {
-      return {
-        report: {
-          gradient: [colors.primary, '#F0BBD4'] as const,
-          shadow: colors.primary,
-          icon: 'document-text-outline' as IoniconName,
-        },
-        support: {
-          gradient: [colors.support, '#BEEBC9'] as const,
-          shadow: colors.support,
-          icon: 'chatbubbles-outline' as IoniconName,
-        },
-        cases: {
-          gradient: [colors.evidence, '#C3E1FF'] as const,
-          shadow: colors.evidence,
-          icon: 'folder-open' as IoniconName,
-        },
-        learn: {
-          gradient: [colors.consent, '#FFE0A8'] as const,
-          shadow: colors.consent,
-          icon: 'play-circle-outline' as IoniconName,
-        },
-      };
-    }
-
-    return {
-      report: {
-        gradient: [colors.primary, '#4F203D'] as const,
-        shadow: colors.primary,
-        icon: 'document-text-outline' as IoniconName,
-      },
-      support: {
-        gradient: [colors.support, '#18412B'] as const,
-        shadow: colors.support,
-        icon: 'chatbubbles-outline' as IoniconName,
-      },
-      cases: {
-        gradient: [colors.evidence, '#123E5C'] as const,
-        shadow: colors.evidence,
-        icon: 'folder-open' as IoniconName,
-      },
-      learn: {
-        gradient: [colors.consent, '#5C2D0F'] as const,
-        shadow: colors.consent,
-        icon: 'play-circle-outline' as IoniconName,
-      },
-    };
-  }, [colors, isHighContrast, mode]);
+  // Dark mode keeps urgent help unmistakable without a bright salmon slab.
+  const emergencyPalette = useMemo(() => (isDarkMode ? {
+    background: colors.criticalMuted,
+    border: colors.critical,
+    foreground: colors.foreground,
+    icon: colors.critical,
+    iconBackground: 'rgba(0,0,0,0.18)',
+    iconBorder: colors.critical,
+    divider: colors.critical,
+  } : {
+    background: colors.critical,
+    border: colors.critical,
+    foreground: colors.criticalForeground,
+    icon: colors.criticalForeground,
+    iconBackground: 'rgba(255,255,255,0.14)',
+    iconBorder: 'rgba(255,255,255,0.28)',
+    divider: 'rgba(255,255,255,0.28)',
+  }), [colors, isDarkMode]);
 
   const closeInfo = useCallback(() => setActiveInfo(null), []);
 
@@ -401,8 +335,11 @@ export default function HomeScreen() {
 
   return (
     <DashboardTemplate showNetworkStatus edges={['left', 'right']} scrollContentStyle={styles.scrollContent}>
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.divider, shadowColor: colors.primary }]}>
-        <View pointerEvents="none" style={[styles.searchAccent, { backgroundColor: colors.primary }]} />
+      <View style={styles.intro}>
+        <Text accessibilityRole="header" style={[styles.introTitle, { color: colors.foreground }]}>{getGreeting()}</Text>
+        <Text style={[styles.introText, { color: colors.textSecondary }]}>Record, find support, or learn at your pace.</Text>
+      </View>
+      <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.input }]}>
         <Ionicons name="search-outline" size={20} color={colors.textTertiary} />
         <TextInput
           style={[styles.searchInput, { color: colors.foreground }]}
@@ -427,233 +364,229 @@ export default function HomeScreen() {
       <View
         style={[
           styles.emergencyButton,
+          emergencyInfoBelow && styles.emergencyStacked,
           {
-            shadowColor: colors.critical,
+            backgroundColor: emergencyPalette.background,
+            borderColor: emergencyPalette.border,
           },
         ]}
       >
-        <LinearGradient
-          colors={cardGradients.emergency}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.emergencyGradient}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Open immediate help options"
+          activeOpacity={0.9}
+          onPress={handleEmergency}
+          style={styles.emergencyPrimary}
         >
-          <View style={[styles.emergencySignal, { backgroundColor: inverseAccent }]} />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Open immediate help options"
-            activeOpacity={0.9}
-            onPress={handleEmergency}
-            style={styles.emergencyPrimary}
-          >
-            <View style={[styles.emergencyIconShell, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}>
+          {emergencyWithoutIcon ? null : (
+            <View style={[styles.emergencyIconShell, { backgroundColor: emergencyPalette.iconBackground, borderColor: emergencyPalette.iconBorder }]}>
               <Ionicons
                 name="warning"
-                size={24}
-                color={colors.criticalForeground}
+                size={22}
+                color={emergencyPalette.icon}
               />
             </View>
-            <View style={styles.emergencyCopy}>
-              <Text style={[styles.emergencyText, { color: colors.criticalForeground }]}>
-                Immediate Help
-              </Text>
-              <Text style={[styles.emergencySubtext, { color: colors.criticalForeground }]}>
-                Kenya: 1195, 999, 112, or Quick Exit
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.criticalForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="More about immediate help"
-            activeOpacity={0.85}
-            onPress={() => setActiveInfo('immediate')}
-            style={[styles.emergencyMoreButton, { borderTopColor: inverseControlBorder }]}
-          >
-            <Ionicons name="information-circle-outline" size={16} color={colors.criticalForeground} />
-            <Text style={[styles.moreButtonText, { color: colors.criticalForeground }]}>More</Text>
-          </TouchableOpacity>
-        </LinearGradient>
+          )}
+          <View style={styles.emergencyCopy}>
+            <Text style={[styles.emergencyText, { color: emergencyPalette.foreground }]}>
+              Immediate Help
+            </Text>
+            <Text style={[styles.emergencySubtext, { color: emergencyPalette.foreground }]}>
+              Kenya: 1195, 999, 112, or Quick Exit
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={emergencyPalette.foreground} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="More about immediate help"
+          activeOpacity={0.85}
+          onPress={() => setActiveInfo('immediate')}
+          style={[
+            styles.cardInfoButton,
+            emergencyInfoBelow
+              ? [styles.cardInfoBelow, { borderTopColor: emergencyPalette.divider }]
+              : { borderLeftColor: emergencyPalette.divider },
+          ]}
+        >
+          <Ionicons name="information-circle-outline" size={22} color={emergencyPalette.foreground} />
+          {emergencyInfoBelow ? <Text style={[styles.cardInfoLabel, { color: emergencyPalette.foreground }]}>More</Text> : null}
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.tileRow}>
-        <View style={[styles.actionTile, { width: tileWidth, shadowColor: tileThemes.report.shadow }]}>
-          <LinearGradient
-            colors={tileThemes.report.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.tileGradient}
-          >
-          <View style={[styles.tileAccentRail, { backgroundColor: inverseAccent }]} />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={latestDraft ? 'Continue latest draft' : 'Start a report'}
-            activeOpacity={0.94}
-            onPress={handleContinueDraft}
-            style={styles.tilePrimary}
-          >
-            <Text style={[styles.tileLabel, { color: colors.textInverse }]}>{latestDraft ? 'Continue draft' : 'File report'}</Text>
-            <Text style={[styles.tileMeta, { color: inverseMutedText }]} numberOfLines={2}>{latestDraftStatus}</Text>
-          </TouchableOpacity>
+      <View style={[styles.reportCard, { backgroundColor: colors.primaryMuted }]}>
+        <View style={styles.reportTop}>
+          <View style={styles.reportCopy}>
+            <Text accessibilityRole="header" style={[styles.reportTitle, { color: colors.foreground }]}>
+              {latestDraft ? 'Continue your report' : 'Record what happened'}
+            </Text>
+            <Text style={[styles.reportText, { color: colors.textSecondary }]}>
+              {latestDraft
+                ? latestDraftStatus
+                : 'Four short steps, saved on this phone. Nothing is shared unless you choose.'}
+            </Text>
+          </View>
+          {showReportArt && !latestDraft ? <SafetyIllustration kind="evidence" size={56} /> : null}
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="More about reports"
             activeOpacity={0.85}
             onPress={() => setActiveInfo('report')}
-            style={[styles.tileInfoButton, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}
+            style={styles.reportInfo}
           >
-            <Ionicons name="information-circle-outline" size={18} color={colors.textInverse} />
+            <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
-          <View style={[styles.tileIconBadge, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}>
-            <Ionicons name={tileThemes.report.icon} size={26} color={colors.textInverse} />
-          </View>
-          <Ionicons name={tileThemes.report.icon} size={62} color={inverseArtwork} style={styles.tileArtworkIcon} />
-          </LinearGradient>
         </View>
 
-        <View style={[styles.actionTile, { width: tileWidth, shadowColor: tileThemes.support.shadow }]}>
-          <LinearGradient
-            colors={tileThemes.support.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.tileGradient}
+        {latestDraftProgress ? (
+          <View
+            style={styles.reportProgress}
+            accessible
+            accessibilityLabel={`${latestDraftProgress.completedSteps} of ${latestDraftProgress.totalSteps} report steps done`}
           >
-          <View style={[styles.tileAccentRail, { backgroundColor: inverseAccent }]} />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Open support"
-            activeOpacity={0.94}
-            onPress={() => navigation.navigate('Support')}
-            style={styles.tilePrimary}
-          >
-            <Text style={[styles.tileLabel, { color: colors.textInverse }]}>Quick support</Text>
-            <Text style={[styles.tileMeta, { color: inverseMutedText }]} numberOfLines={2}>Chat and provider options</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="More about support"
-            activeOpacity={0.85}
-            onPress={() => setActiveInfo('support')}
-            style={[styles.tileInfoButton, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}
-          >
-            <Ionicons name="information-circle-outline" size={18} color={colors.textInverse} />
-          </TouchableOpacity>
-          <View style={[styles.tileIconBadge, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}>
-            <Ionicons name={tileThemes.support.icon} size={26} color={colors.textInverse} />
+            {latestDraftProgress.steps.map(step => (
+              <View
+                key={step.id}
+                style={[
+                  styles.reportProgressSegment,
+                  {
+                    backgroundColor: step.status === 'complete' || step.status === 'skipped'
+                      ? colors.primary
+                      : colors.surface,
+                  },
+                ]}
+              />
+            ))}
           </View>
-          <Ionicons name={tileThemes.support.icon} size={62} color={inverseArtwork} style={styles.tileArtworkIcon} />
-          </LinearGradient>
-        </View>
-      </View>
+        ) : null}
 
-      <View style={styles.tileRow}>
-        <View style={[styles.actionTile, { width: tileWidth, shadowColor: tileThemes.cases.shadow }]}>
-          <LinearGradient
-            colors={tileThemes.cases.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.tileGradient}
-          >
-          <View style={[styles.tileAccentRail, { backgroundColor: inverseAccent }]} />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Open case tracker"
-            activeOpacity={0.94}
-            onPress={() => navigation.navigate('Cases')}
-            style={styles.tilePrimary}
-          >
-            <Text style={[styles.tileLabel, { color: colors.textInverse }]}>Case Tracker</Text>
-            <Text style={[styles.tileMeta, { color: inverseMutedText }]} numberOfLines={2}>Drafts and submissions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="More about case tracking"
-            activeOpacity={0.85}
-            onPress={() => setActiveInfo('cases')}
-            style={[styles.tileInfoButton, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}
-          >
-            <Ionicons name="information-circle-outline" size={18} color={colors.textInverse} />
-          </TouchableOpacity>
-          <View style={[styles.tileIconBadge, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}>
-            <Ionicons name={tileThemes.cases.icon} size={26} color={colors.textInverse} />
-          </View>
-          <Ionicons name={tileThemes.cases.icon} size={62} color={inverseArtwork} style={styles.tileArtworkIcon} />
-          </LinearGradient>
-        </View>
-
-        <View style={[styles.actionTile, { width: tileWidth, shadowColor: tileThemes.learn.shadow }]}>
-          <LinearGradient
-            colors={tileThemes.learn.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.tileGradient}
-          >
-          <View style={[styles.tileAccentRail, { backgroundColor: inverseAccent }]} />
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Open learning videos"
-            activeOpacity={0.94}
-            onPress={() => navigation.navigate('Learn')}
-            style={styles.tilePrimary}
-          >
-            <Text style={[styles.tileLabel, { color: colors.textInverse }]}>Learn</Text>
-            <Text style={[styles.tileMeta, { color: inverseMutedText }]} numberOfLines={2}>Saved guidance</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="More about learning resources"
-            activeOpacity={0.85}
-            onPress={() => setActiveInfo('learn')}
-            style={[styles.tileInfoButton, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}
-          >
-            <Ionicons name="information-circle-outline" size={18} color={colors.textInverse} />
-          </TouchableOpacity>
-          <View style={[styles.tileIconBadge, { backgroundColor: inverseControlBackground, borderColor: inverseControlBorder }]}>
-            <Ionicons name={tileThemes.learn.icon} size={26} color={colors.textInverse} />
-          </View>
-          <Ionicons name={tileThemes.learn.icon} size={62} color={inverseArtwork} style={styles.tileArtworkIcon} />
-          </LinearGradient>
+        <View style={styles.reportActions}>
+          <Button
+            title={latestDraft ? 'Continue' : 'Start report'}
+            onPress={handleContinueDraft}
+            accessibilityLabel={latestDraft ? 'Continue latest draft' : 'Start a report'}
+            icon={<Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />}
+            iconPosition="right"
+            style={styles.reportPrimary}
+          />
+          {latestDraft ? (
+            <Button
+              title="Add evidence"
+              variant="outline"
+              onPress={handleAddEvidence}
+              style={styles.reportSecondary}
+            />
+          ) : null}
         </View>
       </View>
 
-      <View style={[styles.tipsCard, { shadowColor: colors.primary }]}>
-        <LinearGradient
-          colors={cardGradients.tips}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.tipsSurface, { borderColor: colors.divider }]}
-        >
-        <View pointerEvents="none" style={[styles.tipsAccent, { backgroundColor: colors.primary }]} />
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Open tips and rights"
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('TipsRights')}
-          style={styles.tipsPrimary}
-        >
-          <View style={[styles.tipsIcon, { backgroundColor: colors.surface, borderColor: colors.primary + '22' }]}>
-            <Ionicons name="book-outline" size={22} color={colors.primary} />
+      <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {([
+          {
+            key: 'support',
+            title: 'Quick support',
+            description: 'Chat and provider options',
+            icon: 'chatbubbles-outline',
+            iconColor: colors.support,
+            iconBackground: colors.supportMuted,
+            accessibilityLabel: 'Open support',
+            infoLabel: 'More about support',
+            onPress: () => navigation.navigate('Support'),
+            onInfo: () => setActiveInfo('support'),
+          },
+          {
+            key: 'cases',
+            title: 'Case Tracker',
+            description: draftCount > 0 ? `${draftCount} ${draftCount === 1 ? 'draft' : 'drafts'} and your submissions` : 'Drafts and submissions',
+            icon: 'folder-open-outline',
+            iconColor: colors.evidence,
+            iconBackground: colors.evidenceMuted,
+            accessibilityLabel: 'Open case tracker',
+            infoLabel: 'More about case tracking',
+            onPress: () => navigation.navigate('Cases'),
+            onInfo: () => setActiveInfo('cases'),
+          },
+          {
+            key: 'tips',
+            title: 'Tips and rights',
+            description: 'PEP/EC, P3, evidence, 1195 and your rights',
+            icon: 'book-outline',
+            iconColor: colors.primary,
+            iconBackground: colors.primaryMuted,
+            accessibilityLabel: 'Open tips and rights',
+            infoLabel: 'More about tips and rights',
+            onPress: () => navigation.navigate('TipsRights'),
+            onInfo: () => setActiveInfo('tips'),
+          },
+          {
+            key: 'learn',
+            title: 'Learn',
+            description: 'Videos and saved guidance',
+            icon: 'play-circle-outline',
+            iconColor: colors.consent,
+            iconBackground: colors.consentMuted,
+            accessibilityLabel: 'Open learning videos',
+            infoLabel: 'More about learning resources',
+            onPress: () => navigation.navigate('Learn'),
+            onInfo: () => setActiveInfo('learn'),
+          },
+        ] as Array<{
+          key: string;
+          title: string;
+          description: string;
+          icon: IconName;
+          iconColor: string;
+          iconBackground: string;
+          accessibilityLabel: string;
+          infoLabel: string;
+          onPress: () => void;
+          onInfo: () => void;
+        }>).map((row, index) => (
+          <View
+            key={row.key}
+            style={[styles.listRow, index > 0 && { borderTopColor: colors.divider, borderTopWidth: borders.hairline }]}
+          >
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={row.accessibilityLabel}
+              activeOpacity={0.85}
+              onPress={row.onPress}
+              style={styles.listPrimary}
+            >
+              <View style={[styles.listIcon, { backgroundColor: row.iconBackground }]}>
+                <Ionicons name={row.icon} size={20} color={row.iconColor} />
+              </View>
+              <View style={styles.listCopy}>
+                <Text style={[styles.listTitle, { color: colors.foreground }]}>{row.title}</Text>
+                <Text style={[styles.listText, { color: colors.textSecondary }]}>{row.description}</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={row.infoLabel}
+              activeOpacity={0.85}
+              onPress={row.onInfo}
+              style={styles.listInfo}
+            >
+              <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.tipsCopy}>
-            <Text style={[styles.tipsTitle, { color: colors.foreground }]}>Tips and rights</Text>
-            <Text style={[styles.tipsSubtitle, { color: colors.textSecondary }]}>
-              PEP/EC, P3, evidence, 1195, and plain-language rights.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="More about tips and rights"
-          activeOpacity={0.85}
-          onPress={() => setActiveInfo('tips')}
-          style={[styles.tipsMoreButton, { borderColor: colors.divider }]}
-        >
-          <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
-          <Text style={[styles.tipsMoreText, { color: colors.primary }]}>About</Text>
-        </TouchableOpacity>
-        </LinearGradient>
+        ))}
       </View>
+
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Privacy and consent. Nothing leaves this phone until you choose."
+        activeOpacity={0.85}
+        onPress={() => setActiveInfo('privacy')}
+        style={styles.privacyRow}
+      >
+        <Ionicons name="lock-closed-outline" size={16} color={colors.privacy} />
+        <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
+          Nothing leaves this phone until you choose.{' '}
+          <Text style={[styles.privacyLink, { color: colors.privacy }]}>How privacy works</Text>
+        </Text>
+      </TouchableOpacity>
 
       <InfoModal
         visible={activeInfo === 'immediate'}
@@ -762,42 +695,40 @@ export default function HomeScreen() {
         </InfoModalSection>
       </InfoModal>
 
-      <ActionSheet
+      <EmergencyHelpSheet
         visible={isEmergencySheetVisible}
         onClose={() => setIsEmergencySheetVisible(false)}
-        title="Immediate Help - Kenya"
+        title="Immediate help - Kenya"
         message={
           quickExitAvailable
             ? 'Choose a support contact or open the calculator decoy.'
             : 'Choose a support contact. Quick Exit is unavailable until setup is complete.'
         }
-        cancelText="Cancel"
-        actions={[
+        calls={[
           {
-            title: `Call ${PRIMARY_KENYA_GBV_CONTACT.displayPhone}`,
-            icon: 'call-outline',
+            key: 'gbv',
+            number: PRIMARY_KENYA_GBV_CONTACT.displayPhone,
+            label: 'GBV helpline',
+            tone: 'support',
             onPress: () => dialSupportNumber(PRIMARY_KENYA_GBV_CONTACT.phoneNumbers[0]),
           },
           {
-            title: 'Call 999',
-            icon: 'call-outline',
-            destructive: true,
+            key: '999',
+            number: KENYA_POLICE_EMERGENCY_CONTACT.phoneNumbers[0],
+            label: 'Police',
+            tone: 'critical',
             onPress: () => dialSupportNumber(KENYA_POLICE_EMERGENCY_CONTACT.phoneNumbers[0]),
           },
           {
-            title: 'Call 112',
-            icon: 'call-outline',
-            destructive: true,
+            key: '112',
+            number: KENYA_POLICE_EMERGENCY_CONTACT.phoneNumbers[1],
+            label: 'Emergency',
+            tone: 'critical',
             onPress: () => dialSupportNumber(KENYA_POLICE_EMERGENCY_CONTACT.phoneNumbers[1]),
           },
-          ...(quickExitAvailable
-            ? [{
-              title: 'Quick Exit',
-              icon: 'calculator-outline' as const,
-              onPress: quickExit,
-            }]
-            : []),
         ]}
+        onQuickExit={quickExitAvailable ? quickExit : undefined}
+        footnote="Your phone dialer opens next. Calls may appear in phone records."
       />
     </DashboardTemplate>
   );
@@ -805,305 +736,214 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    gap: TILE_GUTTER,
-    paddingBottom: spacing.md,
+    gap: SECTION_GAP,
+    paddingBottom: spacing.lg,
     paddingHorizontal: HORIZONTAL_PADDING,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xxs,
+  },
+  intro: {
+    gap: 2,
+  },
+  introTitle: {
+    ...typography.titleLarge,
+    letterSpacing: -0.3,
+  },
+  introText: {
+    ...typography.bodySmall,
   },
   searchContainer: {
     alignItems: 'center',
-    borderRadius: radii.card,
+    borderRadius: radii.input,
     borderWidth: borders.hairline,
     flexDirection: 'row',
-    height: 56,
+    minHeight: 48,
     overflow: 'hidden',
-    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.sm,
     position: 'relative',
-    ...elevation.card,
-  },
-  searchAccent: {
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    top: 0,
-    width: 4,
   },
   searchInput: {
-    ...typography.bodyS,
+    ...typography.bodyMedium,
     flex: 1,
     marginLeft: spacing.xs,
+    minHeight: 46,
     minWidth: 0,
+    paddingVertical: 0,
   },
   searchAction: {
     alignItems: 'center',
-    borderRadius: radii.round,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  statusPanel: {
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    ...elevation.card,
-  },
-  statusPanelSurface: {
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    overflow: 'hidden',
-    padding: spacing.md,
-    position: 'relative',
-  },
-  statusAccent: {
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  statusHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  statusIcon: {
-    alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
     height: 48,
     justifyContent: 'center',
     width: 48,
   },
-  statusCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  statusTitle: {
-    ...typography.titleMedium,
-  },
-  statusSubtitle: {
-    ...typography.bodySmall,
-    marginTop: spacing.xxxs,
-  },
-  statusGrid: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  statusMetric: {
-    alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    flex: 1,
-    gap: spacing.xxxs,
-    justifyContent: 'center',
-    minHeight: 64,
-    overflow: 'hidden',
-    padding: spacing.xs,
-    position: 'relative',
-  },
-  metricAccent: {
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  statusMetricValue: {
-    ...typography.titleLarge,
-  },
-  statusMetricLabel: {
-    ...typography.labelSmall,
-    textAlign: 'center',
-  },
   emergencyButton: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     borderRadius: radii.card,
-    elevation: 4,
+    borderWidth: borders.emphasized,
+    flexDirection: 'row',
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-  },
-  emergencyGradient: {
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    width: '100%',
   },
   emergencyPrimary: {
     alignItems: 'center',
+    flex: 1,
     flexDirection: 'row',
     gap: spacing.sm,
-    minHeight: 78,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    width: '100%',
+    minHeight: 64,
+    minWidth: 0,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   emergencyIconShell: {
     alignItems: 'center',
-    borderRadius: radii.card,
+    borderRadius: radii.md,
     borderWidth: borders.hairline,
-    height: 44,
+    height: 40,
     justifyContent: 'center',
-    width: 44,
+    width: 40,
   },
   emergencyCopy: {
     flex: 1,
     minWidth: 0,
   },
-  emergencyMoreButton: {
-    alignItems: 'center',
-    borderTopColor: 'rgba(255,255,255,0.22)',
-    borderTopWidth: borders.hairline,
-    flexDirection: 'row',
-    gap: spacing.xxs,
-    justifyContent: 'center',
-    minHeight: 42,
-    width: '100%',
-  },
-  moreButtonText: {
-    ...typography.caption,
-    fontWeight: '700',
-  },
   emergencyText: {
-    ...typography.titleLarge,
+    ...typography.titleMedium,
   },
   emergencySubtext: {
     ...typography.bodySmall,
     fontWeight: '600',
-    marginTop: spacing.xxxs,
+    marginTop: 2,
   },
-  emergencySignal: {
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 1,
-  },
-  tileRow: {
-    flexDirection: 'row',
-    gap: TILE_GUTTER,
-    justifyContent: 'space-between',
-  },
-  actionTile: {
-    aspectRatio: 1,
-    borderRadius: radii.card,
-    elevation: 4,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-  },
-  tileGradient: {
-    borderRadius: radii.card,
-    flex: 1,
-    overflow: 'hidden',
-  },
-  tilePrimary: {
-    flex: 1,
-    padding: spacing.md,
-    paddingRight: spacing.xl,
-    paddingTop: 58,
-  },
-  tileLabel: {
-    ...typography.titleS,
-  },
-  tileMeta: {
-    ...typography.caption,
-    marginTop: spacing.xxs,
-    maxWidth: '92%',
-  },
-  tileArtworkIcon: {
-    bottom: -2,
-    position: 'absolute',
-    right: spacing.xs,
-  },
-  tileIconBadge: {
+  cardInfoButton: {
     alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    height: 44,
+    borderLeftWidth: borders.hairline,
     justifyContent: 'center',
-    left: spacing.sm,
-    position: 'absolute',
-    top: spacing.sm,
-    width: 44,
+    minHeight: 48,
+    width: 52,
   },
-  tileInfoButton: {
-    alignItems: 'center',
-    borderWidth: borders.hairline,
-    borderRadius: radii.round,
-    height: 34,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: spacing.xs,
-    top: spacing.xs,
-    width: 34,
+  emergencyStacked: {
+    flexDirection: 'column',
   },
-  tileAccentRail: {
-    height: 3,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  tipsCard: {
-    alignItems: 'center',
-    borderRadius: radii.card,
-    overflow: 'hidden',
-    ...elevation.card,
-  },
-  tipsSurface: {
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    overflow: 'hidden',
-    position: 'relative',
-    width: '100%',
-  },
-  tipsAccent: {
-    height: 4,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  tipsPrimary: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.md,
-    width: '100%',
-  },
-  tipsIcon: {
-    alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: borders.hairline,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  tipsCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  tipsTitle: {
-    ...typography.label,
-  },
-  tipsSubtitle: {
-    ...typography.bodyS,
-    marginTop: spacing.xxxs,
-  },
-  tipsMoreButton: {
-    alignItems: 'center',
+  cardInfoBelow: {
+    borderLeftWidth: 0,
     borderTopWidth: borders.hairline,
     flexDirection: 'row',
     gap: spacing.xxs,
-    justifyContent: 'center',
-    minHeight: 42,
     width: '100%',
   },
-  tipsMoreText: {
-    ...typography.caption,
-    fontWeight: '700',
+  cardInfoLabel: {
+    ...typography.labelMedium,
+  },
+  reportCard: {
+    borderRadius: radii.lg,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  reportTop: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  reportCopy: {
+    flex: 1,
+    gap: spacing.xxs,
+    minWidth: 0,
+  },
+  reportTitle: {
+    ...typography.titleMedium,
+  },
+  reportText: {
+    ...typography.bodySmall,
+  },
+  reportProgress: {
+    flexDirection: 'row',
+    gap: spacing.xxs,
+  },
+  reportProgressSegment: {
+    borderRadius: radii.round,
+    flex: 1,
+    height: 6,
+  },
+  reportActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  reportPrimary: {
+    flexGrow: 1,
+  },
+  reportSecondary: {
+    flexGrow: 1,
+  },
+  reportInfo: {
+    alignItems: 'center',
+    height: 48,
+    justifyContent: 'center',
+    // Sits in the card corner; the 48dp target extends into the padding.
+    marginRight: -spacing.xs,
+    marginTop: -spacing.xs,
+    width: 48,
+  },
+  listCard: {
+    borderRadius: radii.card,
+    borderWidth: borders.hairline,
+    overflow: 'hidden',
+  },
+  listRow: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+  },
+  listPrimary: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 56,
+    minWidth: 0,
+    paddingLeft: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  listIcon: {
+    alignItems: 'center',
+    borderRadius: radii.round,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  listCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  listTitle: {
+    ...typography.titleSmall,
+  },
+  listText: {
+    ...typography.bodySmall,
+    marginTop: 2,
+  },
+  listInfo: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    width: 52,
+  },
+  privacyRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: spacing.xs,
+  },
+  privacyText: {
+    ...typography.bodySmall,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  privacyLink: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

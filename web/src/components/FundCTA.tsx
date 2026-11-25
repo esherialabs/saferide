@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SITE } from '@/lib/site';
+import { PILOT, SITE } from '@/lib/site';
 
 export default function FundCTA() {
   return (
@@ -8,12 +8,12 @@ export default function FundCTA() {
         <div className="interactive-card border border-black bg-green-900 p-8 text-white md:p-12">
           <div className="grid gap-10 lg:grid-cols-[1.4fr_0.6fr] lg:items-center">
             <div>
-              <p className="font-body text-sm font-bold uppercase tracking-normal text-[#FF9E5F]">Fund the Pilot</p>
+              <p className="font-body text-sm font-bold uppercase tracking-normal text-[#FF9E5F]">Support the Mombasa Pilot</p>
               <h2 id="fund-heading" className="mt-4 max-w-3xl font-display text-[clamp(2.25rem,5vw,4.5rem)] font-semibold leading-[0.95] tracking-normal text-white">
-                Together we can make every matatu ride safe.
+                The pilot has run. Help us learn safely.
               </h2>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-green-200">
-                Join our global movement. Fund the SafeRide corridor pilot and help us publish the Route Safety Index for Nairobi.
+                SafeRide ran a {PILOT.summary} with {PILOT.partner}. Support the next phase of testing, review, and responsible delivery.
               </p>
             </div>
             <div className="grid gap-4">

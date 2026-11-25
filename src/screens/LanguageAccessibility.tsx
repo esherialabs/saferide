@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -73,6 +73,11 @@ export default function LanguageAccessibility() {
   const [showA11yLabels, setShowA11yLabels] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [systemHapticsDisabled, setSystemHapticsDisabled] = useState(false);
+  const [savingDisplay, setSavingDisplay] = useState(false);
+  const savingDisplayRef = useRef(false);
+  const displaySaveError = languageCode === 'sw'
+    ? 'Hali ya mwonekano haijahifadhiwa. Tafadhali jaribu tena.'
+    : 'Could not save display mode. Please try again.';
   const selectedLanguage = useMemo(() => getLanguageByCode(languageCode), [languageCode]);
   const languageStats = useMemo<FeatureHeaderStat[]>(() => [
     { label: headerCopy.statLanguage, value: selectedLanguage?.name ?? headerCopy.fallbackLanguage, icon: 'language-outline' },
@@ -120,12 +125,22 @@ export default function LanguageAccessibility() {
     toast.show({ title: `${copy.textSizeToastTitle}: ${textSizes[newSize]}`, variant: 'info' });
   };
 
-  const handleHighContrastToggle = (enabled: boolean) => {
-    setTheme(enabled ? 'highContrast' : 'system');
-    toast.show({
-      title: enabled ? copy.highContrastEnabledToast : copy.highContrastDisabledToast,
-      variant: 'info',
-    });
+  const handleHighContrastToggle = async (enabled: boolean) => {
+    if (savingDisplayRef.current) return;
+    savingDisplayRef.current = true;
+    setSavingDisplay(true);
+    try {
+      await setTheme(enabled ? 'highContrast' : 'system');
+      toast.show({
+        title: enabled ? copy.highContrastEnabledToast : copy.highContrastDisabledToast,
+        variant: 'info',
+      });
+    } catch {
+      toast.show({ title: displaySaveError, variant: 'error' });
+    } finally {
+      savingDisplayRef.current = false;
+      setSavingDisplay(false);
+    }
   };
 
   const handlePlayDemo = async () => {
@@ -166,13 +181,22 @@ export default function LanguageAccessibility() {
   };
 
   const handleRestoreDefaults = async () => {
-    await setLanguage('en');
-    setTextSize(2);
-    setTheme('system');
-    setHapticsEnabled(true);
-    setShowA11yLabels(false);
-
-    toast.show({ title: copy.defaultsRestoredToast, variant: 'success' });
+    if (savingDisplayRef.current) return;
+    savingDisplayRef.current = true;
+    setSavingDisplay(true);
+    try {
+      await setTheme('system');
+      await setLanguage('en');
+      setTextSize(2);
+      setHapticsEnabled(true);
+      setShowA11yLabels(false);
+      toast.show({ title: copy.defaultsRestoredToast, variant: 'success' });
+    } catch {
+      toast.show({ title: displaySaveError, variant: 'error' });
+    } finally {
+      savingDisplayRef.current = false;
+      setSavingDisplay(false);
+    }
   };
 
   const isAACompliant = textSize >= 1;
@@ -184,19 +208,11 @@ export default function LanguageAccessibility() {
       paddingBottom: 112,
     },
     bannerContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: spacing.sm,
+      alignItems: 'flex-start',
     },
     bannerText: {
       ...typography.bodyS,
       color: colors.foreground,
-      flex: 1,
-    },
-    bannerActions: {
-      flexDirection: 'row',
-      gap: spacing.xs,
     },
     cardContent: {
       gap: spacing.md,
@@ -244,7 +260,7 @@ export default function LanguageAccessibility() {
     },
     radioOuter: {
       alignItems: 'center',
-      borderColor: colors.divider,
+      borderColor: colors.input,
       borderRadius: 11,
       borderWidth: borders.emphasized,
       height: 22,
@@ -273,26 +289,18 @@ export default function LanguageAccessibility() {
       color: colors.mutedForeground,
     },
     sliderLabelActive: {
-      color: colors.accent,
+      color: colors.primary,
       fontWeight: '500',
     },
     previewContainer: {
       gap: 12,
       padding: spacing.md,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.primaryMuted,
       borderColor: colors.divider,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
       overflow: 'hidden',
       position: 'relative',
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     previewTitle: {
       fontWeight: '500',
@@ -437,24 +445,15 @@ export default function LanguageAccessibility() {
           />
 
           {showBanner && (
-            <AlertBanner variant="info">
+            <AlertBanner variant="info" dismissible onDismiss={() => setShowBanner(false)} dismissLabel={copy.close}>
               <View style={styles.bannerContent}>
                 <Text style={styles.bannerText}>{copy.bannerText}</Text>
-                <View style={styles.bannerActions}>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    title={copy.learnMore}
-                    onPress={() => Alert.alert(copy.previewAlertTitle, copy.previewAlertMessage)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onPress={() => setShowBanner(false)}
-                    title="X"
-                    accessibilityLabel={copy.close}
-                  />
-                </View>
+                <Button
+                  variant="link"
+                  size="sm"
+                  title={copy.learnMore}
+                  onPress={() => Alert.alert(copy.previewAlertTitle, copy.previewAlertMessage)}
+                />
               </View>
             </AlertBanner>
           )}
@@ -485,7 +484,6 @@ export default function LanguageAccessibility() {
                     }}
                     activeOpacity={0.78}
                   >
-                    <View pointerEvents="none" style={styles.cardAccentTop} />
                     <View
                       style={[
                         styles.radioOuter,
@@ -543,7 +541,6 @@ export default function LanguageAccessibility() {
               </View>
 
               <View style={styles.previewContainer}>
-                <View pointerEvents="none" style={styles.cardAccentTop} />
                 <Text style={[styles.previewTitle, getTextSizeStyle(textSize)]}>
                   {copy.previewTitle}
                 </Text>
@@ -594,7 +591,8 @@ export default function LanguageAccessibility() {
                 <Label>{copy.highContrastToggle}</Label>
                 <Switch
                   value={isHighContrast}
-                  onValueChange={handleHighContrastToggle}
+                  onValueChange={enabled => { void handleHighContrastToggle(enabled); }}
+                  disabled={savingDisplay}
                   accessibilityLabel={copy.highContrastToggle}
                   accessibilityHint="Applies the contrast setting throughout SafeRide"
                 />
@@ -640,7 +638,6 @@ export default function LanguageAccessibility() {
                 <CardDescription>{copy.screenReaderDescription}</CardDescription>
               </View>
               <View style={styles.demoContainer}>
-                <View pointerEvents="none" style={styles.cardAccentTop} />
                 <Text style={styles.demoTitle}>{copy.demoTitle}</Text>
                 {showA11yLabels && (
                   <Text style={styles.a11yLabel}>{copy.demoAnnouncement}</Text>
@@ -700,7 +697,7 @@ export default function LanguageAccessibility() {
 
       <View style={styles.footer}>
         <View style={styles.footerContent}>
-          <Button variant="link" onPress={handleRestoreDefaults}>
+          <Button variant="link" onPress={() => { void handleRestoreDefaults(); }} disabled={savingDisplay} loading={savingDisplay}>
             {copy.restoreDefaults}
           </Button>
           <Button onPress={() => navigation.goBack()}>

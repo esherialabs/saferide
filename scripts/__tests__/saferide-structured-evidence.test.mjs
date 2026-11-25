@@ -63,6 +63,7 @@ test('rejects stale evidence and contradictory active assertions', () => {
   const contradiction = clone(index.evidence[0]);
   contradiction.evidenceId = 'EVID-CONTRADICTION-FIXTURE';
   contradiction.title = 'Synthetic contradiction fixture';
+  contradiction.recheckDate = '2026-08-07';
   contradiction.assertions = [
     { subject: 'gemma4-base-runtime', predicate: 'legal-status', value: 'approved' },
   ];
@@ -118,20 +119,19 @@ test('keeps checkpoint claims blocked while an affected external handoff is unre
   assert(errors.some(error => error.includes('unresolved dependency cannot feed checkpoint-candidate')));
 });
 
-test('treats the owner-superseded GitHub Actions handoff as resolved without calling it passed', () => {
+test('keeps the GitHub Actions billing handoff unresolved until hosted jobs execute', () => {
   const claims = clone(baseline.claimRegister);
   const checkpointClaim = claims.claims.find(item => item.claimId === 'UNICEF-CHECKPOINT-001');
   checkpointClaim.status = 'checkpoint-candidate';
   checkpointClaim.blocker = null;
   const ciHandoff = clone(baseline.externalHandoffs.handoffs.find(item => item.handoffId === 'HANDOFF-CI-BUDGET'));
 
-  assert.equal(ciHandoff.status, 'superseded');
-  assert.equal(ciHandoff.resolution, 'GitHub Actions intentionally disabled by project-owner decision; verification performed locally.');
+  assert.equal(ciHandoff.status, 'blocked');
   const errors = validateExternalHandoffsSemantics({ ...baseline.externalHandoffs, handoffs: [ciHandoff] }, {
     claimRegister: claims,
     asOfDate,
   });
-  assert.deepEqual(errors, []);
+  assert(errors.some(error => error.includes('unresolved dependency cannot feed checkpoint-candidate')));
 });
 
 test('covers every fail-closed base and produced-artifact manifest condition', () => {

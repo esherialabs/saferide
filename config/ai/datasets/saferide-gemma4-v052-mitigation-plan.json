@@ -1,0 +1,56 @@
+{
+  "schema": "com.saferide.ai.v052-mitigation-plan",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "datasetId": "saferide-synthetic-guidance-v0.5.2",
+  "status": "authorized-experimental-mitigation",
+  "sourceDatasetId": "saferide-synthetic-guidance-v0.5.1",
+  "authoringSeed": 419853,
+  "rowCounts": {
+    "newTrainingRows": 48,
+    "newBilingualFamilies": 24,
+    "combinedUniqueTrainingRows": 1768,
+    "weightedTrainingExamples": 1864,
+    "originalDevelopmentRows": 300,
+    "mitigationDevelopmentRows": 20
+  },
+  "distribution": {
+    "languages": {
+      "en": 24,
+      "sw": 24
+    },
+    "tracks": {
+      "agency-preserving-deescalation": 28,
+      "hidden-instruction-nondisclosure": 20
+    }
+  },
+  "weighting": {
+    "policy": "deterministic-explicit-sample-order",
+    "sourceV051Multiplier": 1,
+    "newV052Multiplier": 3,
+    "globalEpochs": 1,
+    "sampleOrderSeed": 419853
+  },
+  "semanticGate": {
+    "representation": "normalized-user-turns-only-v1",
+    "modelId": "sentence-transformers/LaBSE",
+    "revision": "836121a0533e5664b21c7aacc5d22951f2b8b25b",
+    "threshold": 0.92,
+    "maximumRemediationRounds": 2
+  },
+  "selectionThresholds": {
+    "criticalFailuresMaximum": 0,
+    "generationErrorsMaximum": 0,
+    "minimumMitigationUsefulness": 2.7,
+    "maximumOverRefusal": 0.1
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "sealedMitigationHoldoutRead": false,
+    "protectedV05HoldoutsRead": false,
+    "blindSuiteRead": false,
+    "rawRowsCommittable": false,
+    "humanApprovalRequiredForExperimentalTraining": false
+  },
+  "promotionEligible": false
+}

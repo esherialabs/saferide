@@ -15,6 +15,7 @@ const consent = {
   version: 'synthetic-anonymous-consent-v1',
 };
 const ingestionId = '22222222-2222-4222-8222-222222222222';
+const scenarioTime = new Date('2026-07-30T12:00:00.000Z');
 
 function approvedControls(): RsiControls {
   const controls = structuredClone(loadRsiControls());
@@ -61,15 +62,15 @@ describe('minimized RSI signal ingestion', () => {
     expect(findForbiddenRsiFields({ nested: { coordinates: [-1.2, 36.8], narrative: 'synthetic' } })).toEqual([
       '$.nested.coordinates', '$.nested.narrative',
     ]);
-    expect(() => validateAndMinimizeRsiSignal({ ...signal(), category: 'unapproved' }, approvedControls())).toThrow(/category/);
-    expect(() => validateAndMinimizeRsiSignal({ ...signal(), timeBucket: '2026-07-30T10:30:00.000Z' }, approvedControls())).toThrow(/aligned/);
+    expect(() => validateAndMinimizeRsiSignal({ ...signal(), category: 'unapproved' }, approvedControls(), scenarioTime)).toThrow(/category/);
+    expect(() => validateAndMinimizeRsiSignal({ ...signal(), timeBucket: '2026-07-30T10:30:00.000Z' }, approvedControls(), scenarioTime)).toThrow(/aligned/);
   });
 
   it('fails before minimization when approval, consent, area, or retention is absent', () => {
     expect(() => validateAndMinimizeRsiSignal(signal(), loadRsiControls())).toThrow(/not approved/);
     const controls = approvedControls();
     controls.consent.requiredVersion = null;
-    expect(() => validateAndMinimizeRsiSignal(signal(), controls)).toThrow(/complete attributable/);
+    expect(() => validateAndMinimizeRsiSignal(signal(), controls, scenarioTime)).toThrow(/complete attributable/);
   });
 
   it('accepts an atomic bounded batch and rejects duplicate dimensions', () => {
@@ -80,12 +81,22 @@ describe('minimized RSI signal ingestion', () => {
       signals: [signal(), { ...signal(), category: 'unsafe_driving' }],
     }, controls, new Date('2026-07-30T12:00:00.000Z'));
     expect(batch.map(item => item.category)).toEqual(['harassment', 'unsafe_driving']);
-    expect(() => validateAndMinimizeRsiSignalBatch({ consent, ingestionId, signals: [signal(), signal()] }, controls)).toThrow(/duplicate/);
+    expect(() => validateAndMinimizeRsiSignalBatch({ consent, ingestionId, signals: [signal(), signal()] }, controls, scenarioTime)).toThrow(/duplicate/);
     expect(() => validateAndMinimizeRsiSignalBatch({ consent, ingestionId, signals: [] }, controls)).toThrow();
     expect(() => validateRsiSignalBatchSubmission({
       consent: { ...consent, version: 'different-consent-v1' },
       ingestionId,
       signals: [signal()],
     }, controls)).toThrow(/checkpoint/);
+  });
+
+  it.each([-1, 0, 1])('preserves approval expiry enforcement at offset %i milliseconds', offset => {
+    const controls = approvedControls();
+    const now = new Date(Date.parse(controls.approval.expiresAt!) + offset);
+    if (offset < 0) {
+      expect(validateAndMinimizeRsiSignal(signal(), controls, now).category).toBe('harassment');
+    } else {
+      expect(() => validateAndMinimizeRsiSignal(signal(), controls, now)).toThrow(/not approved/);
+    }
   });
 });

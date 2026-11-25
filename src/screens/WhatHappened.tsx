@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getReportNavigationStyles } from '../components/report/reportNavigationStyles';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ReportWizardProgress } from '../components/report/ReportWizardProgress';
 import { Badge } from '../components/ui/Badge';
@@ -11,6 +11,7 @@ import Button from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Checkbox } from '../components/ui/Checkbox';
 import { Chip } from '../components/ui/Chip';
+import { ChoiceCard } from '../components/ui/ChoiceCard';
 import Screen from '../components/ui/Screen';
 import { Textarea } from '../components/ui/Textarea';
 import { useToast } from '../components/ui/Toast';
@@ -144,7 +145,9 @@ export default function WhatHappenedScreen() {
   const navigation = useNavigation<WhatHappenedNavigationProp>();
   const route = useRoute<WhatHappenedRouteProp>();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { width, fontScale } = useWindowDimensions();
+  // Two-up tiles while words fit; narrow screens and large text get full-width rows.
+  const patternColumns = width >= 350 && fontScale < 1.3 ? 2 : 1;
   const toast = useToast();
   const followUpBaseRef = useRef<Record<string, string>>({});
   const draftCreationPromiseRef = useRef<Promise<string> | null>(null);
@@ -239,6 +242,7 @@ export default function WhatHappenedScreen() {
   );
 
   const styles = StyleSheet.create({
+    ...getReportNavigationStyles(colors),
     screenRoot: {
       flex: 1,
     },
@@ -247,18 +251,12 @@ export default function WhatHappenedScreen() {
     },
     contentContainer: {
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingTop: spacing.xxs,
+      paddingBottom: spacing.md,
     },
     stepHeader: {
-      gap: spacing.xs,
-    },
-    stepHeaderCard: {
+      gap: spacing.xxs,
       marginBottom: spacing.md,
-    },
-    stepHeaderContent: {
-      gap: spacing.xs,
-      paddingTop: spacing.md,
     },
     eyebrowRow: {
       alignItems: 'center',
@@ -266,35 +264,67 @@ export default function WhatHappenedScreen() {
       flexWrap: 'wrap',
       gap: spacing.xs,
     },
+    eyebrow: {
+      ...typography.overline,
+      color: colors.primary,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+    },
     sectionTitle: {
-      ...typography.titleM,
+      ...typography.headlineMedium,
       color: colors.foreground,
+      letterSpacing: -0.3,
     },
     helperText: {
-      ...typography.bodyS,
+      ...typography.bodyMedium,
       color: colors.textSecondary,
     },
     patternGrid: {
-      gap: spacing.sm,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
     },
-    patternCard: {
-      width: '100%',
+    patternTile: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: borders.hairline,
+      gap: spacing.xs,
+      padding: spacing.sm,
     },
-    patternCardSurface: {
-      flex: 1,
+    patternTileGrid: {
+      // Two columns with one 8dp gutter.
+      flexBasis: '48%',
+      flexGrow: 1,
+      minHeight: 132,
     },
-    patternContent: {
+    patternTileRow: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.sm,
-      minHeight: 112,
-      paddingVertical: spacing.md,
+      minHeight: 64,
+      width: '100%',
+    },
+    patternTileSelected: {
+      backgroundColor: colors.primaryMuted,
+      borderColor: colors.primary,
+      borderWidth: borders.emphasized,
+      // Keep the content from shifting when the border thickens.
+      padding: spacing.sm - 1,
+    },
+    patternTilePressed: {
+      backgroundColor: colors.surfaceAlt,
+    },
+    patternTileTop: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
     },
     patternIcon: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       borderRadius: radii.round,
       backgroundColor: colors.surfaceAlt,
     },
@@ -303,30 +333,28 @@ export default function WhatHappenedScreen() {
       gap: spacing.xxxs,
       minWidth: 0,
     },
-    patternTitleRow: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.xs,
-      justifyContent: 'space-between',
-    },
     patternTitle: {
-      ...typography.label,
+      ...typography.labelLarge,
       color: colors.textPrimary,
-      flex: 1,
     },
     patternDescription: {
       ...typography.caption,
       color: colors.textSecondary,
-      lineHeight: 18,
+      marginTop: 2,
     },
     patternSelectionIndicator: {
       alignItems: 'center',
-      borderColor: colors.divider,
+      borderColor: colors.input,
       borderRadius: radii.round,
-      borderWidth: borders.hairline,
-      height: 28,
+      borderWidth: borders.emphasized,
+      height: 24,
       justifyContent: 'center',
-      width: 28,
+      width: 24,
+    },
+    selectedSummary: {
+      ...typography.labelMedium,
+      color: colors.textSecondary,
+      marginTop: spacing.sm,
     },
     chipWrap: {
       flexDirection: 'row',
@@ -335,7 +363,7 @@ export default function WhatHappenedScreen() {
     },
     formSection: {
       gap: spacing.sm,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
     formSectionCard: {
       marginBottom: spacing.md,
@@ -350,24 +378,8 @@ export default function WhatHappenedScreen() {
       borderWidth: borders.hairline,
       gap: spacing.xs,
       overflow: 'hidden',
-      padding: spacing.md,
+      padding: spacing.sm,
       position: 'relative',
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
-    },
-    cardAccentLeft: {
-      backgroundColor: colors.primary,
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
     },
     promptRow: {
       flexDirection: 'row',
@@ -414,24 +426,15 @@ export default function WhatHappenedScreen() {
       ...typography.bodyS,
       color: colors.foreground,
     },
-    navigationButtons: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    navigationDock: {
-      backgroundColor: colors.background,
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-    },
     optionalDetailsButton: {
-      marginTop: spacing.lg,
+      marginTop: spacing.sm,
     },
     backButton: {
+      alignSelf: 'stretch',
       flex: 1,
     },
     nextButton: {
+      alignSelf: 'stretch',
       flex: 2,
     },
   });
@@ -658,16 +661,15 @@ export default function WhatHappenedScreen() {
   };
 
   const renderStepHeader = (title: string, helper: string, optional = false) => (
-    <Card variant="filled" accentColor={colors.primary} style={styles.stepHeaderCard}>
-      <CardContent style={styles.stepHeaderContent}>
+    <View style={styles.stepHeader}>
+      {optional ? (
         <View style={styles.eyebrowRow}>
-          <Badge variant="info" size="sm">Core facts</Badge>
-          {optional ? <Badge variant="outline" size="sm">Optional details</Badge> : null}
+          <Text style={styles.eyebrow}>Optional details</Text>
         </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.helperText}>{helper}</Text>
-      </CardContent>
-    </Card>
+      ) : null}
+      <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.helperText}>{helper}</Text>
+    </View>
   );
 
   const renderCardSection = (children: React.ReactNode) => (
@@ -688,56 +690,75 @@ export default function WhatHappenedScreen() {
       <View style={styles.patternGrid} accessibilityLabel="Incident pattern choices. Select all that apply.">
         {incidentPatterns.map(pattern => {
           const isSelected = formData.patterns.includes(pattern.id);
-          return (
-            <Card
-              key={pattern.id}
-              variant="outlined"
-              selected={isSelected}
-              style={styles.patternCard}
-              surfaceStyle={[
-                styles.patternCardSurface,
-                isSelected ? { backgroundColor: colors.primaryMuted } : null,
+          const indicator = (
+            <View
+              style={[
+                styles.patternSelectionIndicator,
+                isSelected ? {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                } : null,
               ]}
+            >
+              {isSelected ? (
+                <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+              ) : null}
+            </View>
+          );
+          const icon = (
+            <View style={[styles.patternIcon, isSelected ? { backgroundColor: colors.surface } : null]}>
+              <Ionicons
+                name={pattern.icon}
+                size={22}
+                color={isSelected ? colors.primary : colors.textSecondary}
+              />
+            </View>
+          );
+          const copy = (
+            <View style={patternColumns === 1 ? styles.patternCopy : null}>
+              <Text style={styles.patternTitle}>{pattern.title}</Text>
+              <Text style={styles.patternDescription}>{pattern.description}</Text>
+            </View>
+          );
+          return (
+            <Pressable
+              key={pattern.id}
               onPress={() => handlePatternPress(pattern.id)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
               accessibilityLabel={`${pattern.title}. ${pattern.description}. Select all that apply.`}
               accessibilityHint={isSelected ? 'Double tap to clear this pattern' : 'Double tap to select this pattern'}
+              style={({ pressed }) => [
+                styles.patternTile,
+                patternColumns === 2 ? styles.patternTileGrid : styles.patternTileRow,
+                pressed && !isSelected ? styles.patternTilePressed : null,
+                isSelected ? styles.patternTileSelected : null,
+              ]}
             >
-              <CardContent style={styles.patternContent}>
-                <View style={styles.patternIcon}>
-                  <Ionicons
-                    name={pattern.icon}
-                    size={18}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
-                </View>
-                <View style={styles.patternCopy}>
-                  <View style={styles.patternTitleRow}>
-                    <Text style={styles.patternTitle}>{pattern.title}</Text>
-                    <View
-                      style={[
-                        styles.patternSelectionIndicator,
-                        isSelected ? {
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary,
-                        } : null,
-                      ]}
-                    >
-                      <Ionicons
-                        name={isSelected ? 'checkmark' : 'add'}
-                        size={18}
-                        color={isSelected ? colors.primaryForeground : colors.textSecondary}
-                      />
-                    </View>
+              {patternColumns === 2 ? (
+                <>
+                  <View style={styles.patternTileTop}>
+                    {icon}
+                    {indicator}
                   </View>
-                  <Text style={styles.patternDescription}>{pattern.description}</Text>
-                </View>
-              </CardContent>
-            </Card>
+                  {copy}
+                </>
+              ) : (
+                <>
+                  {icon}
+                  {copy}
+                  {indicator}
+                </>
+              )}
+            </Pressable>
           );
         })}
       </View>
+      {selectedPatterns.length > 0 ? (
+        <Text style={styles.selectedSummary} accessibilityLiveRegion="polite">
+          {selectedPatterns.length === 1 ? '1 pattern selected' : `${selectedPatterns.length} patterns selected`}
+        </Text>
+      ) : null}
     </View>
   );
 
@@ -802,7 +823,6 @@ export default function WhatHappenedScreen() {
 
       {suggestedQuestions.length > 0 ? (
         <View style={styles.promptList}>
-          <View pointerEvents="none" style={styles.cardAccentTop} />
           <Badge variant="outline" size="sm">Prompts you can skip</Badge>
           {suggestedQuestions.map(question => (
             <View key={question} style={styles.promptRow}>
@@ -831,27 +851,16 @@ export default function WhatHappenedScreen() {
         {impactOptions.map(option => {
           const selected = formData.severity === option.value;
           return (
-            <Card
+            <ChoiceCard
               key={option.value}
-              variant="outlined"
+              title={option.label}
+              description={option.description}
               selected={selected}
               style={styles.impactCard}
               onPress={() => updateFormData(prev => ({ ...prev, severity: option.value }))}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
               accessibilityLabel={`${option.label}. ${option.description}`}
               accessibilityHint={selected ? 'Selected impact level' : 'Double tap to select this impact level'}
-            >
-              <CardContent style={styles.impactContent}>
-                <View style={styles.impactTitleRow}>
-                  <Text style={styles.impactTitle}>{option.label}</Text>
-                  <Badge variant={selected ? 'primary' : 'outline'} size="sm">
-                    {selected ? 'Selected' : 'Choose'}
-                  </Badge>
-                </View>
-                <Text style={styles.helperText}>{option.description}</Text>
-              </CardContent>
-            </Card>
+            />
           );
         })}
       </View>
@@ -880,7 +889,6 @@ export default function WhatHappenedScreen() {
 
       {formData.immediateHelp ? (
         <View style={styles.resourceNotice}>
-          <View pointerEvents="none" style={[styles.cardAccentLeft, { backgroundColor: colors.destructive }]} />
           <Text style={styles.resourceNoticeTitle}>Kenya immediate-help options</Text>
           <Text style={styles.resourceNoticeText}>{KENYA_IMMEDIATE_HELP_TEXT}</Text>
         </View>
@@ -896,14 +904,12 @@ export default function WhatHappenedScreen() {
   );
 
   return (
-    <Screen>
+    // BottomTabs already reserves the bottom safe area for the report stack.
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.screenRoot}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingBottom: Math.max(spacing.massive, insets.bottom + spacing.massive) },
-          ]}
+          contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -929,7 +935,7 @@ export default function WhatHappenedScreen() {
           ) : null}
         </ScrollView>
 
-        <View style={[styles.navigationDock, { paddingBottom: Math.max(spacing.sm, insets.bottom + spacing.sm) }]}>
+        <View style={styles.navigationDock}>
           <View style={styles.navigationButtons}>
             <Button
               title="Back"

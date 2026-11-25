@@ -14,7 +14,10 @@ import {
   loadSafeRideLiteRtLmBridge,
   prepareSafeRideLiteRtLmBridge,
   unloadSafeRideLiteRtLmBridge,
+  type SafeRideLiteRtLmBridgeStatus,
+  type SafeRideLiteRtLmGenerateResult,
 } from './liteRtLmBridge';
+import { recordAiPilotQaDiagnostic, runWithAiPilotInFlight } from './pilotDiagnostics';
 
 export type AssistantMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -84,6 +87,20 @@ function withTimeout<T>(
   });
 }
 
+function bridgeStatusFromGenerateResult(payload: SafeRideLiteRtLmGenerateResult): SafeRideLiteRtLmBridgeStatus {
+  const mockMode = payload.mockMode === true;
+  return {
+    state: 'loaded',
+    nativeAvailable: true,
+    runtimeAvailable: true,
+    mockMode,
+    realRuntimeLoaded: !mockMode,
+    artifactValidated: !mockMode,
+    activeBackend: payload.activeBackend,
+    backendLabel: payload.backendLabel,
+  };
+}
+
 class LocalModelEngine {
   private liteRtLoadedModelId: string | null = null;
   private liteRtVerifiedModelId: string | null = null;
@@ -118,15 +135,30 @@ class LocalModelEngine {
       totalBytes: 100,
       phase: 'load',
     });
-    await prepareSafeRideLiteRtLmBridge(bridgeConfig);
-    await withTimeout(
-      loadSafeRideLiteRtLmBridge(bridgeConfig),
-      LITERT_LOAD_TIMEOUT_MS,
-      'LiteRT-LM model configuration timed out.',
-      async () => {
-        await unloadSafeRideLiteRtLmBridge();
-      },
-    );
+    const loadStartedAt = Date.now();
+    let loadedStatus: SafeRideLiteRtLmBridgeStatus;
+    try {
+      loadedStatus = await runWithAiPilotInFlight('load', async () => {
+        await prepareSafeRideLiteRtLmBridge(bridgeConfig);
+        return withTimeout(
+          loadSafeRideLiteRtLmBridge(bridgeConfig),
+          LITERT_LOAD_TIMEOUT_MS,
+          'LiteRT-LM model configuration timed out.',
+          async () => {
+            await unloadSafeRideLiteRtLmBridge();
+          },
+        );
+      });
+    } catch (error) {
+      recordAiPilotQaDiagnostic({ modelConfig, phase: 'load', durationMs: Date.now() - loadStartedAt, error });
+      throw error;
+    }
+    recordAiPilotQaDiagnostic({
+      modelConfig,
+      phase: 'load',
+      durationMs: Date.now() - loadStartedAt,
+      bridgeStatus: loadedStatus,
+    });
     this.liteRtLoadedModelId = modelConfig.id;
     this.liteRtVerifiedModelId = null;
     onProgress?.({
@@ -161,20 +193,38 @@ class LocalModelEngine {
     await this.ensureLoaded(modelConfig, onProgress, runtimeOptions);
     if (this.liteRtVerifiedModelId === modelConfig.id) return;
 
-    const payload = await withTimeout(
-      generateSafeRideLiteRtLmResponse(
-        [{ role: 'user', content: 'Say ready.' }],
-        { temperature: 0, maxOutputTokens: READINESS_PROBE_MAX_TOKENS },
-      ),
-      READINESS_PROBE_TIMEOUT_MS,
-      'LiteRT-LM readiness check timed out.',
-      async () => {
-        await cancelSafeRideLiteRtLmBridge();
-      },
-    );
-    if (!payload.content.trim()) {
-      throw new Error('LiteRT-LM readiness check produced an empty response');
+    const probeStartedAt = Date.now();
+    let payload: SafeRideLiteRtLmGenerateResult;
+    try {
+      payload = await runWithAiPilotInFlight('readiness-probe', () => withTimeout(
+        generateSafeRideLiteRtLmResponse(
+          [{ role: 'user', content: 'Say ready.' }],
+          { temperature: 0, maxOutputTokens: READINESS_PROBE_MAX_TOKENS },
+        ),
+        READINESS_PROBE_TIMEOUT_MS,
+        'LiteRT-LM readiness check timed out.',
+        async () => {
+          await cancelSafeRideLiteRtLmBridge();
+        },
+      ));
+      if (!payload.content.trim()) {
+        throw new Error('LiteRT-LM readiness check produced an empty response');
+      }
+    } catch (error) {
+      recordAiPilotQaDiagnostic({
+        modelConfig,
+        phase: 'readiness-probe',
+        durationMs: Date.now() - probeStartedAt,
+        error,
+      });
+      throw error;
     }
+    recordAiPilotQaDiagnostic({
+      modelConfig,
+      phase: 'readiness-probe',
+      durationMs: Date.now() - probeStartedAt,
+      bridgeStatus: bridgeStatusFromGenerateResult(payload),
+    });
     this.liteRtVerifiedModelId = modelConfig.id;
   }
 
@@ -190,8 +240,9 @@ class LocalModelEngine {
       downloadAuthorization: options.downloadAuthorization,
     });
     this.liteRtGenerationActive = true;
+    const generationStartedAt = Date.now();
     try {
-      const payload = await withTimeout(
+      const payload = await runWithAiPilotInFlight('generation', () => withTimeout(
         generateSafeRideLiteRtLmResponse(messages, {
           temperature: options.temperature ?? DEFAULT_GENERATION_OPTS.temperature,
           maxOutputTokens: options.maxTokens ?? modelConfig.runtime.maxOutputTokens ?? DEFAULT_GENERATION_OPTS.maxTokens,
@@ -201,12 +252,28 @@ class LocalModelEngine {
         async () => {
           await cancelSafeRideLiteRtLmBridge();
         },
-      );
+      ));
       const text = payload.content.trim();
       if (!text) {
         throw new Error('LiteRT-LM local model engine produced an empty response');
       }
+      // The reply is read in memory for length and two keyword booleans; it is not stored.
+      recordAiPilotQaDiagnostic({
+        modelConfig,
+        phase: 'generation',
+        durationMs: Date.now() - generationStartedAt,
+        bridgeStatus: bridgeStatusFromGenerateResult(payload),
+        replyText: text,
+      });
       return text;
+    } catch (error) {
+      recordAiPilotQaDiagnostic({
+        modelConfig,
+        phase: 'generation',
+        durationMs: Date.now() - generationStartedAt,
+        error,
+      });
+      throw error;
     } finally {
       this.liteRtGenerationActive = false;
     }

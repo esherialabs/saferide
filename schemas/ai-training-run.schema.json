@@ -40,7 +40,7 @@
     "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$" },
     "createdAt": { "type": "string", "minLength": 20 },
     "issue": { "const": "ESH-4198" },
-    "datasetProfile": { "enum": ["v04", "v05"] },
+    "datasetProfile": { "enum": ["v04", "v05", "v051", "v052", "v053", "v054", "v055", "v056"] },
     "mode": { "enum": ["dry-run", "tiny-smoke", "prototype-finetune"] },
     "runKind": { "enum": ["preflight", "formatting-smoke", "pilot", "candidate"] },
     "candidateRun": { "type": "boolean" },
@@ -86,6 +86,121 @@
             "reviewLedgerSha256": { "$ref": "#/$defs/sha256" },
             "pilotRowManifest": { "type": ["string", "null"] },
             "pilotRowManifestSha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "planSha256", "policySha256", "systemPromptConfigSha256", "systemPromptTextSha256", "scenarioSpecSha256", "splitManifestSha256", "reviewLedgerSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+            "planSha256": { "$ref": "#/$defs/nullableSha256" },
+            "policySha256": { "$ref": "#/$defs/nullableSha256" },
+            "systemPromptConfigSha256": { "$ref": "#/$defs/nullableSha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/nullableSha256" },
+            "scenarioSpecSha256": { "$ref": "#/$defs/nullableSha256" },
+            "splitManifestSha256": { "$ref": "#/$defs/nullableSha256" },
+            "reviewLedgerSha256": { "$ref": "#/$defs/nullableSha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "diagnosisSummarySha256", "implementationSha256", "mitigationDevelopmentSha256", "originalDevelopmentSha256", "planSha256", "scoringPolicySha256", "sealedMitigationHoldoutSha256", "systemPromptTextSha256", "v051CombinedTrainSha256", "v051FrozenManifestSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.2" },
+            "diagnosisSummarySha256": { "$ref": "#/$defs/sha256" },
+            "implementationSha256": { "$ref": "#/$defs/sha256" },
+            "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "planSha256": { "$ref": "#/$defs/sha256" },
+            "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+            "sealedMitigationHoldoutSha256": { "$ref": "#/$defs/sha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/sha256" },
+            "v051CombinedTrainSha256": { "$ref": "#/$defs/sha256" },
+            "v051FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "diagnosisSummarySha256", "implementationSha256", "mitigationDevelopmentSha256", "originalDevelopmentSha256", "planSha256", "scoringPolicySha256", "sealedMitigationHoldoutSha256", "systemPromptTextSha256", "v052CombinedTrainSha256", "v052FrozenManifestSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.3" },
+            "diagnosisSummarySha256": { "$ref": "#/$defs/sha256" },
+            "implementationSha256": { "$ref": "#/$defs/sha256" },
+            "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "planSha256": { "$ref": "#/$defs/sha256" },
+            "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+            "sealedMitigationHoldoutSha256": { "$ref": "#/$defs/sha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/sha256" },
+            "v052CombinedTrainSha256": { "$ref": "#/$defs/sha256" },
+            "v052FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "diagnosisSummarySha256", "implementationSha256", "lossPolicySha256", "mitigationDevelopmentSha256", "originalDevelopmentSha256", "planSha256", "scoringPolicySha256", "sealedMitigationHoldoutSha256", "systemPromptTextSha256", "v053CombinedTrainSha256", "v053FrozenManifestSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.4" },
+            "diagnosisSummarySha256": { "$ref": "#/$defs/sha256" },
+            "implementationSha256": { "$ref": "#/$defs/sha256" },
+            "lossPolicySha256": { "$ref": "#/$defs/sha256" },
+            "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "planSha256": { "$ref": "#/$defs/sha256" },
+            "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+            "sealedMitigationHoldoutSha256": { "$ref": "#/$defs/sha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/sha256" },
+            "v053CombinedTrainSha256": { "$ref": "#/$defs/sha256" },
+            "v053FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "diagnosisSummarySha256", "implementationSha256", "lossPolicySha256", "mitigationDevelopmentSha256", "originalDevelopmentSha256", "planSha256", "scoringPolicySha256", "sealedMitigationHoldoutSha256", "systemPromptTextSha256", "v054CombinedTrainSha256", "v054FrozenManifestSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.5" },
+            "diagnosisSummarySha256": { "$ref": "#/$defs/sha256" },
+            "implementationSha256": { "$ref": "#/$defs/sha256" },
+            "lossPolicySha256": { "$ref": "#/$defs/sha256" },
+            "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "planSha256": { "$ref": "#/$defs/sha256" },
+            "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+            "sealedMitigationHoldoutSha256": { "$ref": "#/$defs/sha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/sha256" },
+            "v054CombinedTrainSha256": { "$ref": "#/$defs/sha256" },
+            "v054FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["datasetId", "diagnosisSummarySha256", "implementationSha256", "lossPolicySha256", "mitigationDevelopmentSha256", "originalDevelopmentSha256", "planSha256", "scoringPolicySha256", "sealedMitigationHoldoutSha256", "systemPromptTextSha256", "v054CombinedTrainSha256", "v054FrozenManifestSha256", "v054TrainingRecipeSha256", "pilotRowManifest", "pilotRowManifestSha256"],
+          "properties": {
+            "datasetId": { "const": "saferide-synthetic-guidance-v0.5.6" },
+            "diagnosisSummarySha256": { "$ref": "#/$defs/sha256" },
+            "implementationSha256": { "$ref": "#/$defs/sha256" },
+            "lossPolicySha256": { "$ref": "#/$defs/sha256" },
+            "mitigationDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "originalDevelopmentSha256": { "$ref": "#/$defs/sha256" },
+            "planSha256": { "$ref": "#/$defs/sha256" },
+            "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+            "sealedMitigationHoldoutSha256": { "$ref": "#/$defs/sha256" },
+            "systemPromptTextSha256": { "$ref": "#/$defs/sha256" },
+            "v054CombinedTrainSha256": { "$ref": "#/$defs/sha256" },
+            "v054FrozenManifestSha256": { "$ref": "#/$defs/sha256" },
+            "v054TrainingRecipeSha256": { "$ref": "#/$defs/sha256" },
+            "pilotRowManifest": { "type": ["string", "null"] },
+            "pilotRowManifestSha256": { "$ref": "#/$defs/nullableSha256" }
           }
         }
       ]
@@ -145,6 +260,7 @@
         "trainBatchSize": { "type": "integer", "minimum": 1 },
         "evalBatchSize": { "type": "integer", "minimum": 1 },
         "gradientAccumulationSteps": { "type": "integer", "minimum": 1 },
+        "maxGradientNorm": { "type": "number", "exclusiveMinimum": 0 },
         "effectiveBatchSize": { "type": "integer", "minimum": 1 },
         "learningRate": { "type": "number", "exclusiveMinimum": 0 },
         "warmupRatio": { "type": "number", "minimum": 0, "exclusiveMaximum": 1 },
@@ -223,10 +339,99 @@
         }
       },
       "else": { "properties": { "candidateRun": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "datasetProfile": { "enum": ["v054", "v055", "v056"] } }, "required": ["datasetProfile"] },
+      "then": {
+        "properties": {
+          "runArguments": {
+            "required": ["maxGradientNorm"],
+            "properties": {
+              "maxGradientNorm": { "const": 1.0 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "datasetProfile": { "enum": ["v054", "v055", "v056"] },
+          "status": { "const": "completed" },
+          "runKind": { "const": "pilot" }
+        },
+        "required": ["datasetProfile", "status", "runKind"]
+      },
+      "then": {
+        "properties": {
+          "outputs": {
+            "required": ["lossReport", "lossMaskPolicy"],
+            "properties": {
+              "lossReport": { "$ref": "#/$defs/v054LossReport" },
+              "lossMaskPolicy": { "const": "assistant-turns-only" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "datasetProfile": { "enum": ["v054", "v055", "v056"] },
+          "status": { "const": "completed" },
+          "runKind": { "const": "preflight" }
+        },
+        "required": ["datasetProfile", "status", "runKind"]
+      },
+      "then": {
+        "properties": {
+          "outputs": {
+            "required": ["lossReport", "lossMaskPolicy"],
+            "properties": {
+              "lossReport": { "$ref": "#/$defs/v054PreflightLossReport" },
+              "lossMaskPolicy": { "const": "assistant-turns-only" }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nullableSha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "v054LossReport": {
+      "type": "object",
+      "required": ["policyId", "policySha256", "rawTrainerAccumulatedLoss", "gradientAccumulationSteps", "meanTrainingObjectiveLoss", "bestDevelopmentLoss", "finalDevelopmentLoss", "selectionMetric", "finite", "spikeGate", "divergenceGate"],
+      "properties": {
+        "policyId": { "const": "saferide-v054-training-loss-integrity.1" },
+        "policySha256": { "$ref": "#/$defs/sha256" },
+        "rawTrainerAccumulatedLoss": { "type": "number" },
+        "gradientAccumulationSteps": { "const": 8 },
+        "meanTrainingObjectiveLoss": { "type": "number" },
+        "bestDevelopmentLoss": { "type": "number" },
+        "finalDevelopmentLoss": { "type": "number" },
+        "selectionMetric": { "const": "minimum-finite-development-assistant-token-loss" },
+        "finite": { "const": true },
+        "spikeGate": { "const": "passed" },
+        "divergenceGate": { "const": "passed" }
+      }
+    },
+    "v054PreflightLossReport": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policyId", "rawTrainerLoss", "observedMicrobatches", "meanTrainingObjectiveLoss", "bestDevelopmentLoss", "finalDevelopmentLoss", "finite", "spikeGate", "divergenceGate", "resumeContinuity"],
+      "properties": {
+        "policyId": { "const": "saferide-v054-preflight-loss-integrity.1" },
+        "rawTrainerLoss": { "type": "number" },
+        "observedMicrobatches": { "const": 1 },
+        "meanTrainingObjectiveLoss": { "type": "number" },
+        "bestDevelopmentLoss": { "type": "number" },
+        "finalDevelopmentLoss": { "type": "number" },
+        "finite": { "const": true },
+        "spikeGate": { "const": "not-applicable-one-step" },
+        "divergenceGate": { "const": "not-applicable-one-step" },
+        "resumeContinuity": { "const": "not-required" }
+      }
+    },
     "pathHash": {
       "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
       "properties": { "path": { "type": "string", "minLength": 3 }, "sha256": { "$ref": "#/$defs/sha256" } }

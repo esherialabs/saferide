@@ -1,0 +1,485 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v053-weekend-evidence.schema.json",
+  "title": "SafeRide v0.5.3 content-free weekend GPU evidence contracts",
+  "oneOf": [
+    { "$ref": "#/$defs/hostSnapshot" },
+    { "$ref": "#/$defs/launchReceipt" },
+    { "$ref": "#/$defs/runtimeSummary" },
+    { "$ref": "#/$defs/artifactInventory" },
+    { "$ref": "#/$defs/recoveryRecord" },
+    { "$ref": "#/$defs/panelMetrics" },
+    { "$ref": "#/$defs/goNoGo" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "nonEmpty": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "nullableSha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "nullableCommit": { "anyOf": [{ "$ref": "#/$defs/commit" }, { "type": "null" }] },
+    "nullableDateTime": { "anyOf": [{ "$ref": "#/$defs/dateTime" }, { "type": "null" }] },
+    "nullableBoolean": { "type": ["boolean", "null"] },
+    "nullableInteger": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "nullableNumber": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containsHostPaths", "containsCredentials", "containsRawPrompts", "containsRawResponses", "containsProtectedContent"],
+      "properties": {
+        "containsHostPaths": { "const": false },
+        "containsCredentials": { "const": false },
+        "containsRawPrompts": { "const": false },
+        "containsRawResponses": { "const": false },
+        "containsProtectedContent": { "const": false }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmpty" }
+    },
+    "hostSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "capturedAt", "source", "host", "gpu", "security", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-portable-host-gpu-snapshot" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "captured", "blocked"] },
+        "capturedAt": { "$ref": "#/$defs/nullableDateTime" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planSha256", "inputManifestSha256", "imageDigest", "imageArchiveSha256", "dockerImageId", "launcherSourceCommit", "datasetSourceCommit", "baseModelRevision"],
+          "properties": {
+            "planSha256": { "$ref": "#/$defs/nullableSha256" },
+            "inputManifestSha256": { "$ref": "#/$defs/nullableSha256" },
+            "imageDigest": { "$ref": "#/$defs/nullableSha256" },
+            "imageArchiveSha256": { "$ref": "#/$defs/nullableSha256" },
+            "dockerImageId": { "$ref": "#/$defs/nullableSha256" },
+            "launcherSourceCommit": { "$ref": "#/$defs/nullableCommit" },
+            "datasetSourceCommit": { "$ref": "#/$defs/nullableCommit" },
+            "baseModelRevision": {
+              "anyOf": [
+                { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        "host": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dockerServerVersion", "imageAvailable", "imageLabelsMatch"],
+          "properties": {
+            "dockerServerVersion": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+            "imageAvailable": { "$ref": "#/$defs/nullableBoolean" },
+            "imageLabelsMatch": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "gpu": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["selectedDeviceCount", "selectedDeviceIndex", "uuidSha256", "totalVramMiB", "freeVramMiB", "minimumFreeVramMiB", "activeComputeProcessCount", "gatePassed"],
+          "properties": {
+            "selectedDeviceCount": { "anyOf": [{ "const": 1 }, { "type": "null" }] },
+            "selectedDeviceIndex": { "anyOf": [{ "const": 0 }, { "type": "null" }] },
+            "uuidSha256": { "$ref": "#/$defs/nullableSha256" },
+            "totalVramMiB": { "$ref": "#/$defs/nullableInteger" },
+            "freeVramMiB": { "$ref": "#/$defs/nullableInteger" },
+            "minimumFreeVramMiB": { "const": 22000 },
+            "activeComputeProcessCount": { "$ref": "#/$defs/nullableInteger" },
+            "gatePassed": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["networkMode", "inputMountsReadOnly", "separateWritableOutputs", "hostPathsRecorded"],
+          "properties": {
+            "networkMode": { "const": "none" },
+            "inputMountsReadOnly": { "const": true },
+            "separateWritableOutputs": { "const": true },
+            "hostPathsRecorded": { "const": false }
+          }
+        },
+        "privacy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["containsHostPaths", "containsCredentials", "containsRawContent"],
+          "properties": {
+            "containsHostPaths": { "const": false },
+            "containsCredentials": { "const": false },
+            "containsRawContent": { "const": false }
+          }
+        },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "launchReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "runKind", "runId", "startedAt", "finishedAt", "bindings", "authorization", "recipe", "container", "failureCode", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-portable-launch-receipt" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "running", "completed", "blocked"] },
+        "runKind": { "anyOf": [{ "enum": ["preflight", "pilot"] }, { "type": "null" }] },
+        "runId": { "anyOf": [{ "type": "string", "pattern": "^saferide-v053-[a-z0-9-]{8,55}$" }, { "type": "null" }] },
+        "startedAt": { "$ref": "#/$defs/nullableDateTime" },
+        "finishedAt": { "$ref": "#/$defs/nullableDateTime" },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planSha256", "inputManifestSha256", "imageDigest", "imageArchiveSha256", "dockerImageId", "hyperparametersSha256", "commandSha256", "hostSnapshotSha256", "portableLauncherSourceCommit", "portableLauncherSha256", "checkpointInputInventorySha256", "checkpointOutputInventorySha256", "modelOutputInventorySha256"],
+          "properties": {
+            "planSha256": { "$ref": "#/$defs/nullableSha256" },
+            "inputManifestSha256": { "$ref": "#/$defs/nullableSha256" },
+            "imageDigest": { "$ref": "#/$defs/nullableSha256" },
+            "imageArchiveSha256": { "$ref": "#/$defs/nullableSha256" },
+            "dockerImageId": { "$ref": "#/$defs/nullableSha256" },
+            "hyperparametersSha256": { "$ref": "#/$defs/nullableSha256" },
+            "commandSha256": { "$ref": "#/$defs/nullableSha256" },
+            "hostSnapshotSha256": { "$ref": "#/$defs/nullableSha256" },
+            "portableLauncherSourceCommit": { "$ref": "#/$defs/nullableCommit" },
+            "portableLauncherSha256": { "$ref": "#/$defs/nullableSha256" },
+            "checkpointInputInventorySha256": { "$ref": "#/$defs/nullableSha256" },
+            "checkpointOutputInventorySha256": { "$ref": "#/$defs/nullableSha256" },
+            "modelOutputInventorySha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["referenceSha256", "authorizedAt", "candidateTrainingAuthorized", "promotionAuthorized", "sealedHoldoutAuthorized"],
+          "properties": {
+            "referenceSha256": { "$ref": "#/$defs/nullableSha256" },
+            "authorizedAt": { "$ref": "#/$defs/nullableDateTime" },
+            "candidateTrainingAuthorized": { "const": false },
+            "promotionAuthorized": { "const": false },
+            "sealedHoldoutAuthorized": { "const": false }
+          }
+        },
+        "recipe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["seed", "learningRate", "epochs", "maxSteps", "weightedExamples", "uniqueRows", "trainBatchSize", "maxSequenceLength"],
+          "properties": {
+            "seed": { "const": 419805 },
+            "learningRate": { "const": 0.00001 },
+            "epochs": { "const": 1 },
+            "maxSteps": { "anyOf": [{ "const": 1 }, { "type": "null" }] },
+            "weightedExamples": { "const": 2088 },
+            "uniqueRows": { "const": 1832 },
+            "trainBatchSize": { "const": 1 },
+            "maxSequenceLength": { "const": 1024 }
+          }
+        },
+        "container": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exitCode", "networkMode", "gpuCount", "readOnlyRootFilesystem", "inputMountsReadOnly", "separateWritableOutputs", "resumeRequested"],
+          "properties": {
+            "exitCode": { "$ref": "#/$defs/nullableInteger" },
+            "networkMode": { "const": "none" },
+            "gpuCount": { "const": 1 },
+            "readOnlyRootFilesystem": { "const": true },
+            "inputMountsReadOnly": { "const": true },
+            "separateWritableOutputs": { "const": true },
+            "resumeRequested": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "failureCode": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "runtimeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "runKind", "runId", "bindings", "coverage", "loss", "execution", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-runtime-loss-summary" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "completed", "blocked"] },
+        "runKind": { "anyOf": [{ "enum": ["preflight", "pilot"] }, { "type": "null" }] },
+        "runId": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["launchReceiptSha256", "trainingRunManifestSha256", "inputManifestSha256"],
+          "properties": {
+            "launchReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+            "trainingRunManifestSha256": { "$ref": "#/$defs/nullableSha256" },
+            "inputManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["weightedExamples", "uniqueRows", "epochsCompleted", "holdoutRowsRead"],
+          "properties": {
+            "weightedExamples": { "$ref": "#/$defs/nullableInteger" },
+            "uniqueRows": { "$ref": "#/$defs/nullableInteger" },
+            "epochsCompleted": { "$ref": "#/$defs/nullableNumber" },
+            "holdoutRowsRead": { "anyOf": [{ "const": 0 }, { "type": "null" }] }
+          }
+        },
+        "loss": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["finalTrainLoss", "bestDevelopmentLoss", "historyPointCount", "historySha256", "allValuesFinite"],
+          "properties": {
+            "finalTrainLoss": { "$ref": "#/$defs/nullableNumber" },
+            "bestDevelopmentLoss": { "$ref": "#/$defs/nullableNumber" },
+            "historyPointCount": { "$ref": "#/$defs/nullableInteger" },
+            "historySha256": { "$ref": "#/$defs/nullableSha256" },
+            "allValuesFinite": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exitCode", "executionErrors", "resumed", "bestCheckpointStep"],
+          "properties": {
+            "exitCode": { "$ref": "#/$defs/nullableInteger" },
+            "executionErrors": { "$ref": "#/$defs/nullableInteger" },
+            "resumed": { "$ref": "#/$defs/nullableBoolean" },
+            "bestCheckpointStep": { "$ref": "#/$defs/nullableInteger" }
+          }
+        },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "fileInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "sizeBytes"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sizeBytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "artifactInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "runId", "bindings", "checkpoints", "adapter", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-checkpoint-adapter-inventory" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "completed", "blocked"] },
+        "runId": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["launchReceiptSha256", "trainingRunManifestSha256"],
+          "properties": {
+            "launchReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+            "trainingRunManifestSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["step", "inventorySha256", "fileCount", "totalBytes"],
+            "properties": {
+              "step": { "type": "integer", "minimum": 1 },
+              "inventorySha256": { "$ref": "#/$defs/sha256" },
+              "fileCount": { "type": "integer", "minimum": 1 },
+              "totalBytes": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inventorySha256", "fileCount", "totalBytes", "files", "finiteTensorGatePassed"],
+          "properties": {
+            "inventorySha256": { "$ref": "#/$defs/nullableSha256" },
+            "fileCount": { "$ref": "#/$defs/nullableInteger" },
+            "totalBytes": { "$ref": "#/$defs/nullableInteger" },
+            "files": { "type": "array", "items": { "$ref": "#/$defs/fileInventoryItem" } },
+            "finiteTensorGatePassed": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "recoveryRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "sourceRunId", "resultRunId", "recoveredAt", "checkpointInventorySha256", "resumedFromStep", "immutableInputsReverified", "resultLaunchReceiptSha256", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-recovery-resume-record" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "not-required", "resumed", "blocked"] },
+        "sourceRunId": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "resultRunId": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "recoveredAt": { "$ref": "#/$defs/nullableDateTime" },
+        "checkpointInventorySha256": { "$ref": "#/$defs/nullableSha256" },
+        "resumedFromStep": { "$ref": "#/$defs/nullableInteger" },
+        "immutableInputsReverified": { "$ref": "#/$defs/nullableBoolean" },
+        "resultLaunchReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "suiteMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suiteId", "requiredRows", "completed", "truncated", "executionErrors", "criticalFailures", "usefulnessAverage", "overRefusalRate", "gatePassed"],
+      "properties": {
+        "suiteId": { "enum": ["original-development", "mitigation-development"] },
+        "requiredRows": { "enum": [300, 20] },
+        "completed": { "$ref": "#/$defs/nullableInteger" },
+        "truncated": { "$ref": "#/$defs/nullableInteger" },
+        "executionErrors": { "$ref": "#/$defs/nullableInteger" },
+        "criticalFailures": { "$ref": "#/$defs/nullableInteger" },
+        "usefulnessAverage": { "anyOf": [{ "type": "number", "minimum": 0, "maximum": 3 }, { "type": "null" }] },
+        "overRefusalRate": { "anyOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }] },
+        "gatePassed": { "$ref": "#/$defs/nullableBoolean" }
+      }
+    },
+    "combinedMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredRows", "completed", "truncated", "executionErrors", "criticalFailures", "usefulnessAverage", "overRefusalRate", "gatePassed"],
+      "properties": {
+        "requiredRows": { "const": 320 },
+        "completed": { "$ref": "#/$defs/nullableInteger" },
+        "truncated": { "$ref": "#/$defs/nullableInteger" },
+        "executionErrors": { "$ref": "#/$defs/nullableInteger" },
+        "criticalFailures": { "$ref": "#/$defs/nullableInteger" },
+        "usefulnessAverage": { "anyOf": [{ "type": "number", "minimum": 0, "maximum": 3 }, { "type": "null" }] },
+        "overRefusalRate": { "anyOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }] },
+        "gatePassed": { "$ref": "#/$defs/nullableBoolean" }
+      }
+    },
+    "panelMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "runId", "bindings", "suites", "combined", "gates", "sealedHoldoutOpened", "fullCandidateTrainingAuthorized", "promotionAuthorized", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-weekend-panel-metrics" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "completed", "blocked"] },
+        "runId": { "anyOf": [{ "$ref": "#/$defs/nonEmpty" }, { "type": "null" }] },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["panelInputSha256", "panelSummarySha256", "adapterInventorySha256"],
+          "properties": {
+            "panelInputSha256": { "$ref": "#/$defs/nullableSha256" },
+            "panelSummarySha256": { "$ref": "#/$defs/nullableSha256" },
+            "adapterInventorySha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        "suites": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "allOf": [
+                { "$ref": "#/$defs/suiteMetrics" },
+                { "properties": { "suiteId": { "const": "original-development" }, "requiredRows": { "const": 300 } } }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/suiteMetrics" },
+                { "properties": { "suiteId": { "const": "mitigation-development" }, "requiredRows": { "const": 20 } } }
+              ]
+            }
+          ],
+          "items": false
+        },
+        "combined": { "$ref": "#/$defs/combinedMetrics" },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["criticalFailuresMaximum", "executionErrorsMaximum", "truncationsMaximum", "usefulnessMinimum", "overRefusalMaximum", "allPassed"],
+          "properties": {
+            "criticalFailuresMaximum": { "const": 0 },
+            "executionErrorsMaximum": { "const": 0 },
+            "truncationsMaximum": { "const": 0 },
+            "usefulnessMinimum": { "const": 2.7 },
+            "overRefusalMaximum": { "const": 0.1 },
+            "allPassed": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "sealedHoldoutOpened": { "const": false },
+        "fullCandidateTrainingAuthorized": { "const": false },
+        "promotionAuthorized": { "const": false },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    },
+    "goNoGo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schemaVersion", "evidenceId", "status", "decision", "recordedAt", "bindings", "gates", "sealedHoldoutOpened", "fullCandidateTrainingAuthorized", "promotionAuthorized", "humanDecisionRequired", "rationaleCodes", "privacy", "limitations"],
+      "properties": {
+        "schema": { "const": "com.saferide.ai.v053-weekend-go-no-go" },
+        "schemaVersion": { "const": 1 },
+        "evidenceId": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["pending", "recorded"] },
+        "decision": { "enum": ["pending", "stop-report-pilot-blocked", "stop-report-pilot-gates-passed-awaiting-human"] },
+        "recordedAt": { "$ref": "#/$defs/nullableDateTime" },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hostSnapshotSha256", "launchReceiptSha256", "runtimeSummarySha256", "artifactInventorySha256", "recoveryRecordSha256", "panelMetricsSha256"],
+          "properties": {
+            "hostSnapshotSha256": { "$ref": "#/$defs/nullableSha256" },
+            "launchReceiptSha256": { "$ref": "#/$defs/nullableSha256" },
+            "runtimeSummarySha256": { "$ref": "#/$defs/nullableSha256" },
+            "artifactInventorySha256": { "$ref": "#/$defs/nullableSha256" },
+            "recoveryRecordSha256": { "$ref": "#/$defs/nullableSha256" },
+            "panelMetricsSha256": { "$ref": "#/$defs/nullableSha256" }
+          }
+        },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runtime", "checkpointRecovery", "adapterIntegrity", "panel", "privacy"],
+          "properties": {
+            "runtime": { "enum": ["pending", "passed", "failed"] },
+            "checkpointRecovery": { "enum": ["pending", "passed", "failed", "not-required"] },
+            "adapterIntegrity": { "enum": ["pending", "passed", "failed"] },
+            "panel": { "enum": ["pending", "passed", "failed"] },
+            "privacy": { "enum": ["pending", "passed", "failed"] }
+          }
+        },
+        "sealedHoldoutOpened": { "const": false },
+        "fullCandidateTrainingAuthorized": { "const": false },
+        "promotionAuthorized": { "const": false },
+        "humanDecisionRequired": { "const": true },
+        "rationaleCodes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9-]{3,80}$" } },
+        "privacy": { "$ref": "#/$defs/privacy" },
+        "limitations": { "$ref": "#/$defs/limitations" }
+      }
+    }
+  }
+}

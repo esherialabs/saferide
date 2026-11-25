@@ -38,11 +38,11 @@ const SIZE_MAP: Record<SizeKey, {
   fontSize: number;
 }> = {
   icon: { height: 48, paddingHorizontal: 0, radius: radii.button, fontSize: typography.button.fontSize },
-  xs: { height: 48, paddingHorizontal: spacing.lg, radius: radii.chip, fontSize: typography.bodyS.fontSize },
-  sm: { height: 48, paddingHorizontal: spacing.xl, radius: radii.button, fontSize: typography.bodyS.fontSize },
-  md: { height: 52, paddingHorizontal: spacing.xl, radius: radii.button, fontSize: typography.button.fontSize },
-  lg: { height: 56, paddingHorizontal: spacing.xl, radius: radii.button, fontSize: typography.button.fontSize },
-  xl: { height: 60, paddingHorizontal: spacing.xxl, radius: radii.button, fontSize: typography.button.fontSize },
+  xs: { height: 48, paddingHorizontal: spacing.md, radius: radii.chip, fontSize: typography.bodyS.fontSize },
+  sm: { height: 48, paddingHorizontal: spacing.md, radius: radii.button, fontSize: typography.bodyS.fontSize },
+  md: { height: 48, paddingHorizontal: spacing.lg, radius: radii.button, fontSize: typography.button.fontSize },
+  lg: { height: 52, paddingHorizontal: spacing.lg, radius: radii.button, fontSize: typography.button.fontSize },
+  xl: { height: 56, paddingHorizontal: spacing.xl, radius: radii.button, fontSize: typography.button.fontSize },
 };
 
 const styles = StyleSheet.create({
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   inner: {
-    flex: 1,
-    height: '100%',
+    flexGrow: 1,
+    paddingVertical: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
   },
   fullWidth: {
     width: '100%',
@@ -95,6 +96,7 @@ export default function Button({
     {
       borderRadius: sizeConfig.radius,
       minHeight: sizeConfig.height,
+      maxWidth: '100%',
       opacity: disabled ? 0.7 : 1,
     },
     fullWidth ? styles.fullWidth : { alignSelf: 'flex-start' },
@@ -121,6 +123,7 @@ export default function Button({
       fontSize: sizeConfig.fontSize,
       color: colors.foreground,
       textAlign: 'center',
+      flexShrink: 1,
     };
 
     if (resolvedVariant === 'link') {
@@ -166,7 +169,7 @@ export default function Button({
     // primary
     return {
       ...base,
-      color: colors.primaryForeground,
+      color: disabled ? colors.textSecondary : colors.primaryForeground,
     };
   }, [colors, disabled, resolvedVariant, sizeConfig.fontSize]);
 
@@ -180,7 +183,7 @@ export default function Button({
             </View>
           )}
           {title && (
-            <Text style={labelStyle} numberOfLines={2}>
+            <Text style={labelStyle}>
               {title}
             </Text>
           )}
@@ -200,7 +203,6 @@ export default function Button({
             <Text
               key={`button_text_${index}`}
               style={labelStyle}
-              numberOfLines={2}
             >
               {child}
             </Text>
@@ -211,7 +213,7 @@ export default function Button({
     }
 
     return (
-      <Text style={labelStyle} numberOfLines={2}>
+      <Text style={labelStyle}>
         {title}
       </Text>
     );
@@ -225,7 +227,9 @@ export default function Button({
             styles.inner,
             innerBaseStyle,
             {
-              backgroundColor: disabled ? colors.primaryDisabled : colors.primary,
+              backgroundColor: disabled ? colors.surfaceAlt : colors.primary,
+              borderColor: disabled ? colors.border : colors.primary,
+              borderWidth: 1,
             },
           ]}
         >
@@ -318,7 +322,7 @@ export default function Button({
 
   const indicatorColor =
     resolvedVariant === 'primary'
-      ? colors.primaryForeground
+      ? disabled ? colors.textSecondary : colors.primaryForeground
       : resolvedVariant === 'destructive'
       ? colors.destructiveForeground
       : resolvedVariant === 'ghost' || resolvedVariant === 'link'

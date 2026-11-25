@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v053-aws-artifact-recovery.schema.json",
+  "title": "SafeRide v0.5.3 content-free AWS artifact recovery evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "issue",
+    "status",
+    "recoveredAt",
+    "account",
+    "s3",
+    "ecr",
+    "executedInputComparison",
+    "security",
+    "privacy",
+    "limitations"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v053-aws-artifact-recovery" },
+    "schemaVersion": { "const": 1 },
+    "issue": { "const": "ESH-4198" },
+    "status": { "const": "recovered-and-verified" },
+    "recoveredAt": { "$ref": "#/$defs/dateTime" },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "accountIdSha256", "stsIdentityVerified"],
+      "properties": {
+        "profile": { "const": "esheria-prod" },
+        "accountIdSha256": { "$ref": "#/$defs/sha256" },
+        "stsIdentityVerified": { "const": true }
+      }
+    },
+    "s3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headVerifiedObjectCount", "versionRetrievedObjectCount", "retrievedBytes", "model", "datasetArchive", "inputManifest"],
+      "properties": {
+        "headVerifiedObjectCount": { "const": 11 },
+        "versionRetrievedObjectCount": { "const": 11 },
+        "retrievedBytes": { "const": 10279681325 },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["modelId", "revision", "fileCount", "totalBytes", "files", "allHeadsAndVersionsVerified", "allHashesAndSizesVerified"],
+          "properties": {
+            "modelId": { "const": "google/gemma-4-E2B-it" },
+            "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" },
+            "fileCount": { "const": 9 },
+            "totalBytes": { "const": 10278846140 },
+            "files": { "type": "array", "minItems": 9, "maxItems": 9, "items": { "$ref": "#/$defs/versionedFile" } },
+            "allHeadsAndVersionsVerified": { "const": true },
+            "allHashesAndSizesVerified": { "const": true }
+          }
+        },
+        "datasetArchive": { "$ref": "#/$defs/versionedFile" },
+        "inputManifest": { "$ref": "#/$defs/versionedFile" }
+      }
+    },
+    "ecr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "historicalPlanSha256",
+        "rootDigest",
+        "rootMediaType",
+        "rootSizeBytes",
+        "tagDigestVerified",
+        "runtimeManifestDigest",
+        "runtimeConfigDigest",
+        "platform",
+        "archiveSha256",
+        "archiveSizeBytes",
+        "blobCount",
+        "blobBytes",
+        "lineageSha256",
+        "descriptorGraphVerified",
+        "portableArchiveVerificationPassed"
+      ],
+      "properties": {
+        "historicalPlanSha256": { "$ref": "#/$defs/sha256" },
+        "rootDigest": { "$ref": "#/$defs/sha256" },
+        "rootMediaType": { "const": "application/vnd.oci.image.index.v1+json" },
+        "rootSizeBytes": { "const": 856 },
+        "tagDigestVerified": { "const": true },
+        "runtimeManifestDigest": { "$ref": "#/$defs/sha256" },
+        "runtimeConfigDigest": { "$ref": "#/$defs/sha256" },
+        "platform": { "const": "linux/amd64" },
+        "archiveSha256": { "$ref": "#/$defs/sha256" },
+        "archiveSizeBytes": { "type": "integer", "minimum": 1 },
+        "blobCount": { "type": "integer", "minimum": 1 },
+        "blobBytes": { "type": "integer", "minimum": 1 },
+        "lineageSha256": { "$ref": "#/$defs/sha256" },
+        "descriptorGraphVerified": { "const": true },
+        "portableArchiveVerificationPassed": { "const": true }
+      }
+    },
+    "executedInputComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelFilesByteIdentical",
+        "datasetArchiveByteIdentical",
+        "inputManifestByteIdentical",
+        "runtimeManifestDigestIdentical",
+        "runtimeConfigDigestIdentical",
+        "executedPlanSha256",
+        "executedArchiveSha256",
+        "rerunRequired",
+        "reasonCode"
+      ],
+      "properties": {
+        "modelFilesByteIdentical": { "const": true },
+        "datasetArchiveByteIdentical": { "const": true },
+        "inputManifestByteIdentical": { "const": true },
+        "runtimeManifestDigestIdentical": { "const": true },
+        "runtimeConfigDigestIdentical": { "const": true },
+        "executedPlanSha256": { "$ref": "#/$defs/sha256" },
+        "executedArchiveSha256": { "$ref": "#/$defs/sha256" },
+        "rerunRequired": { "const": false },
+        "reasonCode": { "const": "all-executed-immutable-input-bytes-match-authoritative-aws-artifacts" }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationScope", "paidJobStarted", "sagemakerJobStarted", "privateModesVerified"],
+      "properties": {
+        "operationScope": { "const": "content-safe-s3-ecr-inventory-head-and-exact-retrieval" },
+        "paidJobStarted": { "const": false },
+        "sagemakerJobStarted": { "const": false },
+        "privateModesVerified": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containsHostPaths", "containsCredentials", "containsRawPrompts", "containsRawResponses", "containsProtectedContent", "containsWeights"],
+      "properties": {
+        "containsHostPaths": { "const": false },
+        "containsCredentials": { "const": false },
+        "containsRawPrompts": { "const": false },
+        "containsRawResponses": { "const": false },
+        "containsProtectedContent": { "const": false },
+        "containsWeights": { "const": false }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 500 }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "versionedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "sizeBytes", "versionId", "etag"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "maxLength": 100 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sizeBytes": { "type": "integer", "minimum": 1 },
+        "versionId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "etag": { "type": "string", "pattern": "^\"[a-f0-9]{32}(-[0-9]+)?\"$" },
+        "headAndVersionVerified": { "const": true }
+      }
+    }
+  }
+}

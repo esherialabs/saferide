@@ -10,13 +10,13 @@ import {
   Text,
   View,
   TextInput,
-  ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import AppLogo from '../components/AppLogo';
+import { BrandBar } from '../components/BrandWordmark';
+import { SafetyIllustration } from '../components/ui/SafetyIllustration';
 import Button from '../components/ui/Button';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { useAuth } from '../context/AuthProvider';
@@ -45,7 +45,7 @@ type TopAuthNotice = {
 export default function AuthScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { colors } = useTheme();
+  const { colors, colorScheme } = useTheme();
   const toast = useToast();
   const {
     signInWithPassword,
@@ -242,21 +242,14 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <BrandBar><AppLogo width={168} height={40} inverted={colorScheme === 'dark'} animated={false} /></BrandBar>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ImageBackground
-          source={require('../../assets/images/saferide-warm-transit-hero.webp')}
-          style={styles.backgroundImage}
-          imageStyle={styles.backgroundImageAsset}
-          resizeMode="cover"
-        >
-          <View style={[styles.overlay, { backgroundColor: 'rgba(255,248,243,0.78)' }]} pointerEvents="none" />
-        </ImageBackground>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.column}>
-            <AppLogo width={200} height={72} style={styles.logo} />
+            <View style={{ alignItems: 'center', marginBottom: spacing.xs }}><SafetyIllustration kind="privacy" size={80} responsive /></View>
             {topNotice ? (
               <View
                 style={[
@@ -323,7 +316,6 @@ export default function AuthScreen() {
               <View
                 style={[styles.linkStatus, { backgroundColor: colors.accent + '22', borderColor: colors.accent + '55' }]}
               >
-                <View pointerEvents="none" style={[styles.cardAccentLeft, { backgroundColor: colors.accent }]} />
                 <ActivityIndicator size="small" color={colors.accent} />
                 <Text style={[styles.linkStatusText, { color: colors.foreground }]}>Processing secure link...</Text>
               </View>
@@ -333,19 +325,15 @@ export default function AuthScreen() {
               <View
                 style={[styles.alert, { borderColor: colors.destructive + '40', backgroundColor: colors.destructive + '15' }]}
               >
-                <View pointerEvents="none" style={[styles.cardAccentLeft, { backgroundColor: colors.destructive }]} />
                 <Text style={[styles.alertTitle, { color: colors.destructive }]}>Link expired</Text>
                 <Text style={[styles.alertMessage, { color: colors.destructive }]}>{linkError}</Text>
                 <Button variant="link" title="Dismiss" onPress={clearLinkError} size="sm" />
               </View>
             ) : null}
 
-            <BlurView
-              intensity={24}
-              tint="light"
-              style={[styles.formBlock, { backgroundColor: 'rgba(255,255,255,0.78)', borderColor: colors.border }]}
+            <View
+              style={[styles.formBlock, { backgroundColor: colors.surface, borderColor: colors.divider }]}
             >
-              <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.primary }]} />
               {isSignUp ? (
                 <>
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Full name</Text>
@@ -462,7 +450,7 @@ export default function AuthScreen() {
               {resetMessage && !isSignUp ? (
                 <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{resetMessage}</Text>
               ) : null}
-            </BlurView>
+            </View>
 
             {!isSignUp ? (
               <View style={styles.anonymousBlock}>
@@ -526,19 +514,16 @@ const styles = StyleSheet.create({
   column: {
     flex: 1,
     justifyContent: 'center',
-  },
-  logo: {
-    width: 200,
-    height: 72,
+    maxWidth: 560,
+    width: '100%',
     alignSelf: 'center',
-    marginBottom: spacing.xl,
   },
   landingLink: {
     alignItems: 'center',
     alignSelf: 'flex-start',
     flexDirection: 'row',
     gap: spacing.xxs,
-    minHeight: 40,
+    minHeight: 48,
     marginBottom: spacing.sm,
   },
   landingLinkText: {
@@ -570,11 +555,11 @@ const styles = StyleSheet.create({
   },
   topNoticeClose: {
     alignItems: 'center',
-    height: 32,
+    height: 48,
     justifyContent: 'center',
     marginRight: -spacing.xs,
     marginTop: -spacing.xs,
-    width: 32,
+    width: 48,
   },
   header: {
     alignItems: 'flex-start',
@@ -628,13 +613,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     width: 4,
-  },
-  cardAccentTop: {
-    height: 4,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
   },
   fieldLabel: {
     ...typography.label,

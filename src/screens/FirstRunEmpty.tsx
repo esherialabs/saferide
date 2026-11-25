@@ -26,7 +26,7 @@ export default function FirstRunEmptyScreen() {
       gap: spacing.sm,
     },
     title: {
-      ...typography.titleSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
     },
     body: {
@@ -35,7 +35,7 @@ export default function FirstRunEmptyScreen() {
     },
     stepRow: {
       alignItems: 'center',
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.primaryMuted,
       borderColor: colors.divider,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
@@ -60,7 +60,7 @@ export default function FirstRunEmptyScreen() {
   });
 
   return (
-    <Screen>
+    <Screen brandHeader>
       <View style={styles.content}>
         <FeatureHeader
           eyebrow="Ready"

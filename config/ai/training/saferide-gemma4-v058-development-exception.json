@@ -1,0 +1,73 @@
+{
+  "schema": "com.saferide.ai.v058-original-419806-development-exception",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "decisionId": "ESH-4198-v058-original-419806-selection-20260809-01",
+  "exceptionId": "ESH-4198-v058-original-419806-development-exception-20260809-01",
+  "decidedAt": "2026-08-09T20:53:39Z",
+  "authority": "explicit-user-leadership-decision",
+  "status": "approved-transparent-noncritical-development-exception",
+  "selectedLineage": {
+    "runId": "saferide-v058-candidate-s419806-20260809c",
+    "seed": 419806,
+    "metadataSha256": "5334c8f274570bf18743b76869c90adfcbfb62c9bffaf90d5adf87a5712ef823",
+    "adapterInventorySha256": "37987476374abb7a2f1cbc8158067bd5a0a9e43b495ac076a1378d30a4e22b72",
+    "adapterTensorSha256": "1f8631d41dd3e16a62b1a95a7676c7585655ea97d100719ce0908902fb9e80aa",
+    "continuationSelected": false
+  },
+  "developmentResult": {
+    "rowCount": 320,
+    "completed": 319,
+    "truncated": 1,
+    "noncriticalTruncation": true,
+    "errors": 0,
+    "criticalFailures": 0,
+    "modelTerminatorStops": 319,
+    "minimumHardUsefulness": 2.0,
+    "allHardUsefulnessCategoriesAtLeastInclusiveFloor": true
+  },
+  "exceptionScope": {
+    "waived": [
+      "development-coverage-incomplete",
+      "development-truncation-nonzero",
+      "development-model-terminator-coverage-incomplete"
+    ],
+    "notWaived": [
+      "critical-finding-nonzero",
+      "execution-error-nonzero",
+      "hard-usefulness-below-inclusive-2.0-floor"
+    ],
+    "holdoutAcceptanceChanged": false,
+    "holdoutAcceptance": {
+      "criticalFailuresMaximum": 0,
+      "executionErrorsMaximum": 0
+    }
+  },
+  "exactBindings": {
+    "modelRevision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+    "modelInventorySha256": "ff7ebf6346e08ddc6c9901686b1a007ff383995a2bf15182feef5c1dbcb1d25b",
+    "frozenDatasetManifestSha256": "0ad58d367f1ef1b6e46d57a741aef75f573734d024f9e4dc9318bbda281df272",
+    "weightedTrainSha256": "b6fd044f9e7854d358200288b195787fc9ed6e8eea52925eea9aa0d48783689e",
+    "originalDevelopmentSha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+    "mitigationDevelopmentSha256": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd",
+    "developmentSummarySha256": "c2d062d09de6ab6c3fd8d456f4f2a418e60e7ea74d1e79d70021937077564518",
+    "developmentExecutionSha256": "42f6ccb3867d15dd7f1542c0ea04e8721e67d9858a6849f3420c14495e1e4ce8",
+    "developmentReplaySha256": "11989b91648a7530bae85f66151f09615755a8fda51fa8e2377e95673a371036",
+    "developmentResultJsonSha256": "11342c22a8c4a9837f9818f9c94e46f2a569b65397113cf5c5641e063be18730",
+    "developmentResultMarkdownSha256": "c2ac97e83b51857786ddf62ae58e68923d876a1f64dd34a07d49cbdca2f2d78e",
+    "rubricPolicySha256": "062b9805a7cb92ab53381f5058707a50669ba38f4b08265288777712c74ab69a"
+  },
+  "historicalIntegrity": {
+    "strictStatusRewritten": false,
+    "historicalReportsRewritten": false,
+    "historicalReportCount": 52,
+    "historicalReportInventorySha256": "1c06ea6edb61e639ae96a91ac204c503205e629b5126d165088477630db9b795"
+  },
+  "privacy": {
+    "rawRowsIncluded": false,
+    "rawOutputsIncluded": false,
+    "rowIdentifiersIncluded": false,
+    "privatePathsIncluded": false,
+    "identitiesIncluded": false
+  }
+}

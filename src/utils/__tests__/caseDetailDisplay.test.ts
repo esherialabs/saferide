@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { CaseAttachment } from '../../services/caseService';
 import type { DraftData } from '../draftStorage';
-import { buildCaseDetailSource, normalizeCaseSummaryPayload } from '../caseDetailDisplay';
+import { buildCaseDetailSource, describeStatusChange, normalizeCaseSummaryPayload } from '../caseDetailDisplay';
+import { buildHuriaPacket } from '../huriaPacket';
 
 function buildDraft(overrides: Partial<DraftData> = {}): DraftData {
   return {
@@ -39,6 +40,14 @@ const remoteAttachment: CaseAttachment = {
 };
 
 describe('case detail display source', () => {
+  it('reads a reviewed referral packet without changing the support pathway into escalation', () => {
+    const packet = buildHuriaPacket(buildDraft({ includeBrief: true }), { generatedAt: '2026-10-22T08:00:00.000Z', pathway: 'referral' });
+    const summary = normalizeCaseSummaryPayload({ schemaVersion: '1.0', workflow: {
+      workflowType: 'referral', providerId: 'ke-coast-huria', channel: 'call', supportBrief: { included: true },
+      partnerPacket: { consentVersion: 'partner-follow-up.ke-coast-huria.v3', packet },
+    } });
+    expect(summary).toMatchObject({ pathway: 'referral', selectedProvider: 'ke-coast-huria', selectedChannel: 'call', incidentDescription: 'Local narrative that was not sent.' });
+  });
   it('prevents anonymous-map records from falling back to local narrative or evidence', () => {
     const source = buildCaseDetailSource({
       casePathway: 'anonymous-map',
@@ -104,5 +113,28 @@ describe('case detail display source', () => {
     });
     expect(summary).not.toHaveProperty('incidentDescription');
     expect(summary.location).not.toHaveProperty('coordinates');
+  });
+});
+
+describe('describeStatusChange', () => {
+  it('labels a partner status event from new_status', () => {
+    const payload = { schemaVersion: 1, new_status: 'in_review', actor: 'partner', partner: 'org', partner_status: 'in_progress' };
+    expect(describeStatusChange(payload, 'submitted')).toEqual({ label: 'In review', body: 'Status updated to In review.' });
+  });
+
+  it('labels every status the partner path can set', () => {
+    const labels = ['in_review', 'referred', 'closed'].map(status => describeStatusChange({ new_status: status }, null).label);
+    expect(labels).toEqual(['In review', 'Referred', 'Closed']);
+  });
+
+  it('falls back to the case status when the payload has no usable new_status', () => {
+    expect(describeStatusChange(null, 'closed').label).toBe('Closed');
+    expect(describeStatusChange({ new_status: 42 }, 'referred').label).toBe('Referred');
+    expect(describeStatusChange({}, undefined).label).toBe('Unknown');
+  });
+
+  it('never surfaces other payload fields', () => {
+    const { body } = describeStatusChange({ new_status: 'closed', note: 'internal note', partner: 'Secret Org' }, null);
+    expect(body).not.toMatch(/internal note|Secret Org/);
   });
 });

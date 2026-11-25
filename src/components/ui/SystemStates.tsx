@@ -243,13 +243,13 @@ export function OfflineBanner({
         styles.banner,
         {
           backgroundColor: colors.offlineMuted,
-          borderColor: colors.offline,
-          paddingVertical: compact ? spacing.xs : spacing.sm,
+          borderColor: colors.border,
+          paddingVertical: compact ? spacing.xxs : spacing.xs,
         },
         style,
       ]}
     >
-      <Ionicons name="cloud-offline-outline" size={20} color={colors.offline} />
+      <Ionicons name="cloud-offline-outline" size={18} color={colors.offline} style={styles.bannerIcon} />
       <View style={styles.bannerText}>
         <Text style={[styles.bannerTitle, { color: colors.foreground }]}>{title}</Text>
         {!compact ? <Text style={[styles.bannerMessage, { color: colors.textSecondary }]}>{message}</Text> : null}
@@ -263,7 +263,6 @@ export function OfflineBanner({
         <Pressable
           accessibilityLabel="Dismiss banner"
           accessibilityRole="button"
-          hitSlop={8}
           onPress={(event) => {
             event.stopPropagation();
             onDismiss();
@@ -307,6 +306,7 @@ export function SafetyAction({
   const { colors } = useTheme();
   const tonePalette = getTonePalette(colors, tone);
   const isDisabled = disabled || !onPress;
+  const [isFocused, setIsFocused] = React.useState(false);
   const defaultAccessibilityLabel = [
     title,
     description,
@@ -317,6 +317,8 @@ export function SafetyAction({
   return (
     <Pressable
       onPress={onPress}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? defaultAccessibilityLabel}
@@ -326,7 +328,8 @@ export function SafetyAction({
         styles.safetyAction,
         {
           backgroundColor: colors.surface,
-          borderColor: tonePalette.border,
+          borderColor: isFocused ? colors.focusRing : tonePalette.border,
+          borderWidth: isFocused ? borders.focus : borders.standard,
           opacity: isDisabled ? 0.58 : 1,
         },
         pressed && !isDisabled ? { backgroundColor: tonePalette.muted } : null,
@@ -337,16 +340,16 @@ export function SafetyAction({
         <Ionicons name={icon} size={22} color={tonePalette.color} />
       </View>
       <View style={styles.actionText}>
-        <Text style={[styles.actionTitle, { color: colors.foreground }]} numberOfLines={2}>
+        <Text style={[styles.actionTitle, { color: colors.foreground }]}>
           {title}
         </Text>
         {description ? (
-          <Text style={[styles.actionDescription, { color: colors.textSecondary }]} numberOfLines={3}>
+          <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>
             {description}
           </Text>
         ) : null}
         {statusLabel ? (
-          <Text style={[styles.actionStatus, { color: tonePalette.color }]} numberOfLines={1}>
+          <Text style={[styles.actionStatus, { color: tonePalette.color }]}>
             {statusLabel}
           </Text>
         ) : null}
@@ -359,18 +362,18 @@ export function SafetyAction({
 const styles = StyleSheet.create({
   state: {
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
   },
   stateIcon: {
     alignItems: 'center',
     borderRadius: radii.round,
     borderWidth: borders.standard,
-    height: 56,
+    height: 48,
     justifyContent: 'center',
-    width: 56,
+    width: 48,
   },
   stateTitle: {
     ...typography.titleS,
@@ -416,10 +419,14 @@ const styles = StyleSheet.create({
   banner: {
     alignItems: 'flex-start',
     borderRadius: radii.sm,
-    borderWidth: borders.standard,
+    borderWidth: borders.hairline,
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.xs,
+  },
+  bannerIcon: {
+    marginTop: 2,
   },
   bannerText: {
     flex: 1,
@@ -431,7 +438,7 @@ const styles = StyleSheet.create({
   },
   bannerMessage: {
     ...typography.caption,
-    marginTop: spacing.xxs,
+    marginTop: 2,
   },
   queuePill: {
     alignItems: 'center',
@@ -448,10 +455,10 @@ const styles = StyleSheet.create({
   bannerDismiss: {
     alignItems: 'center',
     borderRadius: radii.round,
-    height: 28,
+    height: touchTargets.minimum,
     justifyContent: 'center',
     marginLeft: spacing.xxs,
-    width: 28,
+    width: touchTargets.minimum,
   },
   safetyAction: {
     alignItems: 'center',

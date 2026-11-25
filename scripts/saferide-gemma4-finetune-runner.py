@@ -12,6 +12,7 @@ import argparse
 import datetime as dt
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import math
 import os
@@ -34,6 +35,17 @@ DEFAULT_CONSTRAINTS = REPO_ROOT / "constraints-ai-training.txt"
 DEFAULT_BASE_MODEL = "google/gemma-4-E2B-it"
 TINY_SMOKE_MODEL = "sshleifer/tiny-gpt2"
 EXACT_PIN_PATTERN = re.compile(r"^([A-Za-z0-9_.-]+)==([A-Za-z0-9][A-Za-z0-9.+!_-]*)$")
+GOVERNED_V05_PROFILES = {"v05", "v051", "v052", "v053", "v054", "v055", "v056"}
+WEIGHTED_PILOT_PROFILES = {
+    "v052": {"uniqueRows": 1768, "weightedRows": 1864, "learningRate": 2e-5},
+    "v053": {"uniqueRows": 1832, "weightedRows": 2088, "learningRate": 1e-5},
+    "v054": {"uniqueRows": 1864, "weightedRows": 1896, "learningRate": 2e-5},
+    "v055": {"uniqueRows": 1896, "weightedRows": 1992, "learningRate": 1e-5},
+    "v056": {"uniqueRows": 1888, "weightedRows": 1944, "learningRate": 2e-5},
+}
+V054_REMEDIATION_PATH = REPO_ROOT / "scripts" / "saferide-gemma4-v054-remediation.py"
+V055_REMEDIATION_PATH = REPO_ROOT / "scripts" / "saferide-gemma4-v055-remediation.py"
+V056_REMEDIATION_PATH = REPO_ROOT / "scripts" / "saferide-gemma4-v056-remediation.py"
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--audit", help="Content-free dataset audit tied to exact register and data hashes.")
     parser.add_argument("--dataset-manifest", help="v0.5 content-free four-split dataset artifact manifest.")
     parser.add_argument("--artifact-root", help="v0.5 artifact root used by the strict content-free readiness gate.")
-    parser.add_argument("--pilot-row-manifest", help="Pinned 320-row v0.5 pilot selection manifest.")
+    parser.add_argument("--pilot-row-manifest", help="Pinned governed pilot selection or weighted sample-order manifest.")
     parser.add_argument("--run-id", help="Stable training run id. Defaults to timestamped local id.")
     parser.add_argument("--paired-run-id", help="Other approved v0.5 candidate seed run id, when already available.")
     parser.add_argument("--lora-rank-approval-ref", help="Required human evidence reference before exceptional v0.5 rank-16 use.")
@@ -82,6 +94,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train-batch-size", type=int, default=1)
     parser.add_argument("--eval-batch-size", type=int, default=1)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=8)
+    parser.add_argument("--max-grad-norm", type=float, default=1.0, help="Explicit optimizer gradient clipping norm.")
     parser.add_argument("--warmup-ratio", type=float, default=0.03)
     parser.add_argument("--lr-scheduler-type", default="cosine")
     parser.add_argument("--logging-steps", type=int, default=5)
@@ -116,7 +129,134 @@ def run_data_gate(
     artifact_root: Path | None = None,
     train_data: Path | None = None,
     dev_data: Path | None = None,
+    dataset_manifest: Path | None = None,
+    pilot_row_manifest: Path | None = None,
 ) -> dict[str, Any]:
+    if dataset_profile == "v056":
+        gate_sampling_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_sampling_manifest is None or audit is None:
+            raise RuntimeError("v0.5.6 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v056-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_sampling_manifest),
+            "--audit", str(audit),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
+    if dataset_profile == "v055":
+        gate_sampling_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_sampling_manifest is None or audit is None:
+            raise RuntimeError("v0.5.5 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v055-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_sampling_manifest),
+            "--audit", str(audit),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
+    if dataset_profile == "v054":
+        gate_sampling_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_sampling_manifest is None or audit is None:
+            raise RuntimeError("v0.5.4 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v054-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_sampling_manifest),
+            "--audit", str(audit),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
+    if dataset_profile == "v053":
+        gate_sampling_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_sampling_manifest is None or audit is None:
+            raise RuntimeError("v0.5.3 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v053-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_sampling_manifest),
+            "--audit", str(audit),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
+    if dataset_profile == "v052":
+        gate_sampling_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_sampling_manifest is None or audit is None:
+            raise RuntimeError("v0.5.2 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v052-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_sampling_manifest),
+            "--audit", str(audit),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
+    if dataset_profile == "v051":
+        gate_pilot_manifest = pilot_row_manifest or (artifact_root / "dataset/controlled/pilot-row-manifest.json" if artifact_root is not None else None)
+        if train_data is None or dev_data is None or dataset_manifest is None or artifact_root is None or gate_pilot_manifest is None:
+            raise RuntimeError("v0.5.1 training gate inputs are incomplete.")
+        command = [
+            sys.executable,
+            "scripts/saferide-gemma4-v051-training.py",
+            "verify",
+            "--register", str(register),
+            "--train-data", str(train_data),
+            "--dev-data", str(dev_data),
+            "--dataset-manifest", str(dataset_manifest),
+            "--artifact-root", str(artifact_root),
+            "--pilot-row-manifest", str(gate_pilot_manifest),
+        ]
+        result = run_command(command, timeout=180)
+        print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        return {"command": " ".join(command), "exitCode": result.returncode, "passed": result.returncode == 0}
     if dataset_profile == "v05":
         command = [
             "node",
@@ -170,6 +310,18 @@ def read_json(path: Path) -> Any:
 
 
 def dataset_profile_for_register(register: dict[str, Any]) -> str:
+    if register.get("schema") == "com.saferide.ai.v056-mitigation-register":
+        return "v056"
+    if register.get("schema") == "com.saferide.ai.v055-mitigation-register":
+        return "v055"
+    if register.get("schema") == "com.saferide.ai.v054-mitigation-register":
+        return "v054"
+    if register.get("schema") == "com.saferide.ai.v053-mitigation-register":
+        return "v053"
+    if register.get("schema") == "com.saferide.ai.v052-mitigation-register":
+        return "v052"
+    if register.get("schema") == "com.saferide.ai.v051-mitigation-register":
+        return "v051"
     if register.get("schema") == "com.saferide.ai.v05-dataset-register":
         return "v05"
     return "v04"
@@ -177,28 +329,58 @@ def dataset_profile_for_register(register: dict[str, Any]) -> str:
 
 def load_pilot_row_ids(path: Path | None, dataset_profile: str, run_kind: str) -> list[str] | None:
     if run_kind != "pilot":
+        if run_kind == "preflight" and dataset_profile in {"v054", "v055", "v056"} and path is not None:
+            load_pilot_row_ids(path, dataset_profile, "pilot")
+            return None
         if path is not None:
             raise RuntimeError("--pilot-row-manifest is valid only for --run-kind pilot.")
         return None
-    if dataset_profile != "v05":
+    if dataset_profile not in GOVERNED_V05_PROFILES:
         return None
     if path is None:
-        raise RuntimeError("v0.5 pilot runs require --pilot-row-manifest with the deterministic 320-row selection.")
+        raise RuntimeError("v0.5 pilot runs require --pilot-row-manifest with the governed deterministic selection or weighted order.")
     manifest = read_json(path)
     row_ids = manifest.get("rowIds")
-    if (
-        manifest.get("schema") != "com.saferide.ai.v05-pilot-row-manifest"
-        or manifest.get("datasetId") != "saferide-synthetic-guidance-v0.5.0"
-        or manifest.get("seed") != 419805
-        or manifest.get("rowsPerCategoryLanguage") != 16
-        or not isinstance(row_ids, list)
-        or len(row_ids) != 320
-        or len(set(row_ids)) != 320
-    ):
-        raise RuntimeError("v0.5 pilot row manifest is malformed or does not contain exactly 320 unique rows.")
+    if dataset_profile in WEIGHTED_PILOT_PROFILES:
+        expected = WEIGHTED_PILOT_PROFILES[dataset_profile]
+        version = {"v052": "v0.5.2", "v053": "v0.5.3", "v054": "v0.5.4", "v055": "v0.5.5", "v056": "v0.5.6"}[dataset_profile]
+        minor = {"v052": 2, "v053": 3, "v054": 4, "v055": 5, "v056": 6}[dataset_profile]
+        expected_status = "frozen-for-final-targeted-pilot" if dataset_profile == "v055" else "frozen-for-targeted-next-pilot" if dataset_profile in {"v054", "v056"} else "frozen-for-cost-controlled-pilot"
+        valid_identity = (
+            manifest.get("schema") == f"com.saferide.ai.{dataset_profile}-training-recipe"
+            and manifest.get("datasetId") == f"saferide-synthetic-guidance-v0.5.{minor}"
+            and manifest.get("status") == expected_status
+            and manifest.get("learningRate") == expected["learningRate"]
+            and manifest.get("epochs") == 1
+            and manifest.get("fullCandidateSubmissionAuthorized") is False
+        )
+        row_ids = manifest.get("sampleOrder")
+        if not valid_identity or manifest.get("seed") != 419805 or not isinstance(row_ids, list) or len(row_ids) != expected["weightedRows"] or len(set(row_ids)) != expected["uniqueRows"]:
+            raise RuntimeError(f"Governed {version} pilot sample-order manifest is malformed.")
+        expected_hash = hashlib.sha256("\n".join(row_ids).encode("utf-8")).hexdigest()
+        if manifest.get("sampleOrderSha256") != expected_hash:
+            raise RuntimeError(f"{version} pilot sample-order hash is stale.")
+        return [str(row_id) for row_id in row_ids]
+    if dataset_profile == "v051":
+        valid_identity = (
+            manifest.get("schema") == "com.saferide.ai.v051-pilot-row-manifest"
+            and manifest.get("datasetId") == "saferide-synthetic-guidance-v0.5.1"
+            and manifest.get("status") == "frozen"
+            and manifest.get("composition") == {"sourceRows": 200, "sourceRowsPerCategoryLanguage": 10, "mitigationRows": 120}
+            and manifest.get("mitigationHoldoutIncluded") is False
+            and manifest.get("developmentRowsIncluded") is False
+        )
+    else:
+        valid_identity = (
+            manifest.get("schema") == "com.saferide.ai.v05-pilot-row-manifest"
+            and manifest.get("datasetId") == "saferide-synthetic-guidance-v0.5.0"
+            and manifest.get("rowsPerCategoryLanguage") == 16
+        )
+    if not valid_identity or manifest.get("seed") != 419805 or not isinstance(row_ids, list) or len(row_ids) != 320 or len(set(row_ids)) != 320:
+        raise RuntimeError("Governed pilot row manifest is malformed or does not contain exactly 320 unique rows.")
     expected_hash = hashlib.sha256("\n".join(row_ids).encode("utf-8")).hexdigest()
     if manifest.get("rowIdInventorySha256") != expected_hash:
-        raise RuntimeError("v0.5 pilot row manifest inventory hash is stale.")
+        raise RuntimeError("Pilot row manifest inventory hash is stale.")
     return [str(row_id) for row_id in row_ids]
 
 
@@ -329,6 +511,46 @@ def assert_finite_training_evidence(value: Any) -> None:
         raise RuntimeError(f"Non-finite training metric detected at {preview}; the run is blocked.")
 
 
+def final_evaluation_metrics(trainer: Any) -> dict[str, Any]:
+    """Reuse the terminal scheduled evaluation, or evaluate once when it is absent."""
+    state = trainer.state
+    final_step = int(state.global_step)
+    terminal_entries = [
+        entry for entry in state.log_history
+        if isinstance(entry, Mapping)
+        and entry.get("step") == final_step
+        and "eval_loss" in entry
+    ]
+    if len(terminal_entries) > 1:
+        raise RuntimeError("Final optimizer step contains duplicate evaluation entries.")
+    if terminal_entries:
+        return {
+            key: value for key, value in terminal_entries[0].items()
+            if (key.startswith("eval_") or key == "epoch")
+            and isinstance(value, Real)
+            and not isinstance(value, bool)
+        }
+    return trainer.evaluate()
+
+
+def verify_finite_adapter_tensors(path: Path, torch: Any, opener: Any | None = None) -> dict[str, int]:
+    if opener is None:
+        from safetensors import safe_open as opener  # type: ignore
+    tensor_count = 0
+    element_count = 0
+    with opener(str(path), framework="pt", device="cpu") as handle:
+        keys = sorted(handle.keys())
+        if not keys:
+            raise RuntimeError("Adapter safetensors contains no tensors.")
+        for key in keys:
+            tensor = handle.get_tensor(key)
+            tensor_count += 1
+            element_count += int(tensor.numel())
+            if not bool(torch.isfinite(tensor).all().item()):
+                raise RuntimeError("Adapter safetensors contains a non-finite tensor; the pilot is blocked.")
+    return {"tensorCount": tensor_count, "elementCount": element_count, "nonFiniteTensorCount": 0}
+
+
 def environment_summary() -> dict[str, Any]:
     colab_detected = "COLAB_GPU" in os.environ or "COLAB_RELEASE_TAG" in os.environ
     sagemaker_detected = bool(os.environ.get("TRAINING_JOB_NAME") or os.environ.get("SM_TRAINING_ENV"))
@@ -431,6 +653,8 @@ def validate_run_configuration(args: argparse.Namespace, run_kind: str, dataset_
         raise RuntimeError("--epochs must be greater than zero")
     if args.max_steps is not None and args.max_steps < 1:
         raise RuntimeError("--max-steps must be at least 1")
+    if float(getattr(args, "max_grad_norm", 1.0)) <= 0:
+        raise RuntimeError("--max-grad-norm must be greater than zero")
     if not 0 <= args.warmup_ratio < 1:
         raise RuntimeError("--warmup-ratio must be at least 0 and below 1")
     if run_kind == "candidate":
@@ -440,9 +664,9 @@ def validate_run_configuration(args: argparse.Namespace, run_kind: str, dataset_
             raise RuntimeError("Candidate runs require --epochs of at least 1.")
         if not args.base_revision or not re.fullmatch(r"[0-9a-fA-F]{40,64}", args.base_revision):
             raise RuntimeError("Candidate runs require --base-revision pinned to an immutable 40-64 character hex revision.")
-    if dataset_profile == "v05":
+    if dataset_profile in GOVERNED_V05_PROFILES:
         if run_kind in {"preflight", "pilot", "candidate"} and args.seed not in {419805, 419806}:
-            raise RuntimeError("v0.5 preflight, pilot, and candidate runs require seed 419805 or 419806.")
+            raise RuntimeError("Governed v0.5-series runs require seed 419805 or 419806.")
         if run_kind in {"preflight", "pilot", "candidate"}:
             if args.base_model_id != DEFAULT_BASE_MODEL:
                 raise RuntimeError("v0.5 runs require the canonical Gemma 4 E2B base model id.")
@@ -456,6 +680,22 @@ def validate_run_configuration(args: argparse.Namespace, run_kind: str, dataset_
                 raise RuntimeError("v0.5 runs require 1 to 3 declared epochs.")
             if args.learning_rate not in {1e-5, 2e-5}:
                 raise RuntimeError("v0.5 learning rate must be 1e-5 or 2e-5.")
+            if dataset_profile == "v052" and run_kind == "pilot" and args.learning_rate != 2e-5:
+                raise RuntimeError("v0.5.2 pilot requires the frozen 2e-5 learning rate.")
+            if dataset_profile == "v053" and run_kind == "pilot" and args.learning_rate != 1e-5:
+                raise RuntimeError("v0.5.3 pilot requires the frozen 1e-5 learning rate.")
+            if dataset_profile == "v054" and run_kind == "pilot" and args.learning_rate != 2e-5:
+                raise RuntimeError("v0.5.4 pilot requires the frozen 2e-5 learning rate.")
+            if dataset_profile == "v055" and run_kind == "pilot" and args.learning_rate != 1e-5:
+                raise RuntimeError("v0.5.5 pilot requires the frozen 1e-5 learning rate.")
+            if dataset_profile == "v056" and run_kind == "pilot" and args.learning_rate != 2e-5:
+                raise RuntimeError("v0.5.6 pilot requires the frozen 2e-5 learning rate.")
+            if dataset_profile == "v054" and run_kind == "pilot" and args.seed != 419805:
+                raise RuntimeError("v0.5.4 authorizes one targeted pilot at seed 419805 only.")
+            if dataset_profile == "v055" and run_kind == "pilot" and args.seed != 419805:
+                raise RuntimeError("v0.5.5 authorizes one final targeted pilot at seed 419805 only.")
+            if dataset_profile == "v056" and run_kind == "pilot" and args.seed != 419805:
+                raise RuntimeError("v0.5.6 authorizes one bounded targeted pilot at seed 419805 only.")
             if args.lora_r not in {8, 16} or args.lora_alpha != 16 or args.lora_dropout != 0.05:
                 raise RuntimeError("v0.5 LoRA configuration requires rank 8/16, alpha 16, and dropout 0.05.")
             if args.lora_r == 16 and not args.lora_rank_approval_ref:
@@ -464,6 +704,8 @@ def validate_run_configuration(args: argparse.Namespace, run_kind: str, dataset_
                 raise RuntimeError("v0.5 pilot and candidate runs require evaluation/save cadence of 25 steps.")
             if run_kind == "preflight" and (args.eval_steps != 1 or args.save_steps != 1):
                 raise RuntimeError("v0.5 preflight requires evaluation/save cadence of 1 step.")
+            if dataset_profile in {"v054", "v055", "v056"} and run_kind == "preflight" and args.logging_steps != 1:
+                raise RuntimeError("v0.5.4+ preflight requires training-loss logging at step 1.")
             if (
                 args.max_seq_length != 1024
                 or args.train_batch_size != 1
@@ -471,11 +713,22 @@ def validate_run_configuration(args: argparse.Namespace, run_kind: str, dataset_
                 or args.warmup_ratio != 0.03
                 or args.lr_scheduler_type != "cosine"
                 or args.early_stopping_patience != 3
+                or float(getattr(args, "max_grad_norm", 1.0)) != 1.0
             ):
-                raise RuntimeError("v0.5 fixed sequence, batch, scheduler, warmup, and early-stopping configuration differs from the approved plan.")
+                raise RuntimeError("v0.5 fixed sequence, batch, clipping, scheduler, warmup, and early-stopping configuration differs from the approved plan.")
+        if dataset_profile == "v052" and run_kind == "candidate":
+            raise RuntimeError("v0.5.2 full candidate submission is not authorized by the frozen pilot recipe.")
+        if dataset_profile == "v053" and run_kind == "candidate":
+            raise RuntimeError("v0.5.3 full candidate submission is not authorized by the frozen pilot recipe.")
+        if dataset_profile == "v054" and run_kind == "candidate":
+            raise RuntimeError("v0.5.4 full candidate submission is not authorized by the frozen targeted-pilot recipe.")
+        if dataset_profile == "v055" and run_kind == "candidate":
+            raise RuntimeError("v0.5.5 full candidate submission is not authorized by the frozen final-pilot recipe.")
+        if dataset_profile == "v056" and run_kind == "candidate":
+            raise RuntimeError("v0.5.6 full candidate submission is not authorized by the frozen targeted-pilot recipe.")
     if run_kind == "formatting-smoke" and args.max_steps is None:
         args.max_steps = 1
-    if run_kind == "pilot" and dataset_profile != "v05" and args.max_steps is None:
+    if run_kind == "pilot" and dataset_profile not in GOVERNED_V05_PROFILES and args.max_steps is None:
         args.max_steps = 1
     if args.save_steps % args.eval_steps != 0:
         raise RuntimeError("--save-steps must be a multiple of --eval-steps for reproducible best-checkpoint loading.")
@@ -516,6 +769,7 @@ def import_training_deps():
             AutoTokenizer,
             EarlyStoppingCallback,
             Trainer,
+            TrainerCallback,
             TrainingArguments,
         )
     except ModuleNotFoundError as error:
@@ -532,6 +786,7 @@ def import_training_deps():
         "AutoTokenizer": AutoTokenizer,
         "EarlyStoppingCallback": EarlyStoppingCallback,
         "Trainer": Trainer,
+        "TrainerCallback": TrainerCallback,
         "TrainingArguments": TrainingArguments,
     }
 
@@ -988,19 +1243,30 @@ def run_training(
     dev_rows = [row for row in rows if row.get("split") == "dev"]
     if not train_rows or not dev_rows:
         raise RuntimeError("Training requires distinct non-empty train and dev splits; fallback between splits is forbidden.")
-    if dataset_profile == "v05":
+    if dataset_profile in GOVERNED_V05_PROFILES:
         if run_kind == "preflight":
             train_rows = sorted(train_rows, key=lambda row: str(row.get("id", "")))[:1]
             dev_rows = sorted(dev_rows, key=lambda row: str(row.get("id", "")))[:1]
-        if run_kind == "candidate" and (len(train_rows) != 1600 or len(dev_rows) != 300):
-            raise RuntimeError("v0.5 candidate requires exactly 1,600 train rows and 300 development rows.")
+        expected_train_rows = 1888 if dataset_profile == "v056" else 1896 if dataset_profile == "v055" else 1864 if dataset_profile == "v054" else 1832 if dataset_profile == "v053" else 1768 if dataset_profile == "v052" else 1720 if dataset_profile == "v051" else 1600
+        if run_kind == "candidate" and (len(train_rows) != expected_train_rows or len(dev_rows) != 300):
+            raise RuntimeError(f"Governed candidate requires exactly {expected_train_rows:,} train rows and 300 development rows.")
         if run_kind == "pilot":
-            selected = set(pilot_row_ids or [])
             available = {str(row.get("id", "")) for row in train_rows}
-            if len(selected) != 320 or not selected.issubset(available):
-                raise RuntimeError("v0.5 pilot selection must bind exactly 320 available training row IDs.")
-            train_rows = [row for row in train_rows if str(row.get("id", "")) in selected]
-    random.Random(args.seed).shuffle(train_rows)
+            if dataset_profile in WEIGHTED_PILOT_PROFILES:
+                expected = WEIGHTED_PILOT_PROFILES[dataset_profile]
+                version = {"v052": "v0.5.2", "v053": "v0.5.3", "v054": "v0.5.4", "v055": "v0.5.5", "v056": "v0.5.6"}[dataset_profile]
+                order = pilot_row_ids or []
+                by_id = {str(row.get("id", "")): row for row in train_rows}
+                if len(order) != expected["weightedRows"] or len(set(order)) != expected["uniqueRows"] or not set(order).issubset(available):
+                    raise RuntimeError(f"Governed {version} pilot must bind the exact {expected['weightedRows']:,}-example weighted order.")
+                train_rows = [by_id[row_id] for row_id in order]
+            else:
+                selected = set(pilot_row_ids or [])
+                if len(selected) != 320 or not selected.issubset(available):
+                    raise RuntimeError("Governed pilot selection must bind exactly 320 available training row IDs.")
+                train_rows = [row for row in train_rows if str(row.get("id", "")) in selected]
+    if not (dataset_profile in WEIGHTED_PILOT_PROFILES and run_kind == "pilot"):
+        random.Random(args.seed).shuffle(train_rows)
 
     model_source = str(Path(args.base_model_path).expanduser().resolve()) if args.base_model_path else model_id
     if args.base_model_path and not Path(model_source).is_dir():
@@ -1069,6 +1335,7 @@ def run_training(
         "per_device_train_batch_size": args.train_batch_size,
         "per_device_eval_batch_size": args.eval_batch_size,
         "gradient_accumulation_steps": args.gradient_accumulation_steps,
+        "max_grad_norm": args.max_grad_norm,
         "learning_rate": args.learning_rate,
         "warmup_ratio": args.warmup_ratio,
         "lr_scheduler_type": args.lr_scheduler_type,
@@ -1081,7 +1348,9 @@ def run_training(
         "metric_for_best_model": "eval_loss",
         "greater_is_better": False,
         "report_to": [],
-        "save_total_limit": 2,
+        # Full candidates retain every governed checkpoint for immutable
+        # recovery/evidence. Historical pilots keep their bounded retention.
+        "save_total_limit": None if run_kind == "candidate" else 2,
         "use_cpu": not cuda_available,
         "seed": args.seed,
         "data_seed": args.seed,
@@ -1101,6 +1370,33 @@ def run_training(
             dataset = train_dataset if train_dataset is not None else self.train_dataset
             return torch.utils.data.SequentialSampler(dataset)
 
+    callbacks: list[Any] = [deps["EarlyStoppingCallback"](early_stopping_patience=args.early_stopping_patience)]
+    consumption_marker = os.environ.get("SAFERIDE_CANDIDATE_CONSUMPTION_MARKER")
+    if run_kind == "candidate":
+        if not consumption_marker:
+            raise RuntimeError("Candidate execution requires an explicit optimization-consumption marker path.")
+        marker_path = Path(consumption_marker).expanduser().resolve()
+        marker_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        marker_path.parent.chmod(0o700)
+
+        class CandidateConsumptionCallback(deps["TrainerCallback"]):
+            def on_pre_optimizer_step(self, args, state, control, **kwargs):  # type: ignore[no-untyped-def]
+                if not marker_path.exists():
+                    payload = {
+                        "schema": "com.saferide.ai.candidate-consumption-marker",
+                        "schemaVersion": 1,
+                        "status": "candidate-authorization-consumed",
+                        "firstOptimizerStep": int(state.global_step) + 1,
+                    }
+                    marker_path.write_text(
+                        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+                        encoding="utf-8",
+                    )
+                    marker_path.chmod(0o600)
+                return control
+
+        callbacks.append(CandidateConsumptionCallback())
+
     trainer = OrderedTrainer(
         model=model,
         args=training_args,
@@ -1108,7 +1404,7 @@ def run_training(
         eval_dataset=eval_dataset,
         data_collator=data_collator,
         processing_class=tokenizer,
-        callbacks=[deps["EarlyStoppingCallback"](early_stopping_patience=args.early_stopping_patience)],
+        callbacks=callbacks,
     )
     trainable_summary = assert_trainable_adapter_path(model, trainer, data_collator, train_dataset, torch)
     existing_checkpoints = sorted(
@@ -1117,20 +1413,50 @@ def run_training(
     )
     resumed_from_checkpoint = existing_checkpoints[-1] if existing_checkpoints else None
     train_result = trainer.train(resume_from_checkpoint=str(resumed_from_checkpoint) if resumed_from_checkpoint else None)
-    eval_metrics = trainer.evaluate()
+    eval_metrics = final_evaluation_metrics(trainer)
     assert_finite_training_evidence({
         "trainMetrics": train_result.metrics,
         "devMetrics": eval_metrics,
         "logHistory": trainer.state.log_history,
     })
-    if (run_kind == "candidate" or (dataset_profile == "v05" and run_kind == "pilot")) \
+    if (run_kind == "candidate" or (dataset_profile in GOVERNED_V05_PROFILES and run_kind == "pilot")) \
             and float(trainer.state.epoch or 0) < 0.999:
-        raise RuntimeError("v0.5 pilot/candidate stopped before one full epoch; it cannot support selection.")
+        raise RuntimeError("Governed pilot/candidate stopped before one full epoch; it cannot support selection.")
+
+    loss_report = None
+    if dataset_profile in {"v054", "v055", "v056"}:
+        remediation_path = V056_REMEDIATION_PATH if dataset_profile == "v056" else V055_REMEDIATION_PATH if dataset_profile == "v055" else V054_REMEDIATION_PATH
+        spec = importlib.util.spec_from_file_location(f"saferide_{dataset_profile}_runner_remediation", remediation_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("v0.5.4+ truthful-loss implementation is unavailable.")
+        remediation = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(remediation)
+        resumed_step = None
+        if resumed_from_checkpoint is not None:
+            suffix = resumed_from_checkpoint.name.rsplit("-", 1)[-1]
+            if not suffix.isdigit():
+                raise RuntimeError("v0.5.4+ resume checkpoint step is malformed.")
+            resumed_step = int(suffix)
+        if run_kind == "preflight":
+            loss_report = remediation.build_preflight_loss_report(
+                train_metrics=train_result.metrics,
+                log_history=trainer.state.log_history,
+                recorded_best_metric=trainer.state.best_metric,
+            )
+        else:
+            loss_report = remediation.build_loss_report(
+                train_metrics=train_result.metrics,
+                log_history=trainer.state.log_history,
+                gradient_accumulation_steps=args.gradient_accumulation_steps,
+                resumed_from_step=resumed_step,
+                recorded_best_metric=trainer.state.best_metric,
+            )
 
     adapter_dir = run_dir / "adapter"
     model.save_pretrained(adapter_dir)
     tokenizer.save_pretrained(adapter_dir / "tokenizer")
     (adapter_dir / "README.md").write_text(model_card_text(args, model_id), encoding="utf-8")
+    tensor_validation = verify_finite_adapter_tensors(adapter_dir / "adapter_model.safetensors", torch)
 
     adapter_files = []
     for path in sorted(adapter_dir.rglob("*")):
@@ -1190,10 +1516,10 @@ def run_training(
         "sampleOrderSha256": hashlib.sha256(
             "\n".join(str(row["id"]) for row in train_rows).encode("utf-8")
         ).hexdigest(),
-        "sampleOrderPolicy": "seeded-once-then-sequential; repeated unchanged for each epoch",
-        "trainRowIds": sorted(str(row["id"]) for row in train_rows),
+        "sampleOrderPolicy": "frozen-explicit-weighted-order" if dataset_profile in WEIGHTED_PILOT_PROFILES and run_kind == "pilot" else "seeded-once-then-sequential; repeated unchanged for each epoch",
+        "trainRowIds": sorted({str(row["id"]) for row in train_rows}),
         "trainRowIdSha256": hashlib.sha256(
-            "\n".join(sorted(str(row["id"]) for row in train_rows)).encode("utf-8")
+            "\n".join(sorted({str(row["id"]) for row in train_rows})).encode("utf-8")
         ).hexdigest(),
         "developmentRowIds": sorted(str(row["id"]) for row in dev_rows),
         "developmentRowIdSha256": hashlib.sha256(
@@ -1210,9 +1536,11 @@ def run_training(
             "assistantTrain": assistant_train_tokens,
             "assistantDev": assistant_dev_tokens,
         },
+        "lossMaskPolicy": "assistant-turns-only",
         "effectiveBatchSize": args.train_batch_size * args.gradient_accumulation_steps,
         "trainMetrics": {key: value for key, value in train_result.metrics.items() if isinstance(value, (int, float))},
         "devMetrics": {key: value for key, value in eval_metrics.items() if isinstance(value, (int, float))},
+        "lossReport": loss_report,
         "logHistory": safe_log_history,
         "maxCudaMemoryBytes": int(torch.cuda.max_memory_allocated()) if cuda_available else 0,
         "loraTargetModuleCount": len(lora_target_modules),
@@ -1220,6 +1548,7 @@ def run_training(
         "trainableParameterSummary": trainable_summary,
         "adapterDir": rel(adapter_dir),
         "adapterFiles": adapter_files,
+        "adapterTensorValidation": tensor_validation,
         "checkpointRoot": rel(trainer_dir),
         "checkpoints": checkpoint_manifests,
     }
@@ -1251,12 +1580,12 @@ def main() -> int:
         raise RuntimeError("Use either --data or the v0.5 --train-data/--dev-data pair, never both.")
     if (train_data is None) != (dev_data is None):
         raise RuntimeError("--train-data and --dev-data must be supplied together.")
-    if dataset_profile == "v05" and data is not None:
-        raise RuntimeError("v0.5 runs require separate --train-data and --dev-data inputs; combined holdout-bearing --data is forbidden.")
-    if dataset_profile == "v05" and not args.dry_run and (train_data is None or dev_data is None):
-        raise RuntimeError("v0.5 training requires separate --train-data and --dev-data inputs.")
-    if dataset_profile != "v05" and (train_data is not None or dev_data is not None):
-        raise RuntimeError("Separate --train-data/--dev-data inputs require a v0.5 register.")
+    if dataset_profile in GOVERNED_V05_PROFILES and data is not None:
+        raise RuntimeError("Governed v0.5-series runs require separate --train-data and --dev-data inputs; combined holdout-bearing --data is forbidden.")
+    if dataset_profile in GOVERNED_V05_PROFILES and not args.dry_run and (train_data is None or dev_data is None):
+        raise RuntimeError("Governed training requires separate --train-data and --dev-data inputs.")
+    if dataset_profile not in GOVERNED_V05_PROFILES and (train_data is not None or dev_data is not None):
+        raise RuntimeError("Separate --train-data/--dev-data inputs require a governed v0.5-series register.")
     if data is not None and not data.is_file():
         raise RuntimeError(f"Data JSONL not found: {data}")
     if train_data is not None and not train_data.is_file():
@@ -1265,22 +1594,35 @@ def main() -> int:
         raise RuntimeError(f"Development JSONL not found: {dev_data}")
     if audit is not None and not audit.is_file():
         raise RuntimeError(f"Dataset audit not found: {audit}")
-    if dataset_profile == "v05" and train_data is not None:
+    if dataset_profile in GOVERNED_V05_PROFILES and train_data is not None:
         if dataset_manifest is None or not dataset_manifest.is_file():
             raise RuntimeError("v0.5 runs require --dataset-manifest pointing to the frozen content-free manifest.")
         if artifact_root is None or not artifact_root.is_dir():
             raise RuntimeError("v0.5 runs require --artifact-root for strict hash verification.")
         if audit is None:
             raise RuntimeError("v0.5 pilot and candidate runs require the passed content-free dataset audit.")
-        registered_manifest_hash = register_document.get("artifacts", {}).get("datasetManifest", {}).get("sha256")
-        if sha256_file(dataset_manifest) != registered_manifest_hash:
-            raise RuntimeError("v0.5 dataset manifest does not match the approved register binding.")
-        dataset_manifest_document = read_json(dataset_manifest)
-        registered_pilot_hash = register_document.get("artifacts", {}).get("pilotSelection", {}).get("sha256")
-        if dataset_manifest_document.get("pilotSelection", {}).get("sha256") != registered_pilot_hash:
-            raise RuntimeError("v0.5 pilot selection differs between the dataset manifest and register.")
-        if pilot_row_manifest is not None and sha256_file(pilot_row_manifest) != registered_pilot_hash:
-            raise RuntimeError("v0.5 supplied pilot row manifest does not match the approved register binding.")
+        if dataset_profile == "v05":
+            registered_manifest_hash = register_document.get("artifacts", {}).get("datasetManifest", {}).get("sha256")
+            if sha256_file(dataset_manifest) != registered_manifest_hash:
+                raise RuntimeError("v0.5 dataset manifest does not match the approved register binding.")
+            dataset_manifest_document = read_json(dataset_manifest)
+            registered_pilot_hash = register_document.get("artifacts", {}).get("pilotSelection", {}).get("sha256")
+            if dataset_manifest_document.get("pilotSelection", {}).get("sha256") != registered_pilot_hash:
+                raise RuntimeError("v0.5 pilot selection differs between the dataset manifest and register.")
+            if pilot_row_manifest is not None and sha256_file(pilot_row_manifest) != registered_pilot_hash:
+                raise RuntimeError("v0.5 supplied pilot row manifest does not match the approved register binding.")
+        elif dataset_profile == "v051" and read_json(dataset_manifest).get("bindings", {}).get("candidateManifestSha256") != register_document.get("candidateManifestSha256"):
+            raise RuntimeError("v0.5.1 dataset manifest does not match the governed register binding.")
+        elif dataset_profile == "v052" and read_json(dataset_manifest).get("bindings", {}).get("registerSha256") != sha256_file(register):
+            raise RuntimeError("v0.5.2 dataset manifest does not match the governed register binding.")
+        elif dataset_profile == "v053" and read_json(dataset_manifest).get("bindings", {}).get("registerSha256") != sha256_file(register):
+            raise RuntimeError("v0.5.3 dataset manifest does not match the governed register binding.")
+        elif dataset_profile == "v054" and read_json(dataset_manifest).get("bindings", {}).get("registerSha256") != sha256_file(register):
+            raise RuntimeError("v0.5.4 dataset manifest does not match the governed register binding.")
+        elif dataset_profile == "v055" and read_json(dataset_manifest).get("bindings", {}).get("registerSha256") != sha256_file(register):
+            raise RuntimeError("v0.5.5 dataset manifest does not match the governed register binding.")
+        elif dataset_profile == "v056" and read_json(dataset_manifest).get("bindings", {}).get("registerSha256") != sha256_file(register):
+            raise RuntimeError("v0.5.6 dataset manifest does not match the governed register binding.")
     if pilot_row_manifest is not None and not pilot_row_manifest.is_file():
         raise RuntimeError(f"Pilot row manifest not found: {pilot_row_manifest}")
     if not requirements.is_file():
@@ -1303,6 +1645,8 @@ def main() -> int:
         artifact_root=artifact_root,
         train_data=train_data,
         dev_data=dev_data,
+        dataset_manifest=dataset_manifest,
+        pilot_row_manifest=pilot_row_manifest,
     )
     if strict_gate and not gate["passed"]:
         raise RuntimeError("Fine-tuning data gate failed. Fix the register/data before running fine-tuning.")
@@ -1310,13 +1654,13 @@ def main() -> int:
     rows = parse_jsonl(data) if data is not None else (
         parse_jsonl(train_data) + parse_jsonl(dev_data) if train_data is not None and dev_data is not None else []
     )
-    if dataset_profile == "v05" and train_data is not None and dev_data is not None:
+    if dataset_profile in GOVERNED_V05_PROFILES and train_data is not None and dev_data is not None:
         if any(row.get("split") != "train" for row in parse_jsonl(train_data)):
             raise RuntimeError("--train-data may contain only train rows.")
         if any(row.get("split") != "dev" for row in parse_jsonl(dev_data)):
             raise RuntimeError("--dev-data may contain only development rows.")
-        if any(row.get("split") in {"quality-holdout", "safety-holdout"} for row in rows):
-            raise RuntimeError("v0.5 training process must not read quality or safety holdout rows.")
+        if any(row.get("split") in {"quality-holdout", "safety-holdout", "mitigation-holdout"} for row in rows):
+            raise RuntimeError("Training process must not read quality, safety, or mitigation holdout rows.")
     pilot_row_ids = load_pilot_row_ids(pilot_row_manifest, dataset_profile, run_kind)
     environment = environment_summary()
     environment.update({
@@ -1326,6 +1670,56 @@ def main() -> int:
         "constraintsSha256": sha256_file(constraints),
         "dependencyConstraintsSatisfied": None,
     })
+    dataset_bindings: dict[str, Any] | None = None
+    if dataset_profile in GOVERNED_V05_PROFILES and train_data is not None:
+        if dataset_profile in {"v052", "v053", "v054", "v055", "v056"}:
+            register_bindings = register_document.get("bindings", {})
+            dataset_bindings = {
+                "datasetId": register_document.get("datasetId"),
+                "diagnosisSummarySha256": register_bindings.get("diagnosisSummarySha256") or register_bindings.get("diagnosisSha256"),
+                "implementationSha256": register_bindings.get("implementationSha256"),
+                "mitigationDevelopmentSha256": register_bindings.get("mitigationDevelopmentSha256"),
+                "originalDevelopmentSha256": register_bindings.get("originalDevelopmentSha256"),
+                "planSha256": register_bindings.get("planSha256"),
+                "scoringPolicySha256": register_bindings.get("scoringPolicySha256"),
+                "sealedMitigationHoldoutSha256": register_bindings.get("sealedMitigationHoldoutSha256"),
+                "systemPromptTextSha256": register_bindings.get("systemPromptTextSha256"),
+                **({
+                    "v054CombinedTrainSha256": register_bindings.get("v054CombinedTrainSha256"),
+                    "v054FrozenManifestSha256": register_bindings.get("v054FrozenManifestSha256"),
+                    "v054TrainingRecipeSha256": register_bindings.get("v054TrainingRecipeSha256"),
+                    "lossPolicySha256": register_bindings.get("lossPolicySha256"),
+                } if dataset_profile == "v056" else {
+                    "v054CombinedTrainSha256": register_bindings.get("v054CombinedTrainSha256"),
+                    "v054FrozenManifestSha256": register_bindings.get("v054FrozenManifestSha256"),
+                    "lossPolicySha256": register_bindings.get("lossPolicySha256"),
+                } if dataset_profile == "v055" else {
+                    "v053CombinedTrainSha256": register_bindings.get("v053CombinedTrainSha256"),
+                    "v053FrozenManifestSha256": register_bindings.get("v053FrozenManifestSha256"),
+                    "lossPolicySha256": register_bindings.get("lossPolicySha256"),
+                } if dataset_profile == "v054" else {
+                    "v052CombinedTrainSha256": register_bindings.get("v052CombinedTrainSha256"),
+                    "v052FrozenManifestSha256": register_bindings.get("v052FrozenManifestSha256"),
+                } if dataset_profile == "v053" else {
+                    "v051CombinedTrainSha256": register_bindings.get("v051CombinedTrainSha256"),
+                    "v051FrozenManifestSha256": register_bindings.get("v051FrozenManifestSha256"),
+                }),
+                "pilotRowManifest": rel(pilot_row_manifest) if pilot_row_manifest else None,
+                "pilotRowManifestSha256": sha256_file(pilot_row_manifest) if pilot_row_manifest else None,
+            }
+        else:
+            dataset_bindings = {
+                "datasetId": register_document.get("datasetId"),
+                "planSha256": register_document.get("bindings", {}).get("plan", {}).get("sha256"),
+                "policySha256": register_document.get("bindings", {}).get("policy", {}).get("sha256"),
+                "systemPromptConfigSha256": register_document.get("bindings", {}).get("systemPrompt", {}).get("sha256"),
+                "systemPromptTextSha256": register_document.get("bindings", {}).get("systemPrompt", {}).get("textSha256"),
+                "scenarioSpecSha256": register_document.get("artifacts", {}).get("scenarioSpecs", {}).get("sha256"),
+                "splitManifestSha256": register_document.get("artifacts", {}).get("splitManifest", {}).get("sha256"),
+                "reviewLedgerSha256": register_document.get("artifacts", {}).get("reviewLedger", {}).get("sha256"),
+                "pilotRowManifest": rel(pilot_row_manifest) if pilot_row_manifest else None,
+                "pilotRowManifestSha256": sha256_file(pilot_row_manifest) if pilot_row_manifest else None,
+            }
     metadata: dict[str, Any] = {
         "schema": "com.saferide.ai.training-run",
         "schemaVersion": 1,
@@ -1348,23 +1742,12 @@ def main() -> int:
         "dataFiles": {
             "train": {"path": rel(train_data), "sha256": sha256_file(train_data)} if train_data else None,
             "dev": {"path": rel(dev_data), "sha256": sha256_file(dev_data)} if dev_data else None,
-        } if dataset_profile == "v05" and train_data is not None else None,
+        } if dataset_profile in GOVERNED_V05_PROFILES and train_data is not None else None,
         "audit": rel(audit) if audit else None,
         "auditSha256": sha256_file(audit) if audit else None,
         "datasetManifest": rel(dataset_manifest) if dataset_manifest else None,
         "datasetManifestSha256": sha256_file(dataset_manifest) if dataset_manifest else None,
-        "datasetBindings": {
-            "datasetId": register_document.get("datasetId"),
-            "planSha256": register_document.get("bindings", {}).get("plan", {}).get("sha256"),
-            "policySha256": register_document.get("bindings", {}).get("policy", {}).get("sha256"),
-            "systemPromptConfigSha256": register_document.get("bindings", {}).get("systemPrompt", {}).get("sha256"),
-            "systemPromptTextSha256": register_document.get("bindings", {}).get("systemPrompt", {}).get("textSha256"),
-            "scenarioSpecSha256": register_document.get("artifacts", {}).get("scenarioSpecs", {}).get("sha256"),
-            "splitManifestSha256": register_document.get("artifacts", {}).get("splitManifest", {}).get("sha256"),
-            "reviewLedgerSha256": register_document.get("artifacts", {}).get("reviewLedger", {}).get("sha256"),
-            "pilotRowManifest": rel(pilot_row_manifest) if pilot_row_manifest else None,
-            "pilotRowManifestSha256": sha256_file(pilot_row_manifest) if pilot_row_manifest else None,
-        } if dataset_profile == "v05" and train_data is not None else None,
+        "datasetBindings": dataset_bindings,
         "dataGate": gate,
         "dataSummary": summarize_rows(rows) if rows else {"rowCount": 0},
         "environment": environment,
@@ -1377,6 +1760,7 @@ def main() -> int:
             "trainBatchSize": args.train_batch_size,
             "evalBatchSize": args.eval_batch_size,
             "gradientAccumulationSteps": args.gradient_accumulation_steps,
+            "maxGradientNorm": args.max_grad_norm,
             "effectiveBatchSize": args.train_batch_size * args.gradient_accumulation_steps,
             "learningRate": args.learning_rate,
             "warmupRatio": args.warmup_ratio,

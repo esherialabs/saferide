@@ -6,7 +6,7 @@ import { INTERIOR_PAGES } from '@/lib/pages';
 export const metadata = pageMetadata({
   title: 'Impact & Transparency',
   description:
-    'What we measure in the SafeRide pilot — completion, comprehension, trust, and whether partners act — and what we publish.',
+    'What the HURIA pilot in Mombasa delivered, what it tested, and what SafeRide does not claim without evidence.',
   path: '/impact',
   image: INTERIOR_PAGES['impact'].ogImage,
   imageAlt: INTERIOR_PAGES['impact'].imageAlt,

@@ -1,5 +1,7 @@
 # SafeRide Website Repo Audit
 
+> **Status (1 Nov 2026):** historical note. The first-party SafeRide API is live and the HURIA pilot runs on it; text below describing a Supabase prototype or a planned API is out of date.
+
 Audit date: 2026-05-22.
 
 ## Sources Reviewed

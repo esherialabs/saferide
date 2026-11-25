@@ -29,7 +29,7 @@ export interface PhotoAnnotationProps {
   imageUri: string;
   annotations?: AnnotationPoint[];
   onClose: () => void;
-  onSave?: (annotations: AnnotationPoint[]) => void;
+  onSave?: (annotations: AnnotationPoint[]) => void | boolean | Promise<void | boolean>;
   readonly?: boolean;
 }
 
@@ -47,6 +47,18 @@ export default function PhotoAnnotationOverlay({
   const annotationSequence = useRef(0);
   const modalTitleRef = useRef<Text>(null);
   const wasVisible = useRef(false);
+  const savingRef = useRef(false);
+  const saveSession = useRef(0);
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+
+  useEffect(() => {
+    saveSession.current += 1;
+    savingRef.current = false;
+    setSaving(false);
+    setSaveFailed(false);
+    return () => { saveSession.current += 1; };
+  }, [visible, imageUri]);
 
   const screenWidth = Dimensions.get('window').width;
   const screenHeight = Dimensions.get('window').height;
@@ -64,7 +76,7 @@ export default function PhotoAnnotationOverlay({
   };
 
   const handleImagePress = (event: any) => {
-    if (readonly) return;
+    if (readonly || savingRef.current) return;
 
     const { locationX, locationY } = event.nativeEvent;
     const { width, height } = imageLayout;
@@ -85,6 +97,7 @@ export default function PhotoAnnotationOverlay({
   };
 
   const addPresetAnnotation = (region: AnnotationPresetRegion) => {
+    if (savingRef.current) return;
     setCurrentAnnotations(prev => [
       ...prev,
       createPresetAnnotation(selectedTool, region, nextAnnotationId()),
@@ -92,12 +105,33 @@ export default function PhotoAnnotationOverlay({
   };
 
   const removeAnnotation = (id: string) => {
+    if (savingRef.current) return;
     setCurrentAnnotations(prev => prev.filter(a => a.id !== id));
   };
 
-  const handleSave = () => {
-    onSave?.(currentAnnotations);
+  const closeEditor = () => {
+    saveSession.current += 1;
     onClose();
+  };
+  const handleSave = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setSaveFailed(false);
+    const session = saveSession.current;
+    try {
+      const saved = await onSave?.(currentAnnotations);
+      if (saveSession.current !== session) return;
+      if (saved === false) setSaveFailed(true);
+      else closeEditor();
+    } catch {
+      if (saveSession.current === session) setSaveFailed(true);
+    } finally {
+      if (saveSession.current === session) {
+        savingRef.current = false;
+        setSaving(false);
+      }
+    }
   };
 
   const getAnnotationIcon = (type: AnnotationTool) => {
@@ -248,7 +282,7 @@ export default function PhotoAnnotationOverlay({
     <Modal
       visible={visible}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={closeEditor}
       onShow={() => AccessibilityManager.focusElement(modalTitleRef)}
     >
       <View style={styles.overlay} accessibilityViewIsModal>
@@ -259,7 +293,7 @@ export default function PhotoAnnotationOverlay({
           </Text>
           <TouchableOpacity
             style={styles.closeButton}
-            onPress={onClose}
+            onPress={closeEditor}
             accessibilityRole="button"
             accessibilityLabel="Close photo annotation"
             accessibilityHint="Returns without saving new annotation changes"
@@ -273,7 +307,7 @@ export default function PhotoAnnotationOverlay({
           <TouchableOpacity
             activeOpacity={1}
             onPress={handleImagePress}
-            disabled={readonly}
+            disabled={readonly || saving}
             accessible={false}
           >
             <Image
@@ -306,7 +340,7 @@ export default function PhotoAnnotationOverlay({
                   },
                 ]}
                 onPress={() => !readonly && removeAnnotation(annotation.id)}
-                disabled={readonly}
+                disabled={readonly || saving}
                 accessibilityRole={readonly ? 'image' : 'button'}
                 accessibilityLabel={readonly
                   ? describeAnnotation(annotation)
@@ -338,6 +372,7 @@ export default function PhotoAnnotationOverlay({
                   selectedTool === tool && styles.toolButtonActive,
                 ]}
                 onPress={() => setSelectedTool(tool)}
+                disabled={saving}
                 accessibilityRole="radio"
                 accessibilityLabel={`${tool.charAt(0).toUpperCase() + tool.slice(1)} annotation tool`}
                 accessibilityState={{ selected: selectedTool === tool }}
@@ -370,6 +405,7 @@ export default function PhotoAnnotationOverlay({
                   title={`Add at ${region}`}
                   accessibilityHint={`Adds the selected ${selectedTool} tool at the ${region} of the photo`}
                   onPress={() => addPresetAnnotation(region)}
+                  disabled={saving}
                 />
               ))}
             </View>
@@ -385,6 +421,7 @@ export default function PhotoAnnotationOverlay({
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => removeAnnotation(annotation.id)}
+                      disabled={saving}
                       accessibilityRole="button"
                       accessibilityLabel={`Remove ${describeAnnotation(annotation)}`}
                     >
@@ -398,17 +435,20 @@ export default function PhotoAnnotationOverlay({
         )}
 
         {/* Action Buttons */}
+        {saveFailed ? <Text accessibilityRole="alert" style={{ color: '#FFFFFF', paddingHorizontal: 16 }}>Annotations could not be saved. Try again before closing.</Text> : null}
         <View style={styles.actions}>
           <Button
             title="Cancel"
             variant="outline"
-            onPress={onClose}
+            onPress={closeEditor}
             style={{ flex: 1 }}
           />
           {!readonly && (
             <Button
               title={`Save (${currentAnnotations.length})`}
-              onPress={handleSave}
+              onPress={() => { void handleSave(); }}
+              disabled={saving}
+              loading={saving}
               style={{ flex: 2 }}
             />
           )}

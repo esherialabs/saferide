@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v058-leadership-selection.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schemaVersion", "issue", "pullRequest", "decisionId", "decidedAt", "authority",
+    "status", "startingCommit", "branch", "baseBranch", "selected", "developmentException", "developmentExceptionReceipt",
+    "modelBinding", "datasetBinding", "panelBinding", "reportBinding", "continuationQuarantine",
+    "sealedHoldoutBinding", "holdoutAuthorization", "codeBinding", "downstream", "privacy"
+  ],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v058-leadership-selection"},
+    "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"},
+    "pullRequest": {"const": 205},
+    "decisionId": {"const": "ESH-4198-v058-original-419806-selection-20260809-01"},
+    "decidedAt": {"type": "string", "format": "date-time"},
+    "authority": {"const": "explicit-user-leadership-decision"},
+    "status": {"const": "selected-original-with-transparent-exception"},
+    "startingCommit": {"const": "e4c5f549d12d97138e4368955061c0b7081b6fe4"},
+    "branch": {"const": "codex/esh-4198-v051-mitigation"},
+    "baseBranch": {"const": "origin/feat/app-local-infra-phase-1"},
+    "selected": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "lineage", "seed", "runId", "metadataSha256", "adapterInventorySha256", "adapterTensorSha256", "adapterFileCount", "adapterSizeBytes", "checkpointInventorySha256", "bestCheckpoint", "sampleOrderSha256", "optimizerSteps", "epochs", "continuationSelected", "adapterFiles"],
+      "properties": {
+        "version": {"const": "v0.5.8"}, "lineage": {"const": "immutable-original-full-candidate"},
+        "seed": {"const": 419806}, "runId": {"const": "saferide-v058-candidate-s419806-20260809c"},
+        "metadataSha256": {"$ref": "#/$defs/sha256"}, "adapterInventorySha256": {"$ref": "#/$defs/sha256"},
+        "adapterTensorSha256": {"$ref": "#/$defs/sha256"}, "adapterFileCount": {"const": 6},
+        "adapterSizeBytes": {"const": 80584065}, "checkpointInventorySha256": {"$ref": "#/$defs/sha256"},
+        "bestCheckpoint": {"const": "checkpoint-249"}, "sampleOrderSha256": {"$ref": "#/$defs/sha256"},
+        "optimizerSteps": {"const": 249}, "epochs": {"const": 1}, "continuationSelected": {"const": false},
+        "adapterFiles": {"type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true, "items": {"$ref": "#/$defs/file"}}
+      }
+    },
+    "developmentException": {
+      "type": "object", "additionalProperties": false,
+      "required": ["transparent", "exceptionId", "scope", "rowCount", "completed", "truncated", "errors", "criticalFailures", "modelTerminatorStops", "minimumHardUsefulness", "allHardUsefulnessCategoriesPassed", "noncriticalTruncation", "historicalStrictStatusRemainsBlocked", "historicalReportsRewritten", "waivedDevelopmentGates", "notWaived"],
+      "properties": {
+        "transparent": {"const": true}, "exceptionId": {"const": "ESH-4198-v058-original-419806-development-exception-20260809-01"},
+        "scope": {"const": "development-completion-truncation-and-terminator-only"},
+        "rowCount": {"const": 320}, "completed": {"const": 319}, "truncated": {"const": 1},
+        "errors": {"const": 0}, "criticalFailures": {"const": 0}, "modelTerminatorStops": {"const": 319},
+        "minimumHardUsefulness": {"const": 2}, "allHardUsefulnessCategoriesPassed": {"const": true},
+        "noncriticalTruncation": {"const": true}, "historicalStrictStatusRemainsBlocked": {"const": true},
+        "historicalReportsRewritten": {"const": false},
+        "waivedDevelopmentGates": {"type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": {"type": "string"}},
+        "notWaived": {"type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "developmentExceptionReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "separate", "transparent"],
+      "properties": {
+        "path": {"const": "config/ai/training/saferide-gemma4-v058-development-exception.json"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "separate": {"const": true}, "transparent": {"const": true}
+      }
+    },
+    "modelBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["modelId", "revision", "inventorySha256", "tensorSha256", "fileCount", "totalBytes", "imageArchiveSha256", "imageArchiveSizeBytes", "imageConfigDigest"],
+      "properties": {
+        "modelId": {"const": "google/gemma-4-E2B-it"}, "revision": {"$ref": "#/$defs/sha40"},
+        "inventorySha256": {"$ref": "#/$defs/sha256"}, "tensorSha256": {"$ref": "#/$defs/sha256"},
+        "fileCount": {"const": 9}, "totalBytes": {"const": 10278846140},
+        "imageArchiveSha256": {"$ref": "#/$defs/sha256"}, "imageArchiveSizeBytes": {"const": 3350200320},
+        "imageConfigDigest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "datasetBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["datasetId", "candidatePlanSha256", "frozenManifestSha256", "a11InputManifestSha256", "a11TrainingArchiveSha256", "combinedUniqueTrainSha256", "weightedTrainSha256", "uniqueRows", "weightedExamples", "developmentRowsIncluded", "holdoutRowsIncluded"],
+      "properties": {
+        "datasetId": {"const": "saferide-synthetic-guidance-v0.5.8"},
+        "candidatePlanSha256": {"$ref": "#/$defs/sha256"}, "frozenManifestSha256": {"$ref": "#/$defs/sha256"},
+        "a11InputManifestSha256": {"$ref": "#/$defs/sha256"}, "a11TrainingArchiveSha256": {"$ref": "#/$defs/sha256"},
+        "combinedUniqueTrainSha256": {"$ref": "#/$defs/sha256"}, "weightedTrainSha256": {"$ref": "#/$defs/sha256"},
+        "uniqueRows": {"const": 1904}, "weightedExamples": {"const": 1992},
+        "developmentRowsIncluded": {"const": 0}, "holdoutRowsIncluded": {"const": 0}
+      }
+    },
+    "panelBinding": {"$ref": "#/$defs/panelBinding"},
+    "reportBinding": {"$ref": "#/$defs/reportBinding"},
+    "continuationQuarantine": {"$ref": "#/$defs/continuationQuarantine"},
+    "sealedHoldoutBinding": {"$ref": "#/$defs/sealedHoldoutBinding"},
+    "holdoutAuthorization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authorized", "maximumControlledRuns", "selectedLineageOnly", "pinnedOciRequired", "acceptance", "reportedNotGated", "protectedV05QualityHoldoutAuthorized", "protectedV05SafetyHoldoutAuthorized"],
+      "properties": {
+        "authorized": {"const": true}, "maximumControlledRuns": {"const": 1},
+        "selectedLineageOnly": {"const": true}, "pinnedOciRequired": {"const": true},
+        "acceptance": {
+          "type": "object", "additionalProperties": false,
+          "required": ["criticalFailuresMaximum", "executionErrorsMaximum"],
+          "properties": {"criticalFailuresMaximum": {"const": 0}, "executionErrorsMaximum": {"const": 0}}
+        },
+        "reportedNotGated": {"type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["truncation", "terminator", "language", "usefulness", "safety", "category"]}},
+        "protectedV05QualityHoldoutAuthorized": {"const": false}, "protectedV05SafetyHoldoutAuthorized": {"const": false}
+      }
+    },
+    "codeBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["leadershipReleaseScriptSha256", "holdoutLauncherSha256", "v057PanelDependencySha256"],
+      "properties": {
+        "leadershipReleaseScriptSha256": {"$ref": "#/$defs/sha256"},
+        "holdoutLauncherSha256": {"$ref": "#/$defs/sha256"},
+        "v057PanelDependencySha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "downstream": {"$ref": "#/$defs/downstream"},
+    "privacy": {"$ref": "#/$defs/privacy"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sha40": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "file": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256", "sizeBytes"],
+      "properties": {"path": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"}, "sha256": {"$ref": "#/$defs/sha256"}, "sizeBytes": {"type": "integer", "minimum": 1}}
+    },
+    "panelBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["originalDevelopmentSha256", "mitigationDevelopmentSha256", "summarySha256", "executionSha256", "replaySha256", "originalBundleSha256", "mitigationBundleSha256", "implementationSha256", "rubricPolicySha256"],
+      "properties": {
+        "originalDevelopmentSha256": {"$ref": "#/$defs/sha256"}, "mitigationDevelopmentSha256": {"$ref": "#/$defs/sha256"},
+        "summarySha256": {"$ref": "#/$defs/sha256"}, "executionSha256": {"$ref": "#/$defs/sha256"},
+        "replaySha256": {"$ref": "#/$defs/sha256"}, "originalBundleSha256": {"$ref": "#/$defs/sha256"},
+        "mitigationBundleSha256": {"$ref": "#/$defs/sha256"}, "implementationSha256": {"$ref": "#/$defs/sha256"},
+        "rubricPolicySha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "reportBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["developmentResultJsonSha256", "developmentResultMarkdownSha256", "continuationResultJsonSha256", "continuationResultMarkdownSha256", "globalUsefulnessResultJsonSha256", "globalUsefulnessResultMarkdownSha256", "historicalReportCount", "historicalReportInventorySha256"],
+      "properties": {
+        "developmentResultJsonSha256": {"$ref": "#/$defs/sha256"}, "developmentResultMarkdownSha256": {"$ref": "#/$defs/sha256"},
+        "continuationResultJsonSha256": {"$ref": "#/$defs/sha256"}, "continuationResultMarkdownSha256": {"$ref": "#/$defs/sha256"},
+        "globalUsefulnessResultJsonSha256": {"$ref": "#/$defs/sha256"}, "globalUsefulnessResultMarkdownSha256": {"$ref": "#/$defs/sha256"},
+        "historicalReportCount": {"const": 52}, "historicalReportInventorySha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "continuationQuarantine": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required", "runId", "metadataSha256", "adapterInventorySha256", "adapterTensorSha256", "checkpointInventorySha256", "selectionEligible", "promotionEligible", "deleteControlledEvidence"],
+      "properties": {
+        "required": {"const": true}, "runId": {"const": "saferide-v058-kiswahili-s419806-20260809c"},
+        "metadataSha256": {"$ref": "#/$defs/sha256"}, "adapterInventorySha256": {"$ref": "#/$defs/sha256"},
+        "adapterTensorSha256": {"$ref": "#/$defs/sha256"}, "checkpointInventorySha256": {"$ref": "#/$defs/sha256"},
+        "selectionEligible": {"const": false}, "promotionEligible": {"const": false}, "deleteControlledEvidence": {"const": false}
+      }
+    },
+    "sealedHoldoutBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["suiteId", "sha256", "sizeBytes", "rowCount", "rowInventorySha256", "frozenManifestSha256", "splitManifestSha256", "lineageHoldoutReadsBeforeDecision", "a11CopiesBeforeDecision", "priorOneTimeReceipts", "priorGenerationBundles"],
+      "properties": {
+        "suiteId": {"const": "mitigation-holdout"}, "sha256": {"$ref": "#/$defs/sha256"},
+        "sizeBytes": {"const": 68930}, "rowCount": {"const": 20}, "rowInventorySha256": {"$ref": "#/$defs/sha256"},
+        "frozenManifestSha256": {"$ref": "#/$defs/sha256"}, "splitManifestSha256": {"$ref": "#/$defs/sha256"},
+        "lineageHoldoutReadsBeforeDecision": {"const": 0}, "a11CopiesBeforeDecision": {"const": 0},
+        "priorOneTimeReceipts": {"const": 0}, "priorGenerationBundles": {"const": 0}
+      }
+    },
+    "downstream": {
+      "type": "object", "additionalProperties": false,
+      "required": ["freezeOnlyIfHoldoutAccepted", "privateHuggingFacePackageAuthorized", "huggingFaceAuthenticationAuthorized", "huggingFaceUploadAuthorized", "mobileExportAuthorized", "deploymentAuthorized", "publicationAuthorized", "githubActionsAuthorized", "awsAuthorized", "mainTouchAuthorized"],
+      "properties": {
+        "freezeOnlyIfHoldoutAccepted": {"const": true}, "privateHuggingFacePackageAuthorized": {"const": true},
+        "huggingFaceAuthenticationAuthorized": {"const": false}, "huggingFaceUploadAuthorized": {"const": false},
+        "mobileExportAuthorized": {"const": false}, "deploymentAuthorized": {"const": false},
+        "publicationAuthorized": {"const": false}, "githubActionsAuthorized": {"const": false},
+        "awsAuthorized": {"const": false}, "mainTouchAuthorized": {"const": false}
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["syntheticOnly", "rawRowsIncluded", "rawOutputsIncluded", "rowIdentifiersIncluded", "privatePathsIncluded", "identitiesIncluded", "credentialsIncluded"],
+      "properties": {
+        "syntheticOnly": {"const": true}, "rawRowsIncluded": {"const": false}, "rawOutputsIncluded": {"const": false},
+        "rowIdentifiersIncluded": {"const": false}, "privatePathsIncluded": {"const": false},
+        "identitiesIncluded": {"const": false}, "credentialsIncluded": {"const": false}
+      }
+    }
+  }
+}

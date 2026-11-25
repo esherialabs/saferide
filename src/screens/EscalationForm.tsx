@@ -31,6 +31,14 @@ import {
   buildEscalationPacket,
 } from '../utils/escalationPacket';
 import type { EscalationPacket } from '../utils/escalationPacket';
+import { PartnerSharingOptIn } from '../components/report/PartnerSharingOptIn';
+import { usePartnerSharingAvailability } from '../hooks/usePartnerSharingAvailability';
+import { PARTNER_SHARING_COPY } from '../i18n/partnerSharingCopy';
+import {
+  buildPartnerSharingChoice,
+  getPartnerSharingFormState,
+  type PartnerSharingFormState,
+} from '../utils/partnerSharing';
 
 import { devPrivacyError, getPrivacySafeErrorReason } from '../utils/privacyLog';
 type EscalationFormNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EscalationForm'>;
@@ -98,6 +106,9 @@ export default function EscalationFormScreen() {
   const isOffline = !isOnline;
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string[] }>({});
+  const partnerAvailability = usePartnerSharingAvailability();
+  const [partnerForm, setPartnerForm] = useState<PartnerSharingFormState>(() => getPartnerSharingFormState(null));
+  const [partnerPhoneError, setPartnerPhoneError] = useState<string | null>(null);
   const heroStats = useMemo<FeatureHeaderStat[]>(() => [
     {
       label: 'Redaction',
@@ -166,7 +177,7 @@ export default function EscalationFormScreen() {
       padding: spacing.md,
     },
     sectionTitle: {
-      ...typography.titleSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
       marginBottom: spacing.sm,
     },
@@ -292,7 +303,7 @@ export default function EscalationFormScreen() {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -308,14 +319,6 @@ export default function EscalationFormScreen() {
       position: 'relative',
       width: '90%',
       ...elevation.floating,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -373,6 +376,7 @@ export default function EscalationFormScreen() {
 
       const draft = await draftStorage.getDraft(draftId);
       setDraftData(draft);
+      setPartnerForm(getPartnerSharingFormState(draft?.partnerSharing));
       if (draft?.escalationData) {
         const data = draft.escalationData;
         setRedactionLevel(data.redactionLevel || 'light');
@@ -438,6 +442,19 @@ export default function EscalationFormScreen() {
     };
   };
 
+  // The HURIA choice is saved only while the server offers it; otherwise the
+  // stored choice is left alone and the consent review explains it.
+  const getPartnerSharingUpdate = (): { ok: true; update: Partial<DraftData> } | { ok: false } => {
+    if (!partnerAvailability.routing) return { ok: true, update: {} };
+    const result = buildPartnerSharingChoice(draftData?.partnerSharing, partnerForm, partnerAvailability);
+    if (!result.ok) {
+      setPartnerPhoneError(PARTNER_SHARING_COPY.callback.invalidNumber);
+      return { ok: false };
+    }
+    setPartnerPhoneError(null);
+    return { ok: true, update: { partnerSharing: result.sharing } };
+  };
+
   const getCompletedSteps = (step: string) => Array.from(new Set([...(draftData?.completedSteps || []), step]));
 
   const getValidationRules = (): FieldValidation => {
@@ -475,11 +492,18 @@ export default function EscalationFormScreen() {
       return;
     }
 
+    const partnerUpdate = getPartnerSharingUpdate();
+    if (!partnerUpdate.ok) {
+      toast.show({ title: PARTNER_SHARING_COPY.callback.invalidNumber, variant: 'error' });
+      return;
+    }
+
     try {
       setIsSaving(true);
       const formData = getCurrentEscalationData();
 
       const savedDraft = await draftStorage.saveDraft(buildDraftSavePayload({
+        ...partnerUpdate.update,
         escalationData: formData,
         selectedPathway: 'escalate',
         completedSteps: getCompletedStepsBeforeConsent('escalate'),
@@ -521,10 +545,17 @@ export default function EscalationFormScreen() {
         return;
       }
 
+      const partnerUpdate = getPartnerSharingUpdate();
+      if (!partnerUpdate.ok) {
+        toast.show({ title: PARTNER_SHARING_COPY.callback.invalidNumber, variant: 'error' });
+        return;
+      }
+
       const formData = getCurrentEscalationData();
 
       // Save final form data and navigate to consent gate
       const savedDraft = await draftStorage.saveDraft(buildDraftSavePayload({
+        ...partnerUpdate.update,
         escalationData: formData,
         selectedPathway: 'escalate',
         completedSteps: getCompletedStepsBeforeConsent('escalate'),
@@ -598,7 +629,6 @@ export default function EscalationFormScreen() {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <View pointerEvents="none" style={styles.cardAccentTop} />
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Redaction Preview</Text>
             <TouchableOpacity onPress={() => setShowRedactionPreview(false)}>
@@ -608,7 +638,6 @@ export default function EscalationFormScreen() {
           
           <ScrollView>
             <View style={styles.statementPreview}>
-              <View pointerEvents="none" style={styles.cardAccentTop} />
               <Text style={[styles.previewLabel, { marginBottom: 8 }]}>Statement excerpt:</Text>
               <Text style={{ fontSize: 14, color: colors.foreground }}>
                 "{getStatementPreview()}"
@@ -650,7 +679,6 @@ export default function EscalationFormScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Packet Preview</Text>
               <TouchableOpacity onPress={() => setShowPacketPreview(false)}>
@@ -728,7 +756,6 @@ export default function EscalationFormScreen() {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <View pointerEvents="none" style={styles.cardAccentTop} />
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Edit Alias</Text>
             <TouchableOpacity onPress={() => setShowAliasEditor(false)}>
@@ -947,6 +974,21 @@ export default function EscalationFormScreen() {
             </View>
           </CardContent>
         </Card>
+
+        {partnerAvailability.routing ? (
+          <PartnerSharingOptIn
+            pathway="escalate"
+            value={partnerForm}
+            onChange={next => {
+              setPartnerForm(next);
+              setPartnerPhoneError(null);
+            }}
+            callbackAvailable={partnerAvailability.callback}
+            redactionLabel={redactionLevels.find(level => level.id === redactionLevel)?.label}
+            phoneError={partnerPhoneError}
+            style={styles.cardSpacing}
+          />
+        ) : null}
 
         {/* Handoff Status */}
         <Card variant="elevated" style={styles.cardSpacing}>

@@ -195,6 +195,86 @@ describe('requestAssistantReply', () => {
     );
   });
 
+  it('shows a short failure reason instead of the silent fallback and records the code', async () => {
+    chatServiceMock.localStatus = {
+      state: 'ready',
+      modelDownloaded: true,
+      percent: 100,
+      resumable: false,
+    };
+    chatServiceMock.generateLocalAssistantReply.mockRejectedValueOnce(Object.assign(
+      new Error('LiteRT-LM bridge load failed. SYNTHETIC-SECRET-PROMPT'),
+      { code: 'ERR_LITERT_INIT_FAILED' },
+    ));
+    const pilot = await import('../../lib/localAssistant/pilotDiagnostics');
+    const device = await import('../../lib/localAssistant/pilotDeviceProfile');
+    device.__setLocalAiDeviceProvidersForTests({
+      deviceFacts: async () => ({ totalMemory: 7.4 * 1024 ** 3 }),
+      freeStorage: async () => 10e9,
+    });
+    pilot.__configureAiPilotDiagnosticsForTests({ enabled: true });
+    const { requestAssistantReply } = await import('../chatService');
+
+    const reply = await requestAssistantReply([{ role: 'user', content: 'synthetic question' }], { preferLocal: true });
+
+    expect(reply.sources).toEqual(['System notice']);
+    expect(reply.content).toContain('AI could not reply (Model failed to start).');
+    expect(reply.content).toContain('1195');
+    expect(reply.content).not.toContain('SYNTHETIC-SECRET');
+    expect(reply.content).not.toContain('AI is not ready yet');
+    await pilot.flushAiPilotDiagnosticsWrites();
+    const store = await pilot.getAiPilotDiagnosticsStore();
+    expect(store.events).toEqual([expect.objectContaining({
+      kind: 'fallback',
+      failureCode: 'MODEL_START_FAILED',
+      failureCategory: 'model-start',
+      attemptedLocal: true,
+    })]);
+    expect(JSON.stringify(store)).not.toContain('synthetic question');
+    pilot.__resetAiPilotDiagnosticsForTests();
+  });
+
+  it('names memory as the likely reason on phones below the RAM guidance', async () => {
+    chatServiceMock.localStatus = {
+      state: 'ready',
+      modelDownloaded: true,
+      percent: 100,
+      resumable: false,
+    };
+    chatServiceMock.generateLocalAssistantReply.mockRejectedValueOnce(
+      Object.assign(new Error('LiteRT-LM bridge generation failed.'), { code: 'ERR_LITERT_GENERATE_FAILED' }),
+    );
+    const device = await import('../../lib/localAssistant/pilotDeviceProfile');
+    device.__setLocalAiDeviceProvidersForTests({ deviceFacts: async () => ({ totalMemory: 3.6 * 1024 ** 3 }) });
+    await device.loadLocalAiDeviceFacts();
+    const { requestAssistantReply } = await import('../chatService');
+
+    const reply = await requestAssistantReply([{ role: 'user', content: 'synthetic question' }], { preferLocal: true });
+
+    expect(reply.content).toContain('AI could not reply (Not enough memory).');
+    expect(reply.content).toContain('999');
+  });
+
+  it('records why the local model was not attempted while keeping the not-ready notice', async () => {
+    const pilot = await import('../../lib/localAssistant/pilotDiagnostics');
+    const device = await import('../../lib/localAssistant/pilotDeviceProfile');
+    device.__setLocalAiDeviceProvidersForTests({ deviceFacts: async () => ({}), freeStorage: async () => 1e9 });
+    pilot.__configureAiPilotDiagnosticsForTests({ enabled: true });
+    const { requestAssistantReply } = await import('../chatService');
+
+    const reply = await requestAssistantReply([{ role: 'user', content: 'hi' }], { preferLocal: true });
+
+    expect(reply.content).toContain('AI is not ready yet');
+    await pilot.flushAiPilotDiagnosticsWrites();
+    expect((await pilot.getAiPilotDiagnosticsStore()).events).toEqual([expect.objectContaining({
+      kind: 'fallback',
+      failureCode: 'MODEL_NOT_DOWNLOADED',
+      failureCategory: 'not-ready',
+      attemptedLocal: false,
+    })]);
+    pilot.__resetAiPilotDiagnosticsForTests();
+  });
+
   it('deletes an owned chat session through the SafeRide API', async () => {
     const { authClient } = await import('../../lib/auth/authClient');
     const { request, setAuthToken } = await import('../../lib/api/httpClient');

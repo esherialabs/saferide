@@ -36,7 +36,7 @@ export type RootStackParamList = {
   // Case management
   Cases: undefined;
   CaseDetail: { caseId: string; openAddInfo?: boolean };
-  EscalationConfirmation: { isOffline?: boolean; caseId: string; contactMethod: string };
+  EscalationConfirmation: { isOffline?: boolean; caseId: string; contactMethod: string; draftId?: string };
   
   // Settings and info
   Settings: undefined;

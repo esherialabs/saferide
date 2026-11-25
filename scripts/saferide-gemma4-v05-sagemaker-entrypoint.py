@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed SageMaker entrypoint for SafeRide Gemma 4 E2B v0.5."""
+"""Fail-closed SageMaker entrypoint for SafeRide Gemma 4 E2B v0.5-series."""
 
 from __future__ import annotations
 
@@ -84,7 +84,8 @@ def verify_dataset_package(extracted: Path, input_manifest: dict[str, Any]) -> d
     package = json.loads(package_manifest_path.read_text(encoding="utf-8"))
     if (
         package.get("schema") != "com.saferide.ai.v05-sagemaker-dataset-package"
-        or package.get("datasetId") != "saferide-synthetic-guidance-v0.5.0"
+        or package.get("datasetId") not in {"saferide-synthetic-guidance-v0.5.0", "saferide-synthetic-guidance-v0.5.1", "saferide-synthetic-guidance-v0.5.2", "saferide-synthetic-guidance-v0.5.3"}
+        or package.get("datasetId") != input_manifest.get("datasetId")
         or package.get("sourceCommit") != input_manifest.get("sourceCommit")
         or package.get("packageId") != input_manifest["trainingArchive"]["topLevelDirectory"]
     ):
@@ -187,16 +188,55 @@ def runner_command(hyperparameters: dict[str, str], extracted: Path) -> list[str
     return command
 
 
-def strict_training_gate(extracted: Path) -> None:
-    command = [
-        "node",
-        str(REPO_ROOT / "scripts" / "saferide-gemma4-v05-readiness.mjs"),
-        "--register", str(extracted / "register.json"),
-        "--training-strict",
-        "--artifact-root", str(extracted / "artifacts"),
-        "--train-data", str(extracted / "artifacts/dataset/controlled/train.jsonl"),
-        "--dev-data", str(extracted / "artifacts/dataset/controlled/dev.jsonl"),
-    ]
+def strict_training_gate(extracted: Path, dataset_id: str) -> None:
+    if dataset_id == "saferide-synthetic-guidance-v0.5.3":
+        command = [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "saferide-gemma4-v053-training.py"),
+            "verify",
+            "--register", str(extracted / "register.json"),
+            "--train-data", str(extracted / "artifacts/dataset/controlled/train.jsonl"),
+            "--dev-data", str(extracted / "artifacts/dataset/controlled/dev.jsonl"),
+            "--dataset-manifest", str(extracted / "artifacts/dataset/public-safe/dataset-manifest.json"),
+            "--artifact-root", str(extracted / "artifacts"),
+            "--pilot-row-manifest", str(extracted / "artifacts/dataset/controlled/pilot-row-manifest.json"),
+            "--audit", str(extracted / "artifacts/audit/dataset-audit.json"),
+        ]
+    elif dataset_id == "saferide-synthetic-guidance-v0.5.2":
+        command = [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "saferide-gemma4-v052-training.py"),
+            "verify",
+            "--register", str(extracted / "register.json"),
+            "--train-data", str(extracted / "artifacts/dataset/controlled/train.jsonl"),
+            "--dev-data", str(extracted / "artifacts/dataset/controlled/dev.jsonl"),
+            "--dataset-manifest", str(extracted / "artifacts/dataset/public-safe/dataset-manifest.json"),
+            "--artifact-root", str(extracted / "artifacts"),
+            "--pilot-row-manifest", str(extracted / "artifacts/dataset/controlled/pilot-row-manifest.json"),
+            "--audit", str(extracted / "artifacts/audit/dataset-audit.json"),
+        ]
+    elif dataset_id == "saferide-synthetic-guidance-v0.5.1":
+        command = [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "saferide-gemma4-v051-training.py"),
+            "verify",
+            "--register", str(extracted / "register.json"),
+            "--train-data", str(extracted / "artifacts/dataset/controlled/train.jsonl"),
+            "--dev-data", str(extracted / "artifacts/dataset/controlled/dev.jsonl"),
+            "--dataset-manifest", str(extracted / "artifacts/dataset/public-safe/dataset-manifest.json"),
+            "--artifact-root", str(extracted / "artifacts"),
+            "--pilot-row-manifest", str(extracted / "artifacts/dataset/controlled/pilot-row-manifest.json"),
+        ]
+    else:
+        command = [
+            "node",
+            str(REPO_ROOT / "scripts" / "saferide-gemma4-v05-readiness.mjs"),
+            "--register", str(extracted / "register.json"),
+            "--training-strict",
+            "--artifact-root", str(extracted / "artifacts"),
+            "--train-data", str(extracted / "artifacts/dataset/controlled/train.jsonl"),
+            "--dev-data", str(extracted / "artifacts/dataset/controlled/dev.jsonl"),
+        ]
     result = subprocess.run(command, cwd=REPO_ROOT, check=False)
     if result.returncode != 0:
         raise RuntimeError("Strict v0.5 training-input gate failed inside the SageMaker image.")
@@ -234,7 +274,7 @@ def main() -> int:
         extracted = safe_extract(archive_path, WORK_ROOT, archive_record["topLevelDirectory"])
         package = verify_dataset_package(extracted, input_manifest)
         verify_model_snapshot(input_manifest)
-        strict_training_gate(extracted)
+        strict_training_gate(extracted, input_manifest.get("datasetId", ""))
         hyperparameters = read_hyperparameters()
         execution.update({
             "status": "training",

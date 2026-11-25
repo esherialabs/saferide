@@ -4,6 +4,7 @@ import { jwtVerify } from 'jose';
 import { env } from '../config/env.js';
 import { unauthorized } from '../http/errors.js';
 import { query } from '../plugins/db.js';
+import { looksLikePartnerToken } from '../services/partnerTokens.js';
 
 export type AuthContext = {
   userId: string;
@@ -14,6 +15,8 @@ export type AuthContext = {
 const jwtSecret = new TextEncoder().encode(env.authJwtSecret);
 
 export async function verifyBearerToken(token: string): Promise<AuthContext> {
+  // Partner-realm tokens are never survivor credentials, whatever they contain.
+  if (looksLikePartnerToken(token)) throw unauthorized('Invalid or expired token');
   const { payload } = await jwtVerify(token, jwtSecret);
   const userId = typeof payload.sub === 'string' ? payload.sub : null;
   if (!userId) {

@@ -253,7 +253,7 @@ export default function StatementReviewScreen() {
       gap: spacing.xxxs,
     },
     exportOptionSelected: {
-      backgroundColor: colors.primary + '10',
+      backgroundColor: colors.primaryMuted,
       borderColor: colors.primary,
     },
     exportOptionUnavailable: {
@@ -312,7 +312,7 @@ export default function StatementReviewScreen() {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.scrim,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -328,14 +328,6 @@ export default function StatementReviewScreen() {
       position: 'relative',
       width: '90%',
       ...elevation.floating,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -951,7 +943,6 @@ export default function StatementReviewScreen() {
       <Modal visible={showTranscriptPicker} transparent animationType="fade" onRequestClose={() => setShowTranscriptPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Insert from transcript</Text>
               <TouchableOpacity onPress={() => setShowTranscriptPicker(false)}>
@@ -962,7 +953,6 @@ export default function StatementReviewScreen() {
             <ScrollView style={{ maxHeight: 300 }}>
               {transcriptSuggestions.map(suggestion => (
                 <TouchableOpacity key={suggestion} style={styles.transcriptOption} onPress={() => handleInsertFromTranscript(suggestion)}>
-                  <View pointerEvents="none" style={styles.cardAccentTop} />
                   <Text style={{ fontSize: 14, color: colors.foreground, lineHeight: 20 }}>{suggestion}</Text>
                 </TouchableOpacity>
               ))}
@@ -974,7 +964,6 @@ export default function StatementReviewScreen() {
       <Modal visible={showVersionCompare} transparent animationType="fade" onRequestClose={() => setShowVersionCompare(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Compare statement text</Text>
               <TouchableOpacity onPress={() => setShowVersionCompare(false)}>

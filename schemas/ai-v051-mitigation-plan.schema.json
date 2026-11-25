@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "planId", "datasetId", "sourceDatasetId", "issue", "status", "seeds", "bindings", "systemPrompt", "baseModel", "totals", "splits", "tracks", "conversationForms", "review", "gates", "training", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-plan" },
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 8 },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "sourceDatasetId": { "const": "saferide-synthetic-guidance-v0.5.0" },
+    "issue": { "const": "ESH-4198" },
+    "status": { "const": "authoring-approved-review-required" },
+    "seeds": {
+      "type": "object", "additionalProperties": false, "required": ["authoring", "allocation"],
+      "properties": { "authoring": { "const": 419851 }, "allocation": { "const": 419805 } }
+    },
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["adjudicationSummarySha256", "sourceDatasetManifestSha256", "sourceSplitManifestSha256", "sourceRegisterSha256", "sourceTrainSha256", "sourceDevelopmentSha256", "sourceQualityHoldoutSha256", "sourceSafetyHoldoutSha256", "sourceBlindSuiteSha256"],
+      "properties": {
+        "adjudicationSummarySha256": { "$ref": "#/$defs/sha" },
+        "sourceDatasetManifestSha256": { "$ref": "#/$defs/sha" },
+        "sourceSplitManifestSha256": { "$ref": "#/$defs/sha" },
+        "sourceRegisterSha256": { "$ref": "#/$defs/sha" },
+        "sourceTrainSha256": { "$ref": "#/$defs/sha" },
+        "sourceDevelopmentSha256": { "$ref": "#/$defs/sha" },
+        "sourceQualityHoldoutSha256": { "$ref": "#/$defs/sha" },
+        "sourceSafetyHoldoutSha256": { "$ref": "#/$defs/sha" },
+        "sourceBlindSuiteSha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "systemPrompt": {
+      "type": "object", "additionalProperties": false, "required": ["path", "promptId", "textSha256"],
+      "properties": { "path": { "type": "string", "minLength": 8 }, "promptId": { "const": "saferide-on-device-assistant-v0.5.1" }, "textSha256": { "$ref": "#/$defs/sha" } }
+    },
+    "baseModel": {
+      "type": "object", "additionalProperties": false, "required": ["modelId", "immutableRevision"],
+      "properties": { "modelId": { "const": "google/gemma-4-E2B-it" }, "immutableRevision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" } }
+    },
+    "totals": {
+      "type": "object", "additionalProperties": false, "required": ["families", "rows", "rowsPerLanguage"],
+      "properties": { "families": { "const": 80 }, "rows": { "const": 160 }, "rowsPerLanguage": { "const": 80 } }
+    },
+    "splits": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "families", "rows", "rowsPerLanguage", "agencyFamilies", "nondisclosureFamilies", "optimizerAccess"],
+        "properties": {
+          "name": { "$ref": "#/$defs/split" }, "families": { "type": "integer", "minimum": 10, "maximum": 60 },
+          "rows": { "type": "integer", "minimum": 20, "maximum": 120 }, "rowsPerLanguage": { "type": "integer", "minimum": 10, "maximum": 60 },
+          "agencyFamilies": { "type": "integer", "minimum": 6, "maximum": 36 }, "nondisclosureFamilies": { "type": "integer", "minimum": 4, "maximum": 24 },
+          "optimizerAccess": { "enum": ["weight-updates-after-all-gates", "never", "never-sealed"] }
+        }
+      }
+    },
+    "tracks": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "families", "rows", "share", "variants", "familiesPerVariant"],
+        "properties": {
+          "name": { "$ref": "#/$defs/track" }, "families": { "type": "integer", "minimum": 32, "maximum": 48 },
+          "rows": { "type": "integer", "minimum": 64, "maximum": 96 }, "share": { "type": "number", "minimum": 0.4, "maximum": 0.6 },
+          "variants": { "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": { "$ref": "#/$defs/variant" } },
+          "familiesPerVariant": { "type": "integer", "minimum": 8, "maximum": 12 }
+        }
+      }
+    },
+    "conversationForms": { "type": "object" },
+    "review": { "type": "object" },
+    "gates": { "type": "object" },
+    "training": { "type": "object" },
+    "privacy": { "type": "object" }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "split": { "enum": ["train", "mitigation-dev", "mitigation-holdout"] },
+    "track": { "enum": ["agency-preserving-deescalation", "hidden-instruction-nondisclosure"] },
+    "variant": { "enum": ["coercion", "confrontation", "retaliation", "agency-alternative", "direct-extraction", "indirect-extraction", "role-play-extraction", "non-repeating-refusal"] }
+  }
+}

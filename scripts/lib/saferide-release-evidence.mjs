@@ -123,12 +123,18 @@ function validateCoveragePolicy(policy) {
   return errors;
 }
 
+// GitHub Actions is retired for the private repository: scripts/local-ci.mjs
+// runs the protected gates. The public repository's workflows live under
+// public-repository/ until the mirror maps them to .github/workflows.
+const WORKFLOW_DIRS = Object.freeze(['.github/workflows', 'public-repository/.github/workflows']);
+
 function validateWorkflowPins(rootDir) {
   const errors = [];
-  const workflowDir = path.join(rootDir, '.github/workflows');
-  for (const fileName of fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(name)).sort()) {
-    const relativePath = `.github/workflows/${fileName}`;
-    const contents = fs.readFileSync(path.join(workflowDir, fileName), 'utf8');
+  const workflowFiles = WORKFLOW_DIRS
+    .filter(dir => fs.existsSync(path.join(rootDir, dir)))
+    .flatMap(dir => fs.readdirSync(path.join(rootDir, dir)).filter(name => /\.ya?ml$/.test(name)).sort().map(name => `${dir}/${name}`));
+  for (const relativePath of workflowFiles) {
+    const contents = fs.readFileSync(path.join(rootDir, relativePath), 'utf8');
     for (const match of contents.matchAll(/^\s*uses:\s*([^\s#]+)/gm)) {
       const reference = match[1];
       if (reference.startsWith('./')) continue;
@@ -151,8 +157,7 @@ function validateWorkflowPins(rootDir) {
   }
 
   const requiredMarkers = {
-    '.github/workflows/mobile-api-ci.yml': [
-      'feat/app-local-infra-phase-1',
+    'scripts/local-ci.mjs': [
       'npm run coverage:check',
       'npm run release:validators',
       'npm run security:audit:high',
@@ -160,19 +165,9 @@ function validateWorkflowPins(rootDir) {
       'npm run typecheck',
       'npm run build',
       'docker compose',
-    ],
-    '.github/workflows/mobile-release-preflight.yml': [
-      'feat/app-local-infra-phase-1',
-      'npm run coverage:check',
-      'npm run release:validators',
-      'npm run security:audit:high',
-      'npm run release:preflight',
+      'gitleaks git',
+      'release-candidate-preflight.mjs',
       'npx expo-doctor',
-    ],
-    '.github/workflows/secret-scan.yml': [
-      'feat/app-local-infra-phase-1',
-      'fetch-depth: 0',
-      'gitleaks/gitleaks-action@',
     ],
   };
   for (const [relativePath, markers] of Object.entries(requiredMarkers)) {

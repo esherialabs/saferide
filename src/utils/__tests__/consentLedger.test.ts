@@ -10,6 +10,8 @@ import {
   recordAnonymousAggregateConsent,
   recordPathwayConsent,
   recordPolicyAcceptance,
+  getConsentLedgerStatuses,
+  recordServerConsent,
   resolveAnonymousAggregateConsent,
   withdrawConsent,
 } from '../consentLedger';
@@ -113,4 +115,70 @@ describe('local privacy history', () => {
       grantedAt: earlyConsent.grantedAt,
     })).rejects.toThrow(/does not match/);
   });
+
+  it('mirrors server-held partner consents under the server id and tracks their remote withdrawal', async () => {
+    const id = '22222222-2222-4222-8222-222222222222';
+    const params = {
+      id,
+      purpose: 'partner_follow_up' as const,
+      version: 'partner-follow-up.ke-coast-huria.v1',
+      grantedAt: '2026-10-21T10:00:00.000Z',
+      pathway: 'escalate' as const,
+    };
+    const recorded = await recordServerConsent(params);
+    expect(recorded).toMatchObject({ id, purpose: 'partner_follow_up', status: 'granted' });
+    await expect(recordServerConsent(params)).resolves.toEqual(recorded);
+    await expect(recordServerConsent({ ...params, purpose: 'partner_callback' })).rejects.toThrow(/different privacy record/);
+    expect(await listPrivacyHistory()).toEqual([recorded]);
+
+    const withdrawn = await withdrawConsent(id, new Date('2026-10-21T11:00:00Z'));
+    expect(withdrawn).toMatchObject({ status: 'withdrawn', remoteWithdrawalStatus: 'pending' });
+    await expect(confirmRemoteConsentWithdrawal(id)).resolves.toMatchObject({ remoteWithdrawalStatus: 'confirmed' });
+  });
+
+  it('reports each consent as granted, pending withdrawal, withdrawn or missing', async () => {
+    const granted = await recordServerConsent({
+      id: '33333333-3333-4333-8333-333333333333',
+      purpose: 'partner_follow_up',
+      version: 'partner-follow-up.ke-coast-huria.v2',
+      textId: 'partner-follow-up.ke-coast-huria.v2.escalation',
+      grantedAt: '2026-10-21T10:00:00.000Z',
+    });
+    expect(granted).toMatchObject({ textId: 'partner-follow-up.ke-coast-huria.v2.escalation' });
+    expect(granted).not.toHaveProperty('pathway');
+    const pending = await recordServerConsent({
+      id: '44444444-4444-4444-8444-444444444444',
+      purpose: 'partner_callback',
+      version: 'partner-callback.ke-coast-huria.v1',
+      grantedAt: '2026-10-21T10:00:00.000Z',
+    });
+    expect(pending).not.toHaveProperty('textId');
+    await withdrawConsent(pending.id);
+    const local = await recordPathwayConsent({ pathway: 'escalate' });
+    await withdrawConsent(local.id);
+
+    await expect(getConsentLedgerStatuses([granted.id, pending.id, local.id, 'not-on-this-phone'])).resolves.toEqual({
+      [granted.id]: 'granted',
+      [pending.id]: 'withdrawal_pending',
+      [local.id]: 'withdrawn',
+      'not-on-this-phone': 'missing',
+    });
+    await expect(getConsentLedgerStatuses([])).resolves.toEqual({});
+  });
+
+  it('confirms a remote withdrawal only for a withdrawn server-held consent', async () => {
+    const local = await recordPathwayConsent({ pathway: 'referral' });
+    await withdrawConsent(local.id);
+    await expect(confirmRemoteConsentWithdrawal(local.id)).rejects.toThrow(/server-held consent/);
+
+    const partner = await recordServerConsent({
+      id: '55555555-5555-4555-8555-555555555555',
+      purpose: 'partner_follow_up',
+      version: 'partner-follow-up.ke-coast-huria.v2',
+      grantedAt: '2026-10-21T10:00:00.000Z',
+    });
+    await expect(confirmRemoteConsentWithdrawal(partner.id)).rejects.toThrow(/server-held consent/);
+    await expect(confirmRemoteConsentWithdrawal('missing-id')).rejects.toThrow(/not found/);
+  });
 });
+

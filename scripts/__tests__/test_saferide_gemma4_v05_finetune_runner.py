@@ -111,8 +111,66 @@ class V05ConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "inventory hash is stale"):
                 RUNNER.load_pilot_row_ids(manifest, "v05", "pilot")
 
+    def test_v052_weighted_pilot_order_is_exact_and_candidate_is_forbidden(self):
+        unique_ids = [f"v052-test-row-{index:04d}" for index in range(1768)]
+        sample_order = unique_ids + unique_ids[-48:] * 2
+        document = {
+            "schema": "com.saferide.ai.v052-training-recipe",
+            "datasetId": "saferide-synthetic-guidance-v0.5.2",
+            "status": "frozen-for-cost-controlled-pilot",
+            "seed": 419805,
+            "learningRate": 2e-5,
+            "epochs": 1,
+            "fullCandidateSubmissionAuthorized": False,
+            "sampleOrder": sample_order,
+            "sampleOrderSha256": hashlib.sha256("\n".join(sample_order).encode("utf-8")).hexdigest(),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "recipe.json"
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            self.assertEqual(RUNNER.load_pilot_row_ids(manifest, "v052", "pilot"), sample_order)
+            document["sampleOrderSha256"] = "0" * 64
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "sample-order hash is stale"):
+                RUNNER.load_pilot_row_ids(manifest, "v052", "pilot")
+        RUNNER.validate_run_configuration(self.args(learning_rate=2e-5), "pilot", "v052")
+        with self.assertRaisesRegex(RuntimeError, "frozen 2e-5"):
+            RUNNER.validate_run_configuration(self.args(learning_rate=1e-5), "pilot", "v052")
+        with self.assertRaisesRegex(RuntimeError, "full candidate submission is not authorized"):
+            RUNNER.validate_run_configuration(self.args(learning_rate=2e-5), "candidate", "v052")
+
+    def test_v053_weighted_pilot_order_is_exact_and_candidate_is_forbidden(self):
+        unique_ids = [f"v053-test-row-{index:04d}" for index in range(1832)]
+        sample_order = unique_ids + unique_ids[-64:] * 4
+        document = {
+            "schema": "com.saferide.ai.v053-training-recipe",
+            "datasetId": "saferide-synthetic-guidance-v0.5.3",
+            "status": "frozen-for-cost-controlled-pilot",
+            "seed": 419805,
+            "learningRate": 1e-5,
+            "epochs": 1,
+            "fullCandidateSubmissionAuthorized": False,
+            "sampleOrder": sample_order,
+            "sampleOrderSha256": hashlib.sha256("\n".join(sample_order).encode("utf-8")).hexdigest(),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "recipe.json"
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            self.assertEqual(RUNNER.load_pilot_row_ids(manifest, "v053", "pilot"), sample_order)
+            document["sampleOrderSha256"] = "0" * 64
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "sample-order hash is stale"):
+                RUNNER.load_pilot_row_ids(manifest, "v053", "pilot")
+        RUNNER.validate_run_configuration(self.args(learning_rate=1e-5), "pilot", "v053")
+        with self.assertRaisesRegex(RuntimeError, "frozen 1e-5"):
+            RUNNER.validate_run_configuration(self.args(learning_rate=2e-5), "pilot", "v053")
+        with self.assertRaisesRegex(RuntimeError, "full candidate submission is not authorized"):
+            RUNNER.validate_run_configuration(self.args(learning_rate=1e-5), "candidate", "v053")
+
     def test_v05_register_selects_access_separated_profile(self):
         self.assertEqual(RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v05-dataset-register"}), "v05")
+        self.assertEqual(RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v052-mitigation-register"}), "v052")
+        self.assertEqual(RUNNER.dataset_profile_for_register({"schema": "com.saferide.ai.v053-mitigation-register"}), "v053")
         self.assertEqual(RUNNER.dataset_profile_for_register({"schema": "legacy"}), "v04")
 
     def test_training_runner_uses_training_only_gate_not_custodian_holdout_gate(self):
@@ -141,6 +199,54 @@ class V05ConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValueError):
                 RUNNER.write_metadata(Path(directory) / "run", {"grad_norm": math.nan})
+
+    def test_adapter_tensor_gate_rejects_non_finite_values(self):
+        class Tensor:
+            def __init__(self, finite):
+                self.finite = finite
+
+            def numel(self):
+                return 3
+
+        class Result:
+            def __init__(self, value):
+                self.value = value
+
+            def all(self):
+                return self
+
+            def item(self):
+                return self.value
+
+        class Torch:
+            @staticmethod
+            def isfinite(tensor):
+                return Result(tensor.finite)
+
+        class Handle:
+            def __init__(self, values):
+                self.values = values
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def keys(self):
+                return self.values
+
+            def get_tensor(self, key):
+                return Tensor(self.values[key])
+
+        passing = lambda *_args, **_kwargs: Handle({"a": True, "b": True})
+        self.assertEqual(
+            RUNNER.verify_finite_adapter_tensors(Path("adapter.safetensors"), Torch(), passing),
+            {"tensorCount": 2, "elementCount": 6, "nonFiniteTensorCount": 0},
+        )
+        failing = lambda *_args, **_kwargs: Handle({"a": True, "b": False})
+        with self.assertRaisesRegex(RuntimeError, "non-finite tensor"):
+            RUNNER.verify_finite_adapter_tensors(Path("adapter.safetensors"), Torch(), failing)
 
 
 if __name__ == "__main__":

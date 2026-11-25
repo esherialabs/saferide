@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -18,7 +19,16 @@ function resolve(input) {
 }
 
 function compile(name) {
-  const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, strictTypes: false });
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    strictTypes: false,
+    formats: { 'date-time': true },
+  });
+  if (name === 'ai-v05-development-panel-summary.schema.json') {
+    ajv.addSchema(JSON.parse(fs.readFileSync(path.join(repoRoot, 'schemas', 'ai-v05-development-panel-input.schema.json'), 'utf8')));
+  }
   return ajv.compile(JSON.parse(fs.readFileSync(path.join(repoRoot, 'schemas', name), 'utf8')));
 }
 
@@ -91,6 +101,75 @@ export function developmentPanelEligibilityErrors(run, selectionPolicy) {
   return errors;
 }
 
+function canonicalSha256(value) {
+  const canonical = JSON.stringify(value, (_key, entry) => (
+    entry && typeof entry === 'object' && !Array.isArray(entry)
+      ? Object.fromEntries(Object.entries(entry).sort(([left], [right]) => left.localeCompare(right)))
+      : entry
+  ));
+  return crypto.createHash('sha256').update(canonical).digest('hex');
+}
+
+export function validateDevelopmentPanelSummary(summary, run, manifest, selection) {
+  const errors = validationErrors(
+    'developmentPanelSummary',
+    compile('ai-v05-development-panel-summary.schema.json'),
+    summary,
+  );
+  const panel = run.developmentPanel ?? {};
+  if (summary.status !== 'passed' || summary.eligibility?.eligible !== true || summary.eligibility?.reasons?.length) {
+    errors.push('development panel summary is not eligible and passed');
+  }
+  if (
+    summary.candidate?.seed !== run.seed
+    || summary.candidate?.runId !== run.runId
+    || summary.candidate?.manifestSha256 !== run.manifestSha256
+    || summary.candidate?.bestCheckpoint !== run.bestCheckpoint
+  ) errors.push('development panel summary candidate lineage differs from the training selection');
+  if (
+    summary.baseModel?.modelId !== selection.baseModelId
+    || summary.baseModel?.revision !== selection.baseRevision
+  ) errors.push('development panel summary base lineage differs from the training selection');
+  if (
+    summary.suite?.dataSha256 !== manifest.dataFiles?.dev?.sha256
+    || summary.suite?.rowInventorySha256 !== manifest.outputs?.developmentRowIdSha256
+  ) errors.push('development panel summary does not bind the selected run development bytes and row inventory');
+  const adapterInventorySha256 = canonicalSha256(manifest.outputs?.adapterFiles ?? []);
+  if (summary.candidate?.adapterInventorySha256 !== adapterInventorySha256) {
+    errors.push('development panel summary adapter inventory differs from the selected run');
+  }
+  if (
+    summary.metrics?.criticalFailures !== panel.criticalFailures
+    || summary.metrics?.overRefusalRate !== panel.overRefusalRate
+    || summary.metrics?.usefulnessAverage !== panel.usefulnessAverage
+    || summary.metrics?.baseOverRefusalRate !== panel.baseOverRefusalRate
+    || summary.metrics?.baseUsefulnessAverage !== panel.baseUsefulnessAverage
+  ) errors.push('development panel summary metrics differ from the training selection');
+  const expectedPolicy = {
+    criticalFailuresMaximum: selection.selectionPolicy?.criticalFailuresMaximum,
+    maximumDevelopmentOverRefusalRate: selection.selectionPolicy?.maximumDevelopmentOverRefusalRate,
+    minimumDevelopmentUsefulnessAverage: selection.selectionPolicy?.minimumDevelopmentUsefulnessAverage,
+    maximumOverRefusalRegression: selection.selectionPolicy?.maximumOverRefusalRegression,
+    maximumUsefulnessRegression: selection.selectionPolicy?.maximumUsefulnessRegression,
+  };
+  if (JSON.stringify(summary.selectionPolicy) !== JSON.stringify(expectedPolicy)) {
+    errors.push('development panel summary selection policy differs from the training selection');
+  }
+  for (const slot of ['candidate', 'base']) {
+    const coverage = summary.coverage?.[slot] ?? {};
+    if (coverage.rowCount !== 300 || coverage.completed + coverage.truncated + coverage.errors !== 300) {
+      errors.push(`development panel summary ${slot} coverage is incomplete`);
+    }
+  }
+  if (
+    summary.promotionEligible !== false
+    || JSON.stringify(summary.remainingPromotionGates) !== JSON.stringify([
+      'protected-evaluation', 'human-review', 'export', 'physical-device-proof',
+    ])
+  ) errors.push('development panel summary weakens downstream promotion gates');
+  return errors;
+}
+
 export function validateV05TrainingSelection(selection, { verifyFiles = true } = {}) {
   const errors = validationErrors('selection', compile('ai-v05-training-selection.schema.json'), selection);
   const seeds = (selection.candidateRuns ?? []).map(run => run.seed);
@@ -117,6 +196,7 @@ export function validateV05TrainingSelection(selection, { verifyFiles = true } =
   }
   const trainingSchema = compile('ai-training-run.schema.json');
   const manifests = [];
+  const panelSummaries = [];
   for (const run of selection.candidateRuns ?? []) {
     if (run.status !== 'completed' || !run.manifestPath || !run.manifestSha256) {
       errors.push(`seed ${run.seed} run is not completed and hash-bound`);
@@ -146,10 +226,28 @@ export function validateV05TrainingSelection(selection, { verifyFiles = true } =
       .map(error => `seed ${run.seed}: ${error}`));
     if (panel.status === 'passed' && panel.criticalFailures === 0 && panel.summaryRef && panel.summarySha256 && verifyFiles) {
       const panelPath = resolve(panel.summaryRef);
-      if (!fs.existsSync(panelPath) || fileSha256(panelPath) !== panel.summarySha256) errors.push(`seed ${run.seed} development panel hash is stale`);
+      if (!fs.existsSync(panelPath) || fileSha256(panelPath) !== panel.summarySha256) {
+        errors.push(`seed ${run.seed} development panel hash is stale`);
+      } else {
+        const summary = JSON.parse(fs.readFileSync(panelPath, 'utf8'));
+        panelSummaries.push(summary);
+        errors.push(...validateDevelopmentPanelSummary(summary, run, manifest, selection)
+          .map(error => `seed ${run.seed}: ${error}`));
+      }
     }
   }
   errors.push(...validateSelectedRunConsistency(selection, manifests));
+  if (verifyFiles && panelSummaries.length === 2) {
+    const [first, second] = panelSummaries;
+    if (
+      first.rawArtifacts?.baseBundleSha256 !== second.rawArtifacts?.baseBundleSha256
+      || first.metrics?.baseCriticalFailures !== second.metrics?.baseCriticalFailures
+      || first.metrics?.baseOverRefusalRate !== second.metrics?.baseOverRefusalRate
+      || first.metrics?.baseUsefulnessAverage !== second.metrics?.baseUsefulnessAverage
+      || first.provenance?.panelInputSha256 !== second.provenance?.panelInputSha256
+      || first.provenance?.scoringPolicySha256 !== second.provenance?.scoringPolicySha256
+    ) errors.push('two development panel summaries do not bind one base comparator, panel input, and scoring policy');
+  }
   const selected = selection.candidateRuns?.find(run => run.runId === selection.selected?.runId);
   if (!selected || selected.seed !== selection.selected?.seed || selected.bestCheckpoint !== selection.selected?.checkpoint) {
     errors.push('selected checkpoint does not identify one completed candidate run');

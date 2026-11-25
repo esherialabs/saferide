@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v056-pilot-panel-summary.schema.json",
+  "title": "SafeRide v0.5.6 targeted-pilot panel summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "summaryId", "createdAt", "issue", "status", "datasetId", "baseModel", "candidate", "provenance", "generation", "executionPolicy", "suiteResults", "combined", "combinedBase", "byLanguage", "byCategory", "requiredSubgroupGates", "criticalAdjudication", "eligibility", "selectionPolicy", "privacy", "promotionEligible", "fullCandidateSubmissionAuthorized"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v056-pilot-panel-summary" },
+    "schemaVersion": { "const": 1 },
+    "summaryId": { "type": "string", "pattern": "^saferide-v056-pilot-panel-[a-f0-9]{16}-seed-419805$" },
+    "createdAt": { "type": "string", "minLength": 20 },
+    "issue": { "const": "ESH-4198" },
+    "status": { "enum": ["passed", "blocked"] },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.6" },
+    "baseModel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["modelId", "revision"],
+      "properties": {
+        "modelId": { "const": "google/gemma-4-E2B-it" },
+        "revision": { "const": "70af34e20bd4b7a91f0de6b22675850c43922a03" }
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seed", "runId", "runKind", "manifestSha256", "bestCheckpoint", "bestDevelopmentLoss", "finalDevelopmentLoss", "adapterInventorySha256", "finiteTensorGate"],
+      "properties": {
+        "seed": { "const": 419805 },
+        "runId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$" },
+        "runKind": { "const": "pilot" },
+        "manifestSha256": { "$ref": "#/$defs/sha256" },
+        "bestCheckpoint": { "type": "string", "pattern": "^checkpoint-[0-9]+$" },
+        "bestDevelopmentLoss": { "type": "number" },
+        "finalDevelopmentLoss": { "type": "number" },
+        "adapterInventorySha256": { "$ref": "#/$defs/sha256" },
+        "finiteTensorGate": { "type": "object" }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["panelInputSha256", "executionCommit", "imageDigest", "jobNameSha256", "scoringPolicySha256", "historicalBasePanelSha256"],
+      "properties": {
+        "panelInputSha256": { "$ref": "#/$defs/sha256" },
+        "executionCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "imageDigest": { "const": "ec30ecf55a9231d2ef9f87148ac967654f3880ebe6405164078151d157da77ca" },
+        "jobNameSha256": { "$ref": "#/$defs/sha256" },
+        "scoringPolicySha256": { "$ref": "#/$defs/sha256" },
+        "historicalBasePanelSha256": { "const": "5372993414fd791c30e823490119fed0c06dc7ddf73b00ff85efafdca1f109d4" }
+      }
+    },
+    "generation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maxNewTokens", "terminatorIds", "zeroTruncationRequired", "modelTerminatorStops"],
+      "properties": {
+        "maxNewTokens": { "const": 192 },
+        "terminatorIds": { "const": [1, 106, 50] },
+        "zeroTruncationRequired": { "const": true },
+        "modelTerminatorStops": { "type": "integer", "minimum": 0, "maximum": 320 }
+      }
+    },
+    "executionPolicy": { "type": "object" },
+    "suiteResults": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["suiteId", "requiredCount", "dataSha256", "rowInventorySha256", "candidate", "base", "candidateBundleSha256", "baseBundleSha256", "eligible", "reasons"],
+        "properties": {
+          "suiteId": { "enum": ["original-development", "mitigation-development"] },
+          "requiredCount": { "enum": [300, 20] },
+          "dataSha256": { "$ref": "#/$defs/sha256" },
+          "rowInventorySha256": { "$ref": "#/$defs/sha256" },
+          "candidate": { "$ref": "#/$defs/metricsWithTerminators" },
+          "base": { "$ref": "#/$defs/metrics" },
+          "candidateBundleSha256": { "$ref": "#/$defs/sha256" },
+          "baseBundleSha256": { "$ref": "#/$defs/sha256" },
+          "eligible": { "type": "boolean" },
+          "reasons": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "combined": { "$ref": "#/$defs/metricsWithTerminators" },
+    "combinedBase": { "$ref": "#/$defs/metricsWithTerminators" },
+    "byLanguage": { "type": "array", "items": { "type": "object" } },
+    "byCategory": { "type": "array", "items": { "type": "object" } },
+    "requiredSubgroupGates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kiswahili", "agencyPreserving"],
+      "properties": {
+        "kiswahili": { "$ref": "#/$defs/subgroupGate160" },
+        "agencyPreserving": { "$ref": "#/$defs/subgroupGate12" }
+      }
+    },
+    "criticalAdjudication": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total", "signals"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "signals": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["signal", "count"], "properties": { "signal": { "type": "string" }, "count": { "type": "integer", "minimum": 1 } } } }
+      }
+    },
+    "eligibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["eligible", "reasons"],
+      "properties": { "eligible": { "type": "boolean" }, "reasons": { "type": "array", "items": { "type": "string" } } }
+    },
+    "selectionPolicy": { "type": "object" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["summaryContainsRawPrompts", "summaryContainsRawCompletions", "mitigationHoldoutRead", "protectedV05RowsRead", "blindPromptsRead", "baseOutputsRegenerated", "humanReviewClaimed"],
+      "properties": {
+        "summaryContainsRawPrompts": { "const": false },
+        "summaryContainsRawCompletions": { "const": false },
+        "mitigationHoldoutRead": { "const": false },
+        "protectedV05RowsRead": { "const": false },
+        "blindPromptsRead": { "const": false },
+        "baseOutputsRegenerated": { "const": false },
+        "humanReviewClaimed": { "const": false }
+      }
+    },
+    "promotionEligible": { "const": false },
+    "fullCandidateSubmissionAuthorized": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "subgroupGate160": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requiredRows", "eligible", "reasons"],
+      "properties": {
+        "requiredRows": { "const": 160 },
+        "eligible": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "subgroupGate12": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requiredRows", "eligible", "reasons"],
+      "properties": {
+        "requiredRows": { "const": 12 },
+        "eligible": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rowCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage"],
+      "properties": {
+        "rowCount": { "type": "integer", "minimum": 1 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "criticalFailures": { "type": "integer", "minimum": 0 },
+        "overRefusalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usefulnessAverage": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "metricsWithTerminators": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rowCount", "completed", "truncated", "errors", "criticalFailures", "overRefusalRate", "usefulnessAverage", "modelTerminatorStops"],
+      "properties": {
+        "rowCount": { "type": "integer", "minimum": 1 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "criticalFailures": { "type": "integer", "minimum": 0 },
+        "overRefusalRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "usefulnessAverage": { "type": "number", "minimum": 0, "maximum": 3 },
+        "modelTerminatorStops": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

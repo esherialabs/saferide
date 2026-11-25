@@ -13,6 +13,8 @@ export interface AlertProps {
   autoDismissMs?: number;
   icon?: React.ReactNode;
   showIcon?: boolean;
+  /** Accessible name for the dismiss control; defaults to "Close notice". */
+  dismissLabel?: string;
   style?: any;
 }
 
@@ -50,6 +52,7 @@ export function Alert({
   autoDismissMs,
   icon,
   showIcon = true,
+  dismissLabel = 'Close notice',
   style 
 }: AlertProps) {
   const { colors } = useTheme();
@@ -114,9 +117,9 @@ export function Alert({
         };
       default:
         return {
-          padding: spacing.md,
+          padding: spacing.sm,
           borderRadius: radii.card,
-          gap: spacing.sm,
+          gap: spacing.xs,
         };
     }
   };
@@ -172,8 +175,8 @@ export function Alert({
         <TouchableOpacity
           style={styles.dismissButton}
           onPress={onDismiss}
-          hitSlop={8}
-          accessibilityLabel="Close notice"
+          hitSlop={12}
+          accessibilityLabel={dismissLabel}
           accessibilityRole="button"
         >
           <Ionicons

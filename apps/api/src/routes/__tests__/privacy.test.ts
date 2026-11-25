@@ -79,28 +79,41 @@ describe('privacy policy, consent, and rights routes', () => {
     expect(repository.createConsentRecord).not.toHaveBeenCalled();
   });
 
-  it('keeps standalone pathway consent disabled with submitted-case ingestion', async () => {
+  it('accepts both partner consent purposes but keeps them off until the privacy controls enable them', async () => {
+    for (const purpose of ['partner_follow_up', 'partner_callback']) {
+      const response = await app.inject({
+        method: 'POST', url: '/api/privacy/consents', headers: { authorization: 'Bearer synthetic' },
+        payload: { purpose, consentVersion: 'partner-follow-up.ke-coast-huria.v1' },
+      });
+      expect(response.statusCode).toBe(503);
+    }
+    expect(repository.createConsentRecord).not.toHaveBeenCalled();
+  });
+
+  it('records the current pilot pathway consent independently from policy-document approval', async () => {
+    repository.createConsentRecord.mockResolvedValueOnce({ id: 'pilot-consent', purpose: 'pathway_submission', status: 'granted' });
     const response = await app.inject({
       method: 'POST', url: '/api/privacy/consents', headers: { authorization: 'Bearer synthetic' },
       payload: { purpose: 'pathway_submission', consentVersion: 'pathway-consent.v1' },
     });
-    expect(response.statusCode).toBe(503);
-    expect(repository.createConsentRecord).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(repository.createConsentRecord).toHaveBeenCalledOnce();
   });
 
-  it('keeps all six rights-request types unavailable until legal approval while status history stays visible', async () => {
+  it('accepts all six rights-request types under the engineering pilot while preserving status history', async () => {
     repository.listDsarRequests.mockResolvedValueOnce([{ id: 'existing', request_type: 'access', status: 'requested', due_at: '2026-08-29T00:00:00Z' }]);
     const list = await app.inject({ method: 'GET', url: '/api/privacy/dsar', headers: { authorization: 'Bearer synthetic' } });
     expect(list.json().requests[0]).toMatchObject({ status: 'requested' });
     for (const requestType of ['access', 'export', 'correction', 'restriction', 'objection', 'deletion']) {
+      repository.createDsarRequest.mockResolvedValueOnce({ id: 'pilot-rights-request', request_type: requestType, status: 'requested' });
       const response = await app.inject({
         method: 'POST', url: '/api/privacy/dsar', headers: { authorization: 'Bearer synthetic' },
         payload: { requestType, idempotencyKey: '22222222-2222-4222-8222-222222222222' },
       });
-      expect(response.statusCode).toBe(503);
-      expect(response.json().details.handoffId).toBe('HANDOFF-PRIVACY-LEGAL-REVIEW');
+      expect(response.statusCode).toBe(200);
+      expect(response.json().request).toMatchObject({ request_type: requestType, status: 'requested' });
     }
-    expect(repository.createDsarRequest).not.toHaveBeenCalled();
+    expect(repository.createDsarRequest).toHaveBeenCalledTimes(6);
   });
 
   it('records withdrawal as future-only with the external-sharing limitation', async () => {

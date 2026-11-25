@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Vibration,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +43,7 @@ import {
   getStealthTriggerCapability,
   resolveStealthTrigger,
 } from '../utils/stealthCapabilities';
+import * as StealthHaptics from '../utils/stealthHaptics';
 import { borders, radii, spacing, typography } from '../theme/tokens';
 
 type SafetyNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -253,6 +253,10 @@ export default function SafetySettings() {
     enableVibration: true,
     enableAutoRecord: true,
   });
+  // The Test trigger preview reads the live setting before each delayed cue.
+  const hapticFeedbackRef = useRef(stealthSettings.enableVibration);
+  hapticFeedbackRef.current = stealthSettings.enableVibration;
+  useEffect(() => () => StealthHaptics.cancel(), []);
   const [decoyPinSet, setDecoyPinSet] = useState(false);
   const [decoyStorageStatus, setDecoyStorageStatus] = useState<DecoyPinStorageStatus | null>(null);
   const [decoyExitAuthStatus, setDecoyExitAuthStatus] = useState<DecoyPinExitAuthStatus | null>(null);
@@ -318,10 +322,14 @@ export default function SafetySettings() {
     await saveStealthSettings(normalizedSettings);
   };
 
+  const handleHapticFeedbackChange = (enabled: boolean) => {
+    if (!enabled) StealthHaptics.cancel();
+    void persistStealthSettings({ ...stealthSettings, enableVibration: enabled });
+  };
+
   const handleTestStealth = () => {
-    if (stealthSettings.enableVibration) {
-      Vibration.vibrate(50);
-    }
+    // Plays the real cues: trigger buzz, the recording heartbeat after 1 s, the stop buzz after 2.5 s.
+    void StealthHaptics.previewCues(() => hapticFeedbackRef.current);
     toast.show({
       title: 'Foreground trigger ready',
       message: `${selectedStealthCapability.label} works while SafeRide is open.`,
@@ -410,7 +418,7 @@ export default function SafetySettings() {
       marginBottom: spacing.xs,
     },
     cardTitle: {
-      ...typography.titleSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
     },
     cardDescription: {
@@ -437,9 +445,9 @@ export default function SafetySettings() {
       color: colors.foreground,
     },
     rowDescription: {
-      ...typography.caption,
+      ...typography.bodySmall,
       color: colors.mutedForeground,
-      lineHeight: 18,
+      lineHeight: 21,
     },
     badgeContainer: {
       flexDirection: 'row',
@@ -545,11 +553,13 @@ export default function SafetySettings() {
               <View style={styles.switchRow}>
                 <View style={styles.switchCopy}>
                   <Text style={styles.rowTitle}>Haptic feedback</Text>
-                  <Text style={styles.rowDescription}>Vibrate when SafeRide handles a supported trigger.</Text>
+                  <Text style={styles.rowDescription}>
+                    Vibrate when SafeRide handles a supported trigger, and buzz twice every 30 seconds while recording.
+                  </Text>
                 </View>
                 <Switch
                   value={stealthSettings.enableVibration}
-                  onValueChange={(enabled) => persistStealthSettings({ ...stealthSettings, enableVibration: enabled })}
+                  onValueChange={handleHapticFeedbackChange}
                 />
               </View>
 
@@ -567,7 +577,7 @@ export default function SafetySettings() {
               <Text style={styles.cardTitle}>Decoy PIN</Text>
             </View>
             <Text style={styles.cardDescription}>
-              Opens a calculator screen. Enter your Decoy PIN inside the calculator to return to SafeRide.
+              Opens a calculator screen. Type your Decoy PIN in the calculator, then press = to return to SafeRide.
             </Text>
             <View style={styles.cardContent}>
               <View style={styles.badgeContainer}>

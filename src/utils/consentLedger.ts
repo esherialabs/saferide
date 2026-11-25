@@ -3,12 +3,32 @@ import * as Crypto from 'expo-crypto';
 import { encryptedAsyncStorage } from '../lib/encryptedAsyncStorage';
 import { PRIVACY_CONSENT_LEDGER_KEY } from './storageKeys';
 
-export type ConsentPurpose = 'pathway_submission' | 'anonymous_aggregate' | 'analytics' | 'research' | 'model_training' | 'partner_follow_up';
+export type ConsentPurpose =
+  | 'pathway_submission'
+  | 'anonymous_aggregate'
+  | 'analytics'
+  | 'research'
+  | 'model_training'
+  | 'partner_follow_up'
+  | 'partner_callback';
+
+/** Purposes whose record lives on the SafeRide server, so withdrawal must reach it too. */
+export const REMOTE_WITHDRAWAL_PURPOSES: readonly ConsentPurpose[] = [
+  'anonymous_aggregate',
+  'partner_follow_up',
+  'partner_callback',
+];
+
+export function requiresRemoteWithdrawal(purpose: ConsentPurpose): boolean {
+  return REMOTE_WITHDRAWAL_PURPOSES.includes(purpose);
+}
 export type ConsentLedgerEntry = {
   id: string;
   recordType: 'consent';
   purpose: ConsentPurpose;
   version: string;
+  /** The exact wording agreed to, when one version has several (partner sharing). */
+  textId?: string;
   status: 'granted' | 'withdrawn';
   pathway?: 'save-private' | 'anonymous-map' | 'referral' | 'escalate';
   grantedAt: string;
@@ -156,6 +176,60 @@ export async function resolveAnonymousAggregateConsent(params: {
   return params.checkpoint;
 }
 
+/**
+ * Mirrors a consent the server just recorded (POST /api/privacy/consents)
+ * under the server's id, so it shows in Privacy & data and can be
+ * withdrawn from there. Recording the same id again is a no-op.
+ */
+export async function recordServerConsent(params: {
+  id: string;
+  purpose: 'partner_follow_up' | 'partner_callback';
+  version: string;
+  textId?: string;
+  grantedAt: string;
+  pathway?: NonNullable<ConsentLedgerEntry['pathway']>;
+}): Promise<ConsentLedgerEntry> {
+  const entries = await readLedger();
+  const existing = entries.find(entry => entry.recordType === 'consent' && entry.id === params.id);
+  if (existing) {
+    if (existing.recordType !== 'consent' || existing.purpose !== params.purpose) {
+      throw new Error('A different privacy record already uses this consent id.');
+    }
+    return existing;
+  }
+  const entry: ConsentLedgerEntry = {
+    id: params.id,
+    recordType: 'consent',
+    purpose: params.purpose,
+    version: params.version,
+    ...(params.textId ? { textId: params.textId } : {}),
+    status: 'granted',
+    ...(params.pathway ? { pathway: params.pathway } : {}),
+    grantedAt: params.grantedAt,
+  };
+  await writeLedger([...entries, entry]);
+  return entry;
+}
+
+export type ConsentLedgerStatus = 'granted' | 'withdrawn' | 'withdrawal_pending' | 'missing';
+
+/**
+ * Where each consent id stands on this phone. A withdrawal counts from the
+ * moment it is recorded locally, before the server confirms it, so nothing
+ * is shared on the strength of a consent the survivor has taken back.
+ */
+export async function getConsentLedgerStatuses(ids: string[]): Promise<Record<string, ConsentLedgerStatus>> {
+  const entries = await readLedger();
+  const statuses: Record<string, ConsentLedgerStatus> = {};
+  for (const id of ids) {
+    const entry = entries.find(candidate => candidate.recordType === 'consent' && candidate.id === id);
+    if (!entry || entry.recordType !== 'consent') statuses[id] = 'missing';
+    else if (entry.status === 'granted') statuses[id] = 'granted';
+    else statuses[id] = entry.remoteWithdrawalStatus === 'pending' ? 'withdrawal_pending' : 'withdrawn';
+  }
+  return statuses;
+}
+
 export async function assertActivePathwayConsent(params: {
   recordId: string;
   pathway: NonNullable<ConsentLedgerEntry['pathway']>;
@@ -190,7 +264,7 @@ export async function withdrawConsent(consentId: string, now = new Date()): Prom
     withdrawnAt: now.toISOString(),
     withdrawalEffect: 'future_processing_only',
     externalSharingWarning: 'Information already shared outside SafeRide cannot be recalled by this withdrawal.',
-    remoteWithdrawalStatus: current.purpose === 'anonymous_aggregate' ? 'pending' : undefined,
+    remoteWithdrawalStatus: requiresRemoteWithdrawal(current.purpose) ? 'pending' : undefined,
   };
   entries[index] = withdrawn;
   await writeLedger(entries);
@@ -202,8 +276,8 @@ export async function confirmRemoteConsentWithdrawal(consentId: string): Promise
   const index = entries.findIndex(entry => entry.recordType === 'consent' && entry.id === consentId);
   if (index < 0 || entries[index].recordType !== 'consent') throw new Error('Consent record not found.');
   const current = entries[index] as ConsentLedgerEntry;
-  if (current.purpose !== 'anonymous_aggregate' || current.status !== 'withdrawn') {
-    throw new Error('Remote withdrawal can only confirm a withdrawn anonymous aggregate consent.');
+  if (!requiresRemoteWithdrawal(current.purpose) || current.status !== 'withdrawn') {
+    throw new Error('Remote withdrawal can only confirm a withdrawn server-held consent.');
   }
   const confirmed: ConsentLedgerEntry = { ...current, remoteWithdrawalStatus: 'confirmed' };
   entries[index] = confirmed;

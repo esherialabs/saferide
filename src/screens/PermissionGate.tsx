@@ -73,22 +73,14 @@ export default function PermissionGateScreen() {
       marginBottom: spacing.xxxs,
     },
     permissionDetails: {
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.privacyMuted,
       borderColor: colors.divider,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
       gap: spacing.xs,
       overflow: 'hidden',
-      padding: spacing.sm,
+      padding: spacing.md,
       position: 'relative',
-    },
-    cardAccentLeft: {
-      backgroundColor: colors.primary,
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
     },
     permissionDetailRow: {
       alignItems: 'flex-start',
@@ -96,7 +88,7 @@ export default function PermissionGateScreen() {
       gap: spacing.xs,
     },
     permissionDetailText: {
-      ...typography.caption,
+      ...typography.bodySmall,
       color: colors.textSecondary,
       flex: 1,
     },
@@ -287,7 +279,7 @@ export default function PermissionGateScreen() {
   };
 
   return (
-    <Screen scrollable>
+    <Screen scrollable brandHeader>
       <View style={styles.container}>
         <View style={styles.header}>
           <FeatureHeader
@@ -330,7 +322,6 @@ export default function PermissionGateScreen() {
             'mic-outline',
             permissions.audio === 'granted' ? (
               <View style={styles.permissionDetails}>
-                <View pointerEvents="none" style={styles.cardAccentLeft} />
                 {[
                   'Use shake or secret taps while SafeRide is open.',
                   'Audio stays in the local draft until a consent step.',
@@ -350,7 +341,6 @@ export default function PermissionGateScreen() {
               </View>
             ) : permissions.audio === 'denied' ? (
               <View style={styles.permissionDetails}>
-                <View pointerEvents="none" style={styles.cardAccentLeft} />
                 <Text style={styles.permissionDetailText}>
                   Text-only reporting still works. You can enable microphone access from system Settings later.
                 </Text>

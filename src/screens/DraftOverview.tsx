@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,7 +7,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../components/ui/Screen';
 import Button from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Card, CardContent, CardDescription, CardTitle } from '../components/ui/Card';
 import { InfoModal, InfoModalBullet, InfoModalSection } from '../components/ui/InfoModal';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
@@ -19,7 +18,8 @@ import {
 } from '../navigation/reportPathwayFlow';
 import { useDraftState } from '../hooks/useDraftState';
 import { useReportDraftIdentity } from '../hooks/useReportDraftIdentity';
-import { borders, elevation, radii, spacing, typography } from '../theme/tokens';
+import { useCompletedReportRedirect } from '../hooks/useCompletedReportRedirect';
+import { borders, radii, spacing, typography } from '../theme/tokens';
 
 type DraftNavigationProp = NativeStackNavigationProp<RootStackParamList, 'DraftOverview'>;
 type DraftOverviewRoute = keyof Pick<
@@ -85,11 +85,7 @@ export default function DraftOverviewScreen() {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const progress = useMemo(() => getReportWizardProgress(draftData), [draftData]);
 
-  useEffect(() => {
-    if (isFinalReportDraftState(draftData)) {
-      navigation.navigate('Cases');
-    }
-  }, [draftData, navigation]);
+  useCompletedReportRedirect(navigation, draftData);
 
   const stepById = useMemo(() => {
     return new Map(progress.steps.map((step) => [step.id, step]));
@@ -182,45 +178,31 @@ export default function DraftOverviewScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
     },
     header: {
-      marginBottom: spacing.xl,
+      gap: spacing.xxs,
+      marginBottom: spacing.md,
     },
     eyebrow: {
       ...typography.overline,
-      color: colors.textSecondary,
-      marginBottom: spacing.xs,
+      color: colors.primary,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
     },
     title: {
-      ...typography.headlineLarge,
+      ...typography.headlineMedium,
       color: colors.foreground,
-      marginBottom: spacing.xs,
+      letterSpacing: -0.3,
     },
     subtitle: {
       ...typography.bodyMedium,
       color: colors.textSecondary,
     },
     progressPanel: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      marginBottom: spacing.lg,
-      overflow: 'hidden',
-      padding: spacing.lg,
-      position: 'relative',
-      ...elevation.card,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
+      gap: spacing.xs,
+      marginBottom: spacing.md,
     },
     progressTop: {
       alignItems: 'center',
@@ -228,79 +210,82 @@ export default function DraftOverviewScreen() {
       justifyContent: 'space-between',
     },
     progressLabel: {
-      ...typography.titleSmall,
+      ...typography.labelLarge,
       color: colors.foreground,
     },
-    progressTrack: {
-      backgroundColor: colors.surfaceAlt,
-      borderRadius: radii.round,
-      height: 10,
-      marginTop: spacing.md,
-      overflow: 'hidden',
+    progressSegments: {
+      flexDirection: 'row',
+      gap: spacing.xxs,
     },
-    progressFill: {
-      backgroundColor: colors.primary,
+    progressSegment: {
       borderRadius: radii.round,
-      height: '100%',
-      width: `${progress.percentage}%`,
+      flex: 1,
+      height: 6,
     },
     saveText: {
       ...typography.caption,
       color: error ? colors.destructive : colors.textSecondary,
-      marginTop: spacing.sm,
     },
     sections: {
-      gap: spacing.md,
-      flex: 1,
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: radii.card,
+      borderWidth: borders.hairline,
+      overflow: 'hidden',
     },
     primaryActions: {
       gap: spacing.sm,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
-    sectionCard: {
-      backgroundColor: colors.surface,
-    },
-    sectionContent: {
+    sectionRow: {
       alignItems: 'center',
       flexDirection: 'row',
-      gap: spacing.md,
-      paddingVertical: spacing.lg,
+    },
+    sectionDivider: {
+      borderTopColor: colors.divider,
+      borderTopWidth: borders.hairline,
     },
     sectionMain: {
       alignItems: 'center',
       flex: 1,
       flexDirection: 'row',
       gap: spacing.sm,
+      minHeight: 64,
       minWidth: 0,
+      paddingLeft: spacing.sm,
+      paddingVertical: spacing.sm,
     },
     iconWrap: {
       alignItems: 'center',
-      borderRadius: radii.card,
-      height: 52,
+      borderRadius: radii.round,
+      height: 40,
       justifyContent: 'center',
-      width: 52,
+      width: 40,
     },
     cardCopy: {
       flex: 1,
+      gap: 2,
       minWidth: 0,
     },
+    cardTitleRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+    },
     cardTitle: {
-      marginBottom: spacing.xxxs,
+      ...typography.titleSmall,
+      color: colors.foreground,
     },
     cardDescription: {
       ...typography.bodySmall,
-    },
-    sectionActions: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.xs,
+      color: colors.textSecondary,
     },
     moreButton: {
       alignItems: 'center',
-      borderRadius: radii.round,
-      height: 36,
+      height: 48,
       justifyContent: 'center',
-      width: 36,
+      width: 52,
     },
     footer: {
       gap: spacing.sm,
@@ -320,22 +305,33 @@ export default function DraftOverviewScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Draft journey</Text>
-          <Text style={styles.title}>Incident draft</Text>
+          <Text accessibilityRole="header" style={styles.title}>Incident draft</Text>
           <Text style={styles.subtitle}>
             Keep the report moving in a few clear steps. You can close this screen and resume later.
           </Text>
         </View>
 
         <View style={styles.progressPanel}>
-          <View pointerEvents="none" style={styles.cardAccentTop} />
           <View style={styles.progressTop}>
             <Text style={styles.progressLabel}>Report progress</Text>
             <Badge variant={progress.isComplete ? 'success' : 'info'} size="sm">
               {progress.completedSteps}/{progress.totalSteps}
             </Badge>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+          <View style={styles.progressSegments} accessible accessibilityLabel={`${progress.completedSteps} of ${progress.totalSteps} steps done`}>
+            {progress.steps.map(step => (
+              <View
+                key={step.id}
+                style={[
+                  styles.progressSegment,
+                  {
+                    backgroundColor: step.status === 'complete' || step.status === 'skipped'
+                      ? colors.primary
+                      : colors.divider,
+                  },
+                ]}
+              />
+            ))}
           </View>
           <Text style={styles.saveText}>{saveStatus}</Text>
         </View>
@@ -351,51 +347,49 @@ export default function DraftOverviewScreen() {
         </View>
 
         <View style={styles.sections}>
-          {sections.map((section) => {
+          {sections.map((section, index) => {
             const status = getSectionStatus(section.steps);
             const tone = sectionTones[section.tone];
 
             return (
-              <Card key={section.id} variant="elevated" surfaceStyle={[styles.sectionCard, { borderColor: tone.muted }]}>
-                <CardContent style={styles.sectionContent}>
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open ${section.title}`}
-                    accessibilityHint="Opens this draft step."
-                    activeOpacity={0.86}
-                    onPress={() => {
-                      if (!initialDraftId) return;
-                      navigation.navigate(section.route as any, { draftId: initialDraftId });
-                    }}
-                    style={styles.sectionMain}
-                  >
-                    <View style={[styles.iconWrap, { backgroundColor: tone.muted }]}>
-                      <Ionicons name={section.icon} size={22} color={tone.color} />
-                    </View>
-                    <View style={styles.cardCopy}>
-                      <CardTitle variant="small" style={styles.cardTitle}>{section.title}</CardTitle>
-                      <CardDescription style={styles.cardDescription}>{section.description}</CardDescription>
-                    </View>
-                  </TouchableOpacity>
-                  <View style={styles.sectionActions}>
-                    <Badge
-                      variant={status === 'complete' ? 'success' : status === 'current' ? 'primary' : status === 'skipped' ? 'secondary' : 'outline'}
-                      size="sm"
-                    >
-                      {getStatusLabel(status)}
-                    </Badge>
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel={`More about ${section.title}`}
-                      activeOpacity={0.86}
-                      onPress={() => setActiveSectionId(section.id)}
-                      style={[styles.moreButton, { backgroundColor: tone.muted }]}
-                    >
-                      <Ionicons name="information-circle-outline" size={18} color={tone.color} />
-                    </TouchableOpacity>
+              <View key={section.id} style={[styles.sectionRow, index > 0 && styles.sectionDivider]}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${section.title}`}
+                  accessibilityHint="Opens this draft step."
+                  activeOpacity={0.86}
+                  onPress={() => {
+                    if (!initialDraftId) return;
+                    navigation.navigate(section.route as any, { draftId: initialDraftId });
+                  }}
+                  style={styles.sectionMain}
+                >
+                  <View style={[styles.iconWrap, { backgroundColor: tone.muted }]}>
+                    <Ionicons name={section.icon} size={20} color={tone.color} />
                   </View>
-                </CardContent>
-              </Card>
+                  <View style={styles.cardCopy}>
+                    <View style={styles.cardTitleRow}>
+                      <Text style={styles.cardTitle}>{section.title}</Text>
+                      <Badge
+                        variant={status === 'complete' ? 'success' : status === 'current' ? 'primary' : status === 'skipped' ? 'secondary' : 'outline'}
+                        size="sm"
+                      >
+                        {getStatusLabel(status)}
+                      </Badge>
+                    </View>
+                    <Text style={styles.cardDescription}>{section.description}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`More about ${section.title}`}
+                  activeOpacity={0.86}
+                  onPress={() => setActiveSectionId(section.id)}
+                  style={styles.moreButton}
+                >
+                  <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
             );
           })}
         </View>

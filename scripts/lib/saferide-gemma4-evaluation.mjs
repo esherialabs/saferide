@@ -208,7 +208,9 @@ export function validateComparatorPlan(plan, validator, rootDir, systemPromptVal
   const targetSlot = plan.targetSlot ?? 'v04';
   const expectedSlots = targetSlot === 'v05'
     ? ['base', 'v03', 'v05-seed-a', 'v05-seed-b', 'v05']
-    : ['base', 'v03', targetSlot];
+    : targetSlot === 'tuned-mobile'
+      ? ['tuned-mobile']
+      : ['base', 'v03', targetSlot];
   const slots = (plan.artifacts ?? []).map(artifact => artifact.slot);
   if (new Set(slots).size !== expectedSlots.length || !expectedSlots.every(slot => slots.includes(slot))) {
     errors.push(`comparator plan requires exactly one ${expectedSlots.join(', ')} artifact`);
@@ -284,13 +286,14 @@ export function validateComparatorPlan(plan, validator, rootDir, systemPromptVal
   if (new Set(readyArtifactRevisions).size !== readyArtifactRevisions.length) errors.push('comparator slots cannot reuse the same artifact revision');
   for (const artifact of plan.artifacts ?? []) {
     if (artifact.slot === 'base' && artifact.artifactClass !== 'base-runtime') errors.push('base slot must be a base-runtime artifact');
-    if (artifact.slot !== 'base' && artifact.artifactClass !== 'adapter') errors.push(`${artifact.slot} slot must be an adapter artifact`);
+    if (!['base', 'tuned-mobile'].includes(artifact.slot) && artifact.artifactClass !== 'adapter') errors.push(`${artifact.slot} slot must be an adapter artifact`);
+    if (artifact.slot === 'tuned-mobile' && artifact.artifactClass !== 'tuned-mobile-artifact') errors.push('tuned-mobile slot must be a tuned-mobile-artifact');
     if (artifact.status !== 'blocked' && (!artifact.artifactId || !artifact.immutableRevision || !artifact.fileManifestSha256)) {
       errors.push(`${artifact.slot} ready/generated artifact requires identifier, immutable revision, and file-manifest hash`);
     }
     if (artifact.status === 'blocked' && !artifact.blocker) errors.push(`${artifact.slot} blocked artifact requires blocker`);
     if (artifact.artifactClass === 'base-runtime' && artifact.fileInventory !== null) errors.push('base runtime must not claim an adapter file inventory');
-    if (artifact.artifactClass === 'adapter' && artifact.status !== 'blocked' && !artifact.fileInventory) errors.push(`${artifact.slot} ready adapter requires a structured file inventory`);
+    if (['adapter', 'tuned-mobile-artifact'].includes(artifact.artifactClass) && artifact.status !== 'blocked' && !artifact.fileInventory) errors.push(`${artifact.slot} ready artifact requires a structured file inventory`);
     if (artifact.fileInventory) {
       const inventoryPath = resolveRepositoryFile(rootDir, `${artifact.slot} file inventory`, artifact.fileInventory, errors);
       if (!inventoryPath) continue;
@@ -308,7 +311,8 @@ export function validateComparatorPlan(plan, validator, rootDir, systemPromptVal
       const paths = (inventory.files ?? []).map(file => file.path);
       if (new Set(paths).size !== paths.length) errors.push(`${artifact.slot} file inventory contains duplicate paths`);
       if (paths.some(file => path.isAbsolute(file) || file.split(/[\\/]/).includes('..'))) errors.push(`${artifact.slot} file inventory contains an unsafe path`);
-      if (targetSlot === 'v05' && ['v05-seed-a', 'v05-seed-b', 'v05'].includes(artifact.slot)
+      if (((targetSlot === 'v05' && ['v05-seed-a', 'v05-seed-b', 'v05'].includes(artifact.slot))
+        || artifact.slot === 'tuned-mobile')
         && artifact.status !== 'blocked'
         && (inventory.files ?? []).some(file => !Number.isInteger(file.sizeBytes) || file.sizeBytes < 1)) {
         errors.push(`${artifact.slot} file inventory requires exact positive file sizes`);

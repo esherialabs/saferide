@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getReportNavigationStyles } from '../components/report/reportNavigationStyles';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Location from 'expo-location';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ReportWizardProgress } from '../components/report/ReportWizardProgress';
+import { ReportStepHeader } from '../components/report/ReportStepHeader';
+import { ChoiceCard } from '../components/ui/ChoiceCard';
 import { Alert as AlertComponent, AlertDescription, AlertTitle } from '../components/ui/Alert';
 import { Badge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -27,6 +28,7 @@ import { borders, radii, spacing, typography } from '../theme/tokens';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import type { DraftData } from '../utils/draftStorage';
 import { formatDraftLocalDate, formatDraftLocalTime } from '../utils/reportDateTime';
+import { readCurrentReportLocation } from '../utils/reportLocationRequest';
 import { captureMeasurementEvent } from '../lib/measurement/localEventStore';
 
 type WhereWhenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WhereWhen'>;
@@ -103,7 +105,6 @@ export default function WhereWhenScreen() {
   const route = useRoute<WhereWhenRouteProp>();
   const { colors } = useTheme();
   const toast = useToast();
-  const insets = useSafeAreaInsets();
 
   const [locationData, setLocationData] = useState<LocationData>({
     locationMode: 'general',
@@ -124,6 +125,7 @@ export default function WhereWhenScreen() {
   const timeDataRef = useRef(timeData);
 
   const [isLocating, setIsLocating] = useState(false);
+  const locationRequestId = useRef(0);
   const [permissionState, setPermissionState] = useState<LocationPermissionState>('idle');
   const [hasAskedForLocation, setHasAskedForLocation] = useState(false);
   const [timeConfirmed, setTimeConfirmed] = useState(false);
@@ -141,6 +143,17 @@ export default function WhereWhenScreen() {
   const isEditingCompleted = route.params?.editCompleted === true;
   const { draftData, updateDraft, saveDraftPatch, isSaving, lastSaved, error } = useDraftState(initialDraftId);
   useCompletedReportRedirect(navigation, draftData, { enabled: !isEditingCompleted });
+
+  const cancelLocationRequest = useCallback(() => {
+    locationRequestId.current += 1;
+    setIsLocating(false);
+    setPermissionState(state => state === 'checking' ? 'idle' : state);
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    cancelLocationRequest();
+    return () => { locationRequestId.current += 1; };
+  }, [cancelLocationRequest, initialDraftId]));
 
   useEffect(() => {
     if (initialDraftId && !routeDraftId) {
@@ -190,6 +203,7 @@ export default function WhereWhenScreen() {
   }, [draftData?.id]);
 
   const styles = StyleSheet.create({
+    ...getReportNavigationStyles(colors),
     screenRoot: {
       flex: 1,
     },
@@ -198,18 +212,18 @@ export default function WhereWhenScreen() {
     },
     contentContainer: {
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: Math.max(spacing.massive, insets.bottom + spacing.massive),
+      paddingTop: spacing.xxs,
+      paddingBottom: spacing.md,
     },
     stepHeader: {
       gap: spacing.xs,
     },
     stepHeaderCard: {
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
     },
     stepHeaderContent: {
-      gap: spacing.xs,
-      paddingTop: spacing.md,
+      gap: spacing.xxs,
+      paddingTop: spacing.sm,
     },
     eyebrowRow: {
       alignItems: 'center',
@@ -218,16 +232,16 @@ export default function WhereWhenScreen() {
       gap: spacing.xs,
     },
     sectionTitle: {
-      ...typography.titleM,
+      ...typography.headlineSmall,
       color: colors.foreground,
     },
     helperText: {
-      ...typography.bodyS,
+      ...typography.bodyMedium,
       color: colors.textSecondary,
     },
     section: {
-      gap: spacing.md,
-      marginBottom: spacing.lg,
+      gap: spacing.sm,
+      marginBottom: spacing.md,
     },
     modeGrid: {
       gap: spacing.sm,
@@ -245,12 +259,14 @@ export default function WhereWhenScreen() {
       ...typography.label,
       color: colors.textPrimary,
       flex: 1,
+      minWidth: 0,
     },
     iconTitle: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.xs,
       flex: 1,
+      minWidth: 0,
     },
     chipWrap: {
       flexDirection: 'row',
@@ -261,10 +277,10 @@ export default function WhereWhenScreen() {
       gap: spacing.xs,
     },
     fieldCard: {
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
     fieldCardContent: {
-      gap: spacing.md,
+      gap: spacing.sm,
     },
     timeSection: {
       flexDirection: 'row',
@@ -273,24 +289,15 @@ export default function WhereWhenScreen() {
     timeInput: {
       flex: 1,
     },
-    navigationButtons: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    navigationDock: {
-      backgroundColor: colors.background,
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-    },
     optionalDetailsButton: {
-      marginTop: spacing.lg,
+      marginTop: spacing.sm,
     },
     backButton: {
+      alignSelf: 'stretch',
       flex: 1,
     },
     nextButton: {
+      alignSelf: 'stretch',
       flex: 2,
     },
   });
@@ -371,21 +378,24 @@ export default function WhereWhenScreen() {
       return;
     }
 
+    const requestId = ++locationRequestId.current;
+    const isActive = () => locationRequestId.current === requestId;
     setIsLocating(true);
     setPermissionState('checking');
     setHasAskedForLocation(true);
 
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const result = await readCurrentReportLocation(isActive);
+      if (!result || !isActive()) return;
 
-      if (permission.status !== 'granted') {
+      if (result.status === 'denied') {
         setPermissionState('denied');
-        updateLocationData(prev => ({
+        updateLocationData(prev => isActive() ? ({
           ...prev,
           locationMode: 'manual',
           coordinates: undefined,
           address: '',
-        }));
+        }) : prev);
         toast.show({
           title: 'Location not shared',
           message: 'Manual location is still available and exact location is optional.',
@@ -394,44 +404,16 @@ export default function WhereWhenScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      let fullAddress = 'Current device location';
-      try {
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
-        if (reverseGeocode.length > 0) {
-          const address = reverseGeocode[0];
-          fullAddress = [
-            address.name,
-            address.street,
-            address.city,
-            address.region,
-            address.postalCode,
-          ].filter(Boolean).join(', ') || fullAddress;
-        }
-      } catch (error) {
-        console.warn('Failed to reverse geocode current report location:', error);
-      }
-
       setPermissionState('granted');
-      updateLocationData(prev => ({
+      updateLocationData(prev => isActive() ? ({
         ...prev,
         locationMode: 'current',
-        address: fullAddress,
+        address: result.address,
         customLocation: '',
-        coordinates: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        },
-      }));
-    } catch (error) {
-      console.warn('Failed to get current report location:', error);
+        coordinates: result.coordinates,
+      }) : prev);
+    } catch {
+      if (!isActive()) return;
       setPermissionState('error');
       toast.show({
         title: 'Location not available',
@@ -439,7 +421,7 @@ export default function WhereWhenScreen() {
         variant: 'error',
       });
     } finally {
-      setIsLocating(false);
+      if (isActive()) setIsLocating(false);
     }
   };
 
@@ -468,6 +450,7 @@ export default function WhereWhenScreen() {
   };
 
   const finishWhereWhen = async (includeTimeDetails: boolean) => {
+    cancelLocationRequest();
     if (!initialDraftId) {
       toast.show({
         title: 'Draft still opening',
@@ -544,6 +527,7 @@ export default function WhereWhenScreen() {
   };
 
   const handleBack = () => {
+    cancelLocationRequest();
     if (showOptionalTimeDetails) {
       setShowOptionalTimeDetails(false);
     } else {
@@ -561,10 +545,12 @@ export default function WhereWhenScreen() {
       return;
     }
 
+    cancelLocationRequest();
     setShowOptionalTimeDetails(true);
   };
 
   const selectLocationMode = (mode: LocationMode) => {
+    cancelLocationRequest();
     updateLocationData(prev => ({
       ...prev,
       locationMode: mode,
@@ -575,16 +561,7 @@ export default function WhereWhenScreen() {
   };
 
   const renderStepHeader = (title: string, helper: string) => (
-    <Card variant="filled" accentColor={colors.primary} style={styles.stepHeaderCard}>
-      <CardContent style={styles.stepHeaderContent}>
-        <View style={styles.eyebrowRow}>
-          <Badge variant="info" size="sm">Place and time</Badge>
-          <Badge variant="outline" size="sm">Exact details optional</Badge>
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.helperText}>{helper}</Text>
-      </CardContent>
-    </Card>
+    <ReportStepHeader eyebrow="Exact details optional" title={title} helper={helper} />
   );
 
   const renderFieldCard = (children: React.ReactNode) => (
@@ -604,26 +581,16 @@ export default function WhereWhenScreen() {
   ) => {
     const selected = locationData.locationMode === mode;
     return (
-      <Card
-        variant="outlined"
+      <ChoiceCard
+        title={title}
+        description={description}
+        icon={icon}
         selected={selected}
         onPress={mode === 'current' ? undefined : () => selectLocationMode(mode)}
         accessibilityLabel={`${title}. ${description}`}
       >
-        <CardContent style={styles.modeContent}>
-          <View style={styles.modeTitleRow}>
-            <View style={styles.iconTitle}>
-              <Ionicons name={icon} size={18} color={selected ? colors.primary : colors.textSecondary} />
-              <Text style={styles.modeTitle}>{title}</Text>
-            </View>
-            <Badge variant={selected ? 'primary' : 'outline'} size="sm">
-              {selected ? 'Selected' : 'Option'}
-            </Badge>
-          </View>
-          <Text style={styles.helperText}>{description}</Text>
-          {action}
-        </CardContent>
-      </Card>
+        {action}
+      </ChoiceCard>
     );
   };
 
@@ -672,6 +639,7 @@ export default function WhereWhenScreen() {
               onPress={getCurrentLocation}
               variant="outline"
               size="sm"
+              fullWidth
               loading={isLocating}
               disabled={permissionState === 'denied' && hasAskedForLocation}
             />,
@@ -796,23 +764,14 @@ export default function WhereWhenScreen() {
             {timingAccuracyOptions.map(option => {
               const selected = timeData.timeAccuracy === option.value;
               return (
-                <Card
+                <ChoiceCard
                   key={option.value}
-                  variant="outlined"
+                  title={option.label}
+                  description={option.description}
                   selected={selected}
                   onPress={() => updateTimeData(prev => ({ ...prev, timeAccuracy: option.value }))}
                   accessibilityLabel={`${option.label}. ${option.description}`}
-                >
-                  <CardContent style={styles.modeContent}>
-                    <View style={styles.modeTitleRow}>
-                      <Text style={styles.modeTitle}>{option.label}</Text>
-                      <Badge variant={selected ? 'primary' : 'outline'} size="sm">
-                        {selected ? 'Selected' : 'Choose'}
-                      </Badge>
-                    </View>
-                    <Text style={styles.helperText}>{option.description}</Text>
-                  </CardContent>
-                </Card>
+                />
               );
             })}
           </View>
@@ -843,7 +802,8 @@ export default function WhereWhenScreen() {
   const renderCurrentStep = () => (showOptionalTimeDetails ? renderTimeStep() : renderLocationStep());
 
   return (
-    <Screen>
+    // BottomTabs already reserves the bottom safe area for the report stack.
+    <Screen edges={['top', 'left', 'right']}>
       <View style={styles.screenRoot}>
         <ScrollView
           style={styles.scroll}
@@ -873,7 +833,7 @@ export default function WhereWhenScreen() {
           ) : null}
         </ScrollView>
 
-        <View style={[styles.navigationDock, { paddingBottom: Math.max(spacing.sm, insets.bottom + spacing.sm) }]}>
+        <View style={styles.navigationDock}>
           <View style={styles.navigationButtons}>
             <Button
               title="Back"

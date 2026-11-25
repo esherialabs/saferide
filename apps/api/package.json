@@ -13,6 +13,10 @@
     "start:ws": "node dist/websocket/server.js",
     "evidence:rsi:synthetic": "tsx src/jobs/generateRsiSyntheticProof.ts",
     "retention:rsi": "node dist/jobs/rsiRetentionJob.js",
+    "partner:admin": "node dist/jobs/partnerAdmin.js",
+    "partner:seed:synthetic": "node dist/jobs/partnerSyntheticSeed.js",
+    "evidence:derivatives": "node dist/jobs/evidenceDerivativeJob.js",
+    "scanner:status": "node dist/jobs/scannerStatus.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "validate:env-examples": "node scripts/validate-env-examples.mjs"
   },
@@ -28,11 +32,13 @@
     "pino": "^9.6.0",
     "prom-client": "^15.1.3",
     "socket.io": "^4.8.3",
-    "zod": "^3.25.76"
+    "web-push": "3.6.7",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.11",
+    "@types/web-push": "3.6.4",
     "tsx": "^4.19.4",
     "typescript": "~6.0.3"
   }

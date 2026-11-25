@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-next-pilot-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "planId", "issue", "status", "datasetId", "sourceCommit", "historicalDecision", "dataset", "fixedSuites", "recipe", "generation", "runtime", "codeBindings", "scope", "strictDecision"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-next-pilot-plan"}, "schemaVersion": {"const": 1},
+    "planId": {"type": "string", "pattern": "^saferide-v057-next-pilot-[a-f0-9]{16}$"},
+    "issue": {"const": "ESH-4198"}, "status": {"const": "vps-validated-gpu-pilot-pending"},
+    "datasetId": {"const": "saferide-synthetic-guidance-v0.5.7"}, "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "historicalDecision": {"type": "object", "additionalProperties": false, "required": ["decision", "v054ResultSha256", "v055ResultSha256", "v056ResultSha256", "rewritten"], "properties": {"decision": {"const": "NO-GO"}, "v054ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "v055ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "v056ResultSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "rewritten": {"const": false}}},
+    "dataset": {"type": "object", "additionalProperties": true, "required": ["frozenManifestSha256", "weightedTrainSha256", "newMitigationTrainSha256", "trainingRecipeSha256", "datasetAuditSha256", "semanticReportSha256", "tokenizationReportSha256", "registerSha256", "uniqueRows", "weightedExamples", "newRows", "newFamilies"]},
+    "fixedSuites": {"type": "object", "additionalProperties": true, "required": ["originalDevelopment", "mitigationDevelopment", "sealedHoldout"]},
+    "recipe": {"type": "object", "additionalProperties": true, "required": ["initialization", "initialAdapterTensorSha256", "seed", "epochs", "learningRate", "optimizerSteps", "assistantOnlyLoss", "retryAllowed"]},
+    "generation": {"type": "object", "additionalProperties": false, "required": ["maxNewTokens", "terminatorIds", "terminatorSource", "zeroTruncationRequired"], "properties": {"maxNewTokens": {"const": 192}, "terminatorIds": {"const": [1, 106, 50]}, "terminatorSource": {"const": "pinned-model-generation-config"}, "zeroTruncationRequired": {"const": true}}},
+    "runtime": {"type": "object", "additionalProperties": true, "required": ["baseModel", "image"]},
+    "codeBindings": {"type": "array", "minItems": 12, "items": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 2}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}},
+    "scope": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "strictDecision": {"const": "NO-GO-PENDING-ONE-GPU-PILOT"}
+  }
+}

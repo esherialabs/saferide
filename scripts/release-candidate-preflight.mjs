@@ -2,14 +2,22 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { loadLineageInputs, resolveBuildProfile, validateLineageConfiguration } from './lib/saferide-android-release-lineage.mjs';
 
 const require = createRequire(import.meta.url);
 
-const STAGING_ORIGIN = 'https://d1wsat0xd3v4go.cloudfront.net';
-const STAGING_HOST = 'd1wsat0xd3v4go.cloudfront.net';
-const STAGING_STORAGE_HOST = 's3.eu-central-1.amazonaws.com';
-const STAGING_STORAGE_BASE =
-  'https://s3.eu-central-1.amazonaws.com/saferide-staging-api-runtime-evidencebucket-wr3fulb9om9k';
+const REVIEWED_STAGING_ORIGIN = 'https://api.saferide.esheria.org';
+const REVIEWED_STAGING_HOST = 'api.saferide.esheria.org';
+const REVIEWED_STORAGE_HOST = 'storage.saferide.esheria.org';
+const REVIEWED_STAGING_ENDPOINTS = {
+  EXPO_PUBLIC_API_BASE_URL: `${REVIEWED_STAGING_ORIGIN}/api`,
+  EXPO_PUBLIC_AUTH_BASE_URL: `${REVIEWED_STAGING_ORIGIN}/auth`,
+  EXPO_PUBLIC_WS_BASE_URL: `wss://${REVIEWED_STAGING_HOST}`,
+  EXPO_PUBLIC_STORAGE_BASE_URL: `https://${REVIEWED_STORAGE_HOST}/saferide-staging-evidence`,
+  EXPO_PUBLIC_RUNTIME_CONFIG_URL: `${REVIEWED_STAGING_ORIGIN}/api/config/runtime`,
+  EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS: REVIEWED_STAGING_HOST,
+  EXPO_PUBLIC_RELEASE_STORAGE_HOSTS: REVIEWED_STORAGE_HOST,
+};
 const BASE_GEMMA4_MODEL_ID = 'litert-community/gemma-4-E2B-it-litert-lm';
 const V058_QA_MODEL_ID = 'esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm';
 const V058_QA_MANIFEST_ID =
@@ -20,38 +28,19 @@ const ANDROID_TUNED_MODEL_PROFILES = new Set([
   'android-internal-ai',
 ]);
 
-const STAGING_PUBLIC_ENV = {
-  EAS_BUILD_PROFILE: 'preview',
-  EAS_BUILD_PLATFORM: 'android',
-  EXPO_PUBLIC_ENVIRONMENT: 'staging',
-  EXPO_PUBLIC_API_BASE_URL: `${STAGING_ORIGIN}/api`,
-  EXPO_PUBLIC_AUTH_BASE_URL: `${STAGING_ORIGIN}/auth`,
-  EXPO_PUBLIC_WS_BASE_URL: `wss://${STAGING_HOST}`,
-  EXPO_PUBLIC_STORAGE_BASE_URL: STAGING_STORAGE_BASE,
-  EXPO_PUBLIC_RUNTIME_CONFIG_URL: `${STAGING_ORIGIN}/api/config/runtime`,
-  EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS: STAGING_HOST,
-  EXPO_PUBLIC_RELEASE_STORAGE_HOSTS: STAGING_STORAGE_HOST,
-  EXPO_PUBLIC_API_TIMEOUT_MS: '10000',
-  EXPO_PUBLIC_CONFIG_REFRESH_SECONDS: '60',
-  EXPO_PUBLIC_OPENAI_ENABLED: 'false',
-  EXPO_PUBLIC_AZURE_OPENAI_TRANSCRIPTION_ENABLED: 'false',
-  EXPO_PUBLIC_AZURE_OPENAI_ENDPOINT: '',
-  EXPO_PUBLIC_AZURE_OPENAI_DEPLOYMENT: '',
-  EXPO_PUBLIC_AZURE_OPENAI_API_VERSION: '',
-};
-
 const EXPECTED_APP = {
   name: 'Safe Ride',
   slug: 'saferide',
   scheme: 'saferide',
-  version: '1.0.0',
-  androidVersionCode: 2,
+  // Version decisions live in reviewed app.json, not a second hidden constant.
+  // Artifact-native codes remain independently checked by the lineage gate.
+  version: readJson('app.json').expo.version,
+  androidVersionCode: readJson('app.json').expo.android.versionCode,
   androidPackage: 'com.esheria.saferide.app',
   iosBundleIdentifier: 'com.esheria.saferide.app',
   easProjectId: 'df299186-b444-414a-bae3-1e2c263c6927',
 };
 
-const EXPECTED_EAS_UPDATE_URL = `https://u.expo.dev/${EXPECTED_APP.easProjectId}`;
 const EXPECTED_UPDATE_CHANNELS = {
   preview: 'preview',
   production: 'production',
@@ -67,16 +56,18 @@ const LOCAL_OR_PRIVATE_HOST =
 
 const args = new Set(process.argv.slice(2));
 const includeRemoteSmoke = args.has('--include-remote-smoke');
+const offline = args.has('--offline');
 const jsonOutput = args.has('--json');
 const help = args.has('--help') || args.has('-h');
 
 if (help) {
-  console.log(`Usage: node scripts/release-candidate-preflight.mjs [--include-remote-smoke] [--json]
+  console.log(`Usage: node scripts/release-candidate-preflight.mjs [--offline | --include-remote-smoke] [--json]
 
 Validates SafeRide preview release-candidate public config without starting EAS.
 
 Options:
-  --include-remote-smoke  Also run npm run smoke:owned-stack against CloudFront.
+  --offline               Local config only; no remote runtime fetch or smoke.
+  --include-remote-smoke  Also check the reviewed owned staging endpoints.
   --json                  Print the final summary as JSON.
 `);
   process.exit(0);
@@ -95,19 +86,28 @@ function assert(condition, message) {
 }
 
 function stagingEnvForProfile(buildProfile) {
-  const tunedModelProfile = ANDROID_TUNED_MODEL_PROFILES.has(buildProfile);
+  const profile = resolveBuildProfile(readJson('eas.json'), buildProfile);
+  for (const [key, expected] of Object.entries(REVIEWED_STAGING_ENDPOINTS)) {
+    assert(profile.env[key] === expected, `${buildProfile} ${key} differs from the reviewed staging endpoint`);
+  }
+  assert(profile.env.EXPO_PUBLIC_ENVIRONMENT === 'staging', `${buildProfile} must target staging`);
   return {
-    ...STAGING_PUBLIC_ENV,
+    ...profile.env,
     EAS_BUILD_PROFILE: buildProfile,
-    EXPO_PUBLIC_LOCAL_ASSISTANT_ENABLED: tunedModelProfile ? 'true' : 'false',
-    EXPO_PUBLIC_LOCAL_ASSISTANT_PREFER_ON_DEVICE: tunedModelProfile ? 'true' : 'false',
-    EXPO_PUBLIC_LOCAL_ASSISTANT_MODEL_ID: tunedModelProfile ? V058_QA_MODEL_ID : BASE_GEMMA4_MODEL_ID,
-    EXPO_PUBLIC_LOCAL_ASSISTANT_ALLOW_REAL_LITERTLM_RUNTIME: tunedModelProfile ? 'true' : 'false',
-    EXPO_PUBLIC_LOCAL_ASSISTANT_QA_TUNED_MANIFEST_ID: tunedModelProfile ? V058_QA_MANIFEST_ID : '',
+    EAS_BUILD_PLATFORM: 'android',
+    EXPO_PUBLIC_AZURE_OPENAI_ENDPOINT: '',
+    EXPO_PUBLIC_AZURE_OPENAI_DEPLOYMENT: '',
+    EXPO_PUBLIC_AZURE_OPENAI_API_VERSION: '',
   };
 }
 
 function setReleaseEnv(buildProfile = 'preview') {
+  process.env.EXPO_NO_DOTENV = '1';
+  // Do not let a previous profile or the caller's private shell environment
+  // supply undeclared public configuration to a passing release check.
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith('EXPO_PUBLIC_') || key.startsWith('SAFERIDE_LITERTLM_')) delete process.env[key];
+  }
   for (const [key, value] of Object.entries(stagingEnvForProfile(buildProfile))) {
     process.env[key] = value;
   }
@@ -140,13 +140,17 @@ function validatePackageJson() {
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url);
-  const text = await response.text();
+  let response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  } catch {
+    fail('Reviewed staging runtime is unreachable within the 15-second check; connected release readiness is unverified.');
+  }
   if (!response.ok) {
-    fail(`GET ${url} returned ${response.status}: ${text.slice(0, 500)}`);
+    fail(`Remote runtime request returned HTTP ${response.status}`);
   }
   try {
-    return JSON.parse(text);
+    return await response.json();
   } catch {
     fail(`GET ${url} did not return JSON`);
   }
@@ -154,20 +158,7 @@ async function fetchJson(url) {
 
 function validateEasJson() {
   const eas = readJson('eas.json');
-  const resolveProfile = name => {
-    const profile = eas.build?.[name];
-    assert(profile, `${name} EAS build profile is missing`);
-    if (!profile.extends) return profile;
-    const parent = eas.build?.[profile.extends];
-    assert(parent, `${name} extends missing EAS profile ${profile.extends}`);
-    return {
-      ...parent,
-      ...profile,
-      env: { ...(parent.env ?? {}), ...(profile.env ?? {}) },
-      android: { ...(parent.android ?? {}), ...(profile.android ?? {}) },
-      ios: { ...(parent.ios ?? {}), ...(profile.ios ?? {}) },
-    };
-  };
+  const resolveProfile = name => resolveBuildProfile(eas, name);
   const androidReleaseApk = resolveProfile('android-release-apk');
   const androidInternalAi = resolveProfile('android-internal-ai');
   assert(eas.cli?.appVersionSource === 'remote', 'EAS appVersionSource must remain remote');
@@ -259,12 +250,15 @@ function validateIosPrivacyUsageDescriptions(config) {
 function validateEasUpdateConfig(config) {
   assert(config.runtimeVersion?.policy === 'appVersion', 'runtimeVersion policy must be appVersion');
   assert(config.updates && typeof config.updates === 'object', 'Expo updates config missing');
-  assert(config.updates.url === EXPECTED_EAS_UPDATE_URL, 'EAS Update URL must target the configured EAS project');
-  assert(config.updates.enabled !== false, 'EAS Update must not be explicitly disabled');
-  pass('eas update config');
+  assert(config.updates.enabled === false, 'Over-the-air updates must be disabled');
+  assert(config.updates.checkAutomatically === 'NEVER', 'Over-the-air update checks must be NEVER');
+  assert(!config.updates.url, 'No update URL may be configured');
+  assert(!config.updates.requestHeaders, 'No update request headers may be configured');
+  pass('over-the-air updates disabled');
 }
 
 function validateExpoConfig(expectedBuildProfile = 'preview') {
+  const expectedEnv = stagingEnvForProfile(expectedBuildProfile);
   const configFactory = require('../app.config.js');
   const config = configFactory({});
 
@@ -284,18 +278,18 @@ function validateExpoConfig(expectedBuildProfile = 'preview') {
   assert(config.extra?.runtime?.releaseLike === true, 'preview config must resolve as release-like');
   assert(config.extra?.runtime?.openAIEnabled === false, 'preview client must not enable direct OpenAI');
   assert(
-    config.extra?.runtime?.releaseEndpointHosts?.includes(STAGING_HOST),
-    'release endpoint host allowlist missing CloudFront host',
+    config.extra?.runtime?.releaseEndpointHosts?.includes(REVIEWED_STAGING_HOST),
+    'release endpoint host allowlist missing owned staging API host',
   );
   assert(
-    config.extra?.runtime?.releaseStorageHosts?.includes(STAGING_STORAGE_HOST),
+    config.extra?.runtime?.releaseStorageHosts?.includes(REVIEWED_STORAGE_HOST),
     'release storage host allowlist missing staging storage host',
   );
-  assert(config.extra?.api?.baseUrl === STAGING_PUBLIC_ENV.EXPO_PUBLIC_API_BASE_URL, 'API URL mismatch');
-  assert(config.extra?.auth?.baseUrl === STAGING_PUBLIC_ENV.EXPO_PUBLIC_AUTH_BASE_URL, 'auth URL mismatch');
-  assert(config.extra?.websocket?.baseUrl === STAGING_PUBLIC_ENV.EXPO_PUBLIC_WS_BASE_URL, 'WebSocket URL mismatch');
-  assert(config.extra?.storage?.baseUrl === STAGING_PUBLIC_ENV.EXPO_PUBLIC_STORAGE_BASE_URL, 'storage URL mismatch');
-  assert(config.extra?.remoteConfig?.url === STAGING_PUBLIC_ENV.EXPO_PUBLIC_RUNTIME_CONFIG_URL, 'runtime config URL mismatch');
+  assert(config.extra?.api?.baseUrl === expectedEnv.EXPO_PUBLIC_API_BASE_URL, 'API URL mismatch');
+  assert(config.extra?.auth?.baseUrl === expectedEnv.EXPO_PUBLIC_AUTH_BASE_URL, 'auth URL mismatch');
+  assert(config.extra?.websocket?.baseUrl === expectedEnv.EXPO_PUBLIC_WS_BASE_URL, 'WebSocket URL mismatch');
+  assert(config.extra?.storage?.baseUrl === expectedEnv.EXPO_PUBLIC_STORAGE_BASE_URL, 'storage URL mismatch');
+  assert(config.extra?.remoteConfig?.url === expectedEnv.EXPO_PUBLIC_RUNTIME_CONFIG_URL, 'runtime config URL mismatch');
   assert(config.extra?.azureOpenAI?.transcriptionEnabled === false, 'direct Azure transcription must remain disabled');
   const tunedModelProfile = ANDROID_TUNED_MODEL_PROFILES.has(expectedBuildProfile);
   assert(config.extra?.localAssistant?.enabled === tunedModelProfile, `local AI enabled flag mismatch for ${expectedBuildProfile}`);
@@ -321,6 +315,7 @@ function validateExpoConfig(expectedBuildProfile = 'preview') {
 }
 
 async function validateRuntimeConfig() {
+  const STAGING_PUBLIC_ENV = stagingEnvForProfile('android-release-apk');
   const runtime = await fetchJson(STAGING_PUBLIC_ENV.EXPO_PUBLIC_RUNTIME_CONFIG_URL);
   assert(runtime.environment === 'staging', 'runtime config environment must be staging');
   assert(runtime.apiBaseUrl === STAGING_PUBLIC_ENV.EXPO_PUBLIC_API_BASE_URL, 'runtime API URL mismatch');
@@ -337,9 +332,10 @@ async function validateRuntimeConfig() {
 }
 
 function runRemoteSmoke() {
+  const STAGING_PUBLIC_ENV = stagingEnvForProfile('android-release-apk');
   const env = {
     ...process.env,
-    SAFERIDE_SMOKE_API_ORIGIN: STAGING_ORIGIN,
+    SAFERIDE_SMOKE_API_ORIGIN: new URL(STAGING_PUBLIC_ENV.EXPO_PUBLIC_API_BASE_URL).origin,
     SAFERIDE_SMOKE_API_BASE: STAGING_PUBLIC_ENV.EXPO_PUBLIC_API_BASE_URL,
     SAFERIDE_SMOKE_AUTH_BASE: STAGING_PUBLIC_ENV.EXPO_PUBLIC_AUTH_BASE_URL,
     SAFERIDE_SMOKE_WS_BASE: STAGING_PUBLIC_ENV.EXPO_PUBLIC_WS_BASE_URL,
@@ -383,7 +379,7 @@ function approvalSummary() {
     productionBuildRequiresApproval: true,
     productionBuildCommandAfterApproval: 'eas build --platform android --profile production',
     productionSubmitRequiresApproval: true,
-    productionSubmitCommandAfterApproval: 'eas submit --platform android --profile production --latest',
+    productionSubmitCommandAfterApproval: 'eas submit --platform android --profile production --id <approved-build-id>',
     iosProductionBuildRequiresApproval: true,
     iosProductionBuildCommandAfterApproval: 'eas build --platform ios --profile production',
     iosProductionSubmitRequiresApproval: true,
@@ -400,6 +396,11 @@ function approvalSummary() {
 }
 
 async function main() {
+  assert(!(offline && includeRemoteSmoke), '--offline cannot include remote smoke');
+  const lineageInputs = loadLineageInputs(process.cwd());
+  const lineageErrors = validateLineageConfiguration(lineageInputs);
+  assert(lineageErrors.length === 0, lineageErrors.join('\n'));
+  pass('Android release lineage and archive inputs');
   setReleaseEnv('preview');
   const pkg = validatePackageJson();
   const eas = validateEasJson();
@@ -410,7 +411,8 @@ async function main() {
   validateExpoConfig('android-internal-ai');
   setReleaseEnv('prerelease');
   validateExpoConfig('prerelease');
-  const runtime = await validateRuntimeConfig();
+  const runtime = offline ? null : await validateRuntimeConfig();
+  if (offline) pass('remote runtime config unverified (offline configuration check only)');
 
   if (includeRemoteSmoke) {
     runRemoteSmoke();
@@ -420,6 +422,8 @@ async function main() {
 
   const summary = {
     status: 'pass',
+    verificationScope: offline ? 'local-configuration-only' : 'configuration-and-remote-runtime',
+    selectedAndroidDelivery: lineageInputs.contract.currentDelivery,
     profile: 'preview',
     branchExpectation: 'run from the reviewed SafeRide release branch or its current PR branch',
     app: {
@@ -458,7 +462,7 @@ async function main() {
       productionAndroidSubmitTrack: eas.submit?.production?.android?.track,
       productionIosSubmitConfigured: Boolean(eas.submit?.production?.ios),
     },
-    runtimeFeatures: runtime.features,
+    runtimeFeatures: runtime?.features ?? null,
     remoteSmoke: includeRemoteSmoke ? 'passed' : 'skipped',
     approval: approvalSummary(),
   };
@@ -466,7 +470,9 @@ async function main() {
   if (jsonOutput) {
     console.log(JSON.stringify(summary, null, 2));
   } else {
-    console.log('Release-candidate preflight passed. No EAS build was started.');
+    console.log(offline ? 'Local configuration preflight passed. Backend, artifact and deployment readiness remain unverified.' : 'Release-candidate preflight passed. No EAS build was started.');
+    console.log('Selected Android delivery: local Gradle build, private GitHub Releases download. Follow docs/release/android-release-playbook.md.');
+    console.log('The EAS/OTA commands below describe separately authorized exceptions; they are not the selected Android build path.');
     console.log(`After explicit approval only: ${summary.approval.buildCommandAfterApproval}`);
     console.log(`After explicit approval only: ${summary.approval.prereleaseAndroidBuildCommandAfterApproval}`);
     console.log(`After explicit approval only: ${summary.approval.prereleaseAndroidSubmitCommandAfterApproval}`);

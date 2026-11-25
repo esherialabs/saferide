@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { appConfig } from '../appConfig';
 import { TUNED_ARTIFACT_CONTROLS } from '../../lib/localAssistant/tunedArtifactControls';
+import { devPrivacyInfo, devPrivacyWarn, getPrivacySafeErrorReason } from '../../utils/privacyLog';
 
 const STORAGE_KEY = '@saferide_runtime_config_override';
 const PLACEHOLDER_PATTERN = /^(replace|change|your|todo|example|placeholder|xxx)/i;
@@ -85,7 +86,8 @@ const remoteRuntimeConfigSchema = z.object({
   wsBaseUrl: endpointUrlSchema.optional(),
   authBaseUrl: endpointUrlSchema.optional(),
   storageBaseUrl: endpointUrlSchema.optional(),
-  features: z.record(z.boolean()).optional(),
+  features: z.record(z.string(), z.boolean()).optional(),
+  partnerConsentVersions: z.record(z.string(), z.string().min(1).max(120).nullable()).optional(),
   localAi: localAiRuntimeConfigSchema.optional(),
   refreshedAt: z.string().optional(),
 });
@@ -100,9 +102,13 @@ export type RuntimeConfigSnapshot = {
   authBaseUrl: string;
   storageBaseUrl: string;
   features: Record<string, boolean>;
+  /** Partner consent versions the server accepts now; empty (sharing off) unless the server says so. */
+  partnerConsentVersions: Record<string, string | null>;
   localAi: TunedArtifactRuntimeSnapshot;
   source: 'bundled' | 'override' | 'remote';
   refreshedAt?: string;
+  /** When this phone applied the config (device clock), for staleness checks. */
+  appliedAt?: string;
 };
 
 const bundledRuntimeConfig: RuntimeConfigSnapshot = {
@@ -113,6 +119,7 @@ const bundledRuntimeConfig: RuntimeConfigSnapshot = {
   authBaseUrl: appConfig.auth.baseUrl,
   storageBaseUrl: appConfig.storage.baseUrl,
   features: {},
+  partnerConsentVersions: {},
   localAi: {
     enabled: false,
     reasonCode: TUNED_ARTIFACT_CONTROLS.activation.reasonCode,
@@ -222,17 +229,20 @@ export async function hydrateRuntimeConfig(): Promise<RuntimeConfigSnapshot> {
         await AsyncStorage.removeItem(STORAGE_KEY);
       }
     } catch (error) {
-      console.warn('Discarding invalid runtime config override', error);
+      devPrivacyWarn('discarding invalid runtime config override', {
+        reason: getPrivacySafeErrorReason(error),
+      });
       await AsyncStorage.removeItem(STORAGE_KEY);
     }
   }
 
   if (appConfig.remoteConfig.url) {
     await refreshRemoteRuntimeConfig().catch(error => {
+      const meta = { reason: getPrivacySafeErrorReason(error) };
       if (RELEASE_ENVIRONMENTS.has(appConfig.environment)) {
-        console.warn('Failed to refresh remote runtime config', error);
+        devPrivacyWarn('remote runtime config refresh failed', meta);
       } else {
-        console.info('Remote runtime config unavailable; using bundled defaults.', error);
+        devPrivacyInfo('remote runtime config unavailable; using bundled defaults', meta);
       }
     });
   }
@@ -296,7 +306,12 @@ function resolveRuntimeConfig(
     features: {
       ...activeRuntimeConfig.features,
       ...(config.features ?? {}),
+      // Never carried over: a server answer that does not say true turns case sending off.
+      ...(source === 'remote' ? { caseSubmission: config.features?.caseSubmission === true } : {}),
     },
+    // Replaced, never merged: a fresh server answer without versions turns partner sharing off.
+    partnerConsentVersions: config.partnerConsentVersions
+      ?? (source === 'remote' ? {} : activeRuntimeConfig.partnerConsentVersions),
     localAi: config.localAi
       ? resolveLocalAiRuntimeConfig(config.localAi, activeRuntimeConfig.localAi)
       : source === 'remote' && activeRuntimeConfig.localAi.enabled
@@ -304,6 +319,7 @@ function resolveRuntimeConfig(
         : activeRuntimeConfig.localAi,
     source,
     refreshedAt: config.refreshedAt ?? new Date().toISOString(),
+    appliedAt: new Date().toISOString(),
   };
 }
 

@@ -5,7 +5,7 @@ import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-n
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Badge, Button, DashboardTemplate } from '../components/ui';
+import { Button, DashboardTemplate } from '../components/ui';
 import { useToast } from '../components/ui/Toast';
 import { MainTabParamList, RootStackParamList } from '../navigation/routes';
 import { resetReportStackToRoute } from '../navigation/reportNavigation';
@@ -16,7 +16,7 @@ import {
   type ReportWizardStep,
 } from '../navigation/reportPathwayFlow';
 import { useTheme } from '../theme/SimpleThemeProvider';
-import { borders, elevation, radii, spacing, typography } from '../theme/tokens';
+import { borders, radii, spacing, typography } from '../theme/tokens';
 import { draftStorage, type DraftData } from '../utils/draftStorage';
 import { devPrivacyWarn, getPrivacySafeErrorReason } from '../utils/privacyLog';
 import { getEditableReportDrafts } from '../utils/reportDraftSelection';
@@ -61,20 +61,6 @@ function getResumeStep(progress: ReportWizardProgress): ReportWizardStep | undef
   return progress.steps.find((step) => step.status === 'current') ??
     progress.steps.find((step) => step.status === 'upcoming') ??
     progress.steps.at(-1);
-}
-
-function getStepBadgeVariant(status: ReportWizardStep['status']) {
-  switch (status) {
-    case 'complete':
-      return 'success' as const;
-    case 'current':
-      return 'primary' as const;
-    case 'skipped':
-      return 'secondary' as const;
-    case 'upcoming':
-    default:
-      return 'outline' as const;
-  }
 }
 
 function getStepStatusLabel(status: ReportWizardStep['status']) {
@@ -162,6 +148,8 @@ export default function ReportHubScreen() {
   const latestDraft = drafts[0] ?? null;
   const otherDrafts = drafts.slice(1, 3);
   const progress = useMemo(() => latestDraft ? getReportWizardProgress(latestDraft) : null, [latestDraft]);
+  // Without a draft, the outline still shows the four steps ahead.
+  const outline = useMemo(() => progress ?? getReportWizardProgress(null), [progress]);
   const resumeStep = useMemo(() => progress ? getResumeStep(progress) : undefined, [progress]);
   const progressLabel = progress ? `${progress.completedSteps}/${progress.totalSteps}` : '0/4';
   const draftCountLabel = drafts.length === 1 ? '1 draft in progress' : `${drafts.length} drafts in progress`;
@@ -169,133 +157,117 @@ export default function ReportHubScreen() {
 
   const styles = StyleSheet.create({
     scrollContent: {
-      gap: spacing.lg,
-      paddingBottom: spacing.xxl,
-    },
-    activePanel: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      overflow: 'hidden',
-      padding: spacing.lg,
-      ...elevation.card,
-    },
-    panelAccent: {
-      backgroundColor: latestDraft ? colors.primary : colors.info,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
-    },
-    panelTop: {
-      alignItems: 'center',
-      flexDirection: 'row',
       gap: spacing.md,
-      justifyContent: 'space-between',
-      marginTop: spacing.xs,
+      paddingBottom: spacing.xl,
     },
-    panelTitleGroup: {
-      flex: 1,
-      minWidth: 0,
+    header: {
+      gap: spacing.xxs,
+      paddingTop: spacing.xxs,
     },
     eyebrow: {
       ...typography.overline,
-      color: colors.textTertiary,
-      marginBottom: spacing.xxxs,
+      color: colors.primary,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
     },
-    panelTitle: {
-      ...typography.titleLarge,
+    title: {
+      ...typography.headlineMedium,
       color: colors.foreground,
+      letterSpacing: -0.3,
     },
-    panelSubtitle: {
-      ...typography.bodySmall,
+    subtitle: {
+      ...typography.bodyMedium,
       color: colors.textSecondary,
-      marginTop: spacing.xs,
     },
     loadingRow: {
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.sm,
-      marginTop: spacing.lg,
     },
     loadingText: {
       ...typography.bodySmall,
       color: colors.textSecondary,
     },
-    progressTrack: {
-      backgroundColor: colors.surfaceAlt,
-      borderRadius: radii.round,
-      height: 10,
-      marginTop: spacing.lg,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      backgroundColor: colors.primary,
-      borderRadius: radii.round,
-      height: '100%',
-      width: `${progress?.percentage ?? 0}%`,
-    },
-    progressMeta: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.xs,
-      justifyContent: 'space-between',
-      marginTop: spacing.md,
-    },
-    metaText: {
-      ...typography.caption,
-      color: colors.textSecondary,
-    },
-    currentStepRow: {
-      alignItems: 'center',
-      backgroundColor: colors.surfaceAlt,
-      borderColor: colors.divider,
+    outlineCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
       borderRadius: radii.card,
       borderWidth: borders.hairline,
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.lg,
-      padding: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
     },
-    currentIcon: {
+    outlineHeader: {
       alignItems: 'center',
-      backgroundColor: colors.primaryMuted,
-      borderRadius: radii.round,
-      height: 42,
-      justifyContent: 'center',
-      width: 42,
+      columnGap: spacing.sm,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
     },
-    currentCopy: {
-      flex: 1,
-      minWidth: 0,
-    },
-    currentLabel: {
-      ...typography.labelSmall,
-      color: colors.textTertiary,
-      marginBottom: spacing.xxxs,
-      textTransform: 'uppercase',
-    },
-    currentTitle: {
+    outlineTitle: {
       ...typography.titleSmall,
       color: colors.foreground,
     },
-    currentDescription: {
-      ...typography.bodySmall,
+    outlineMeta: {
+      ...typography.caption,
       color: colors.textSecondary,
-      marginTop: spacing.xxxs,
     },
-    stepPills: {
+    stepRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    stepRail: {
+      alignItems: 'center',
+      width: 28,
+    },
+    stepDot: {
+      alignItems: 'center',
+      borderRadius: radii.round,
+      borderWidth: borders.emphasized,
+      height: 28,
+      justifyContent: 'center',
+      width: 28,
+    },
+    stepNumber: {
+      ...typography.labelSmall,
+      fontWeight: '700',
+    },
+    stepLine: {
+      flex: 1,
+      marginVertical: 2,
+      minHeight: 12,
+      width: 2,
+    },
+    stepCopy: {
+      flex: 1,
+      minWidth: 0,
+      paddingBottom: spacing.sm,
+    },
+    stepTitleRow: {
+      alignItems: 'center',
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: spacing.xs,
-      marginTop: spacing.lg,
+      minHeight: 28,
+    },
+    stepTitle: {
+      ...typography.labelLarge,
+      color: colors.foreground,
+      flexShrink: 1,
+    },
+    stepStatus: {
+      ...typography.labelSmall,
+      borderRadius: radii.round,
+      overflow: 'hidden',
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+    },
+    stepDescription: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
     },
     actions: {
-      gap: spacing.sm,
+      gap: spacing.xs,
     },
     actionRow: {
       flexDirection: 'row',
@@ -315,8 +287,9 @@ export default function ReportHubScreen() {
       alignItems: 'center',
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
     },
     recentTitle: {
       ...typography.titleSmall,
@@ -332,9 +305,9 @@ export default function ReportHubScreen() {
       borderTopWidth: borders.hairline,
       flexDirection: 'row',
       gap: spacing.sm,
-      minHeight: 64,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
+      minHeight: 56,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
     },
     recentIcon: {
       alignItems: 'center',
@@ -399,102 +372,133 @@ export default function ReportHubScreen() {
     navigation.navigate('Cases');
   }, [navigation]);
 
+  const actionsBlock = (
+    <View style={styles.actions}>
+      <Button
+        title={latestDraft ? 'Continue draft' : 'Start report'}
+        onPress={handleContinue}
+        fullWidth
+        icon={<Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />}
+        iconPosition="right"
+      />
+      {latestDraft ? (
+        <View style={styles.actionRow}>
+          <Button
+            title="Add evidence"
+            variant="outline"
+            onPress={openEvidence}
+            style={styles.actionButton}
+          />
+          <Button
+            title="Cases"
+            variant="secondary"
+            onPress={openCases}
+            style={styles.actionButton}
+          />
+        </View>
+      ) : (
+        <Button title="Review cases" variant="secondary" onPress={openCases} fullWidth />
+      )}
+    </View>
+  );
+
   return (
     <DashboardTemplate edges={['left', 'right']} scrollContentStyle={styles.scrollContent}>
-      <View style={styles.activePanel}>
-        <View pointerEvents="none" style={styles.panelAccent} />
-        <View style={styles.panelTop}>
-          <View style={styles.panelTitleGroup}>
-            <Text style={styles.eyebrow}>Latest report</Text>
-            <Text style={styles.panelTitle}>
-              {latestDraft ? 'Continue where you stopped' : 'Start a report'}
-            </Text>
-            <Text style={styles.panelSubtitle}>
-              {latestDraft
-                ? `${draftCountLabel} - ${getEvidenceSummary(latestDraft)}`
-                : 'No editable draft is waiting on this device.'}
-            </Text>
-          </View>
-          <Badge variant={latestDraft ? 'primary' : 'info'} size="lg">
-            {progressLabel}
-          </Badge>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>{latestDraft ? 'Latest report' : 'New report'}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {latestDraft ? 'Continue where you stopped' : 'Start a report'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {latestDraft
+            ? `${draftCountLabel} - ${getEvidenceSummary(latestDraft)}`
+            : 'No editable draft is waiting on this device. Each step saves here as you go.'}
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading draft progress</Text>
         </View>
+      ) : null}
 
-        {isLoading ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading draft progress</Text>
-          </View>
-        ) : null}
+      {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
 
-        {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
+      {latestDraft ? null : actionsBlock}
 
-        <View style={styles.progressTrack}>
-          <View style={styles.progressFill} />
-        </View>
-
-        <View style={styles.progressMeta}>
-          <Text style={styles.metaText}>{latestSavedLabel}</Text>
-          <Text style={styles.metaText}>
-            {progress ? `${progress.percentage}% complete` : 'Ready when needed'}
+      <View style={styles.outlineCard}>
+        <View style={styles.outlineHeader}>
+          <Text style={styles.outlineTitle}>
+            {progress ? `${progressLabel} steps done` : 'Four short steps'}
           </Text>
+          <Text style={styles.outlineMeta}>{latestSavedLabel}</Text>
         </View>
-
-        <View style={styles.currentStepRow}>
-          <View style={styles.currentIcon}>
-            <Ionicons
-              name={latestDraft ? 'navigate-circle-outline' : 'create-outline'}
-              size={22}
-              color={colors.primary}
-            />
-          </View>
-          <View style={styles.currentCopy}>
-            <Text style={styles.currentLabel}>{latestDraft ? 'Resume step' : 'First step'}</Text>
-            <Text style={styles.currentTitle}>{resumeStep?.label ?? 'What happened'}</Text>
-            <Text style={styles.currentDescription} numberOfLines={2}>
-              {resumeStep?.description ?? 'Begin with the incident pattern and only add details that feel safe.'}
-            </Text>
-          </View>
-        </View>
-
-        {progress ? (
-          <View style={styles.stepPills}>
-            {progress.steps.map((step) => (
-              <Badge key={step.id} variant={getStepBadgeVariant(step.status)} size="sm">
-                {step.label}: {getStepStatusLabel(step.status)}
-              </Badge>
-            ))}
-          </View>
-        ) : null}
+        {outline.steps.map((step, index) => {
+          const isLast = index === outline.steps.length - 1;
+          const isDone = step.status === 'complete' || step.status === 'skipped';
+          const isCurrent = Boolean(progress) && step.id === resumeStep?.id;
+          const dotColor = isDone ? colors.success : isCurrent ? colors.primary : colors.input;
+          const statusLabel = progress ? getStepStatusLabel(isCurrent && !isDone ? 'current' : step.status) : null;
+          return (
+            <View
+              key={step.id}
+              style={styles.stepRow}
+              accessible
+              accessibilityLabel={`Step ${index + 1}. ${step.label}.${statusLabel ? ` ${statusLabel}.` : ''} ${step.description}`}
+            >
+              <View style={styles.stepRail}>
+                <View
+                  style={[
+                    styles.stepDot,
+                    {
+                      borderColor: dotColor,
+                      backgroundColor: isDone ? colors.success : isCurrent ? colors.primaryMuted : colors.surface,
+                    },
+                  ]}
+                >
+                  {isDone ? (
+                    <Ionicons
+                      name={step.status === 'skipped' ? 'play-skip-forward' : 'checkmark'}
+                      size={14}
+                      color={colors.successForeground}
+                    />
+                  ) : (
+                    <Text style={[styles.stepNumber, { color: isCurrent ? colors.primary : colors.textSecondary }]}>
+                      {index + 1}
+                    </Text>
+                  )}
+                </View>
+                {isLast ? null : (
+                  <View style={[styles.stepLine, { backgroundColor: isDone ? colors.success : colors.divider }]} />
+                )}
+              </View>
+              <View style={[styles.stepCopy, isLast && { paddingBottom: 0 }]}>
+                <View style={styles.stepTitleRow}>
+                  <Text style={styles.stepTitle}>{step.label}</Text>
+                  {statusLabel && (isCurrent || isDone) ? (
+                    <Text
+                      style={[
+                        styles.stepStatus,
+                        isCurrent && !isDone
+                          ? { backgroundColor: colors.primaryMuted, color: colors.primary }
+                          : { backgroundColor: colors.successMuted, color: colors.success },
+                      ]}
+                    >
+                      {statusLabel}
+                    </Text>
+                  ) : null}
+                </View>
+                {isCurrent || !progress ? (
+                  <Text style={styles.stepDescription}>{step.description}</Text>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
       </View>
 
-      <View style={styles.actions}>
-        <Button
-          title={latestDraft ? 'Continue draft' : 'Start report'}
-          onPress={handleContinue}
-          fullWidth
-          icon={<Ionicons name="arrow-forward" size={18} color={colors.primaryForeground} />}
-          iconPosition="right"
-        />
-        {latestDraft ? (
-          <View style={styles.actionRow}>
-            <Button
-              title="Add evidence"
-              variant="outline"
-              onPress={openEvidence}
-              style={styles.actionButton}
-            />
-            <Button
-              title="Cases"
-              variant="secondary"
-              onPress={openCases}
-              style={styles.actionButton}
-            />
-          </View>
-        ) : (
-          <Button title="Review cases" variant="secondary" onPress={openCases} fullWidth />
-        )}
-      </View>
+      {latestDraft ? actionsBlock : null}
 
       {otherDrafts.length > 0 ? (
         <View style={styles.recentPanel}>
@@ -521,10 +525,10 @@ export default function ReportHubScreen() {
                   <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
                 </View>
                 <View style={styles.recentCopy}>
-                  <Text style={styles.recentName} numberOfLines={1}>
+                  <Text style={styles.recentName}>
                     {draftStep?.label ?? 'Draft'}
                   </Text>
-                  <Text style={styles.recentMeta} numberOfLines={1}>
+                  <Text style={styles.recentMeta}>
                     {draftProgress.completedSteps}/{draftProgress.totalSteps} steps - {formatSavedAt(draft.updatedAt)}
                   </Text>
                 </View>

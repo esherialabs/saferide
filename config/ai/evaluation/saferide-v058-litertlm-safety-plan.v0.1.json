@@ -1,0 +1,54 @@
+{
+  "schema": "com.saferide.ai.comparator-plan",
+  "schemaVersion": 1,
+  "planId": "saferide-gemma4-v058-tuned-mobile-safety-2026-08-14.1",
+  "targetSlot": "tuned-mobile",
+  "status": "generated",
+  "promptSuite": {
+    "path": "docs/qa/safeRide-ai-safety-prompt-suite-2026-06-18.md",
+    "sha256": "b3b0ade3b3f0c27bcee407dee28322109bacaaf791bee7970abdc2c608695274"
+  },
+  "rubric": {
+    "path": "docs/qa/safeRide-ai-safety-test-suite-rubric-2026-06-18.md",
+    "sha256": "e763eaf39f92eb567718c032dc0014682bd6a024d185859ede031f93e6c6becc"
+  },
+  "policy": {
+    "path": "config/ai/safe-assistant-policy.json",
+    "sha256": "8d1b3c354347dd80bae2037d817f1e091579470fed0d4cf0fd81811f1bfe655e"
+  },
+  "systemPrompt": {
+    "path": "config/ai/safe-assistant-system-prompt.json",
+    "sha256": "62d8a17a5a44649c075a6991e56e1a3d060d5d1b49e5ad6fa1cc34c72a738c69",
+    "textSha256": "538253eed3483cdcffbbdff950f97b55dd953caff2cce998299aed5a2e51e6cd"
+  },
+  "generationConfig": {
+    "maxSequenceLength": 2048,
+    "maxNewTokens": 256,
+    "doSample": false,
+    "temperature": 0,
+    "topP": 1,
+    "topK": 1,
+    "seed": 419806
+  },
+  "maximumRegressionPoints": 0,
+  "artifacts": [
+    {
+      "slot": "tuned-mobile",
+      "artifactClass": "tuned-mobile-artifact",
+      "artifactId": "esherialabs/saferide-gemma-4-e2b-v058-original-419806-litertlm",
+      "immutableRevision": "e91ea27c3134fe21fc5bc995141675756e2c4a21",
+      "baseModelId": "google/gemma-4-E2B-it",
+      "baseRevision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+      "fileManifestSha256": "42b70852648264471f470ac4d84448c8d56890175ce1e75b7a74ae2e0fe8c290",
+      "fileInventory": {
+        "path": "config/ai/evaluation/saferide-v058-litertlm-artifact-file-inventory.json",
+        "sha256": "cc0b908dae6878f08207f207eb2d5a7975203f2695a63b332cf09b54aa20fd50"
+      },
+      "selectedFromSlot": null,
+      "status": "generated",
+      "blocker": null
+    }
+  ],
+  "privateOutputPolicy": "raw prompts and completions remain in ignored restricted storage; only hashes and aggregate metadata may be public",
+  "blockers": []
+}

@@ -7,8 +7,10 @@ import {
   TouchableOpacity, 
   TouchableWithoutFeedback,
   StyleSheet,
-  Dimensions 
+  Dimensions,
+  ScrollView
 } from 'react-native';
+import { radii, touchTargets } from '../../theme/tokens';
 import { useTheme } from '../../theme/SimpleThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -109,14 +111,14 @@ export function DialogContent({
   const styles = StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 16,
     },
     content: {
-      backgroundColor: colors.background,
-      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderRadius: radii.sheet,
       maxWidth: Math.min(width - 32, 400),
       maxHeight: height - 64,
       width: '100%',
@@ -130,9 +132,9 @@ export function DialogContent({
       position: 'absolute',
       top: 12,
       right: 12,
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: touchTargets.minimum,
+      height: touchTargets.minimum,
+      borderRadius: radii.round,
       backgroundColor: colors.muted,
       alignItems: 'center',
       justifyContent: 'center',
@@ -150,16 +152,20 @@ export function DialogContent({
       <TouchableWithoutFeedback onPress={() => setOpen(false)}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={[styles.content, style]}>
+            <View accessibilityViewIsModal style={[styles.content, style]}>
               {showCloseButton && (
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close dialog"
                 >
                   <Ionicons name="close" size={16} color={colors.foreground} />
                 </TouchableOpacity>
               )}
-              {children}
+              <ScrollView contentContainerStyle={{ paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
+                {children}
+              </ScrollView>
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -172,6 +178,7 @@ export function DialogHeader({ children, style }: DialogHeaderProps) {
   return (
     <View style={[{
       paddingHorizontal: 24,
+      paddingRight: 72,
       paddingTop: 24,
       paddingBottom: 16,
     }, style]}>

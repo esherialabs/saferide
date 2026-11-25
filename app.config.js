@@ -65,6 +65,7 @@ function parseEnvLine(line) {
 }
 
 function loadLocalEnv() {
+  if (process.env.EXPO_NO_DOTENV === '1') return;
   const loaded = {};
 
   for (const file of ENV_FILES) {
@@ -247,7 +248,7 @@ function runtimeContext() {
 
   if (releaseLike && releaseEndpointHosts.length === 0) {
     throw new Error(
-      `${RELEASE_ENDPOINT_HOSTS_ENV} must list the expected CloudFront API/auth/websocket/runtime-config hostnames for release-like builds.`,
+      `${RELEASE_ENDPOINT_HOSTS_ENV} must list the expected owned API/auth/websocket/runtime-config hostnames for release-like builds.`,
     );
   }
   if (releaseLike && releaseStorageHosts.length === 0) {
@@ -479,6 +480,11 @@ function moderatedTestRuntimeEnv(context) {
   return { enabled, controlVersion };
 }
 
+// Over-the-air updates stay off: the app must not contact u.expo.dev. Releases ship as signed builds.
+function updatesForBuildProfile() {
+  return { enabled: false, checkAutomatically: 'NEVER' };
+}
+
 loadLocalEnv();
 
 module.exports = ({ config } = {}) => {
@@ -500,6 +506,7 @@ module.exports = ({ config } = {}) => {
 
   return {
     ...base,
+    updates: updatesForBuildProfile(),
     extra: {
       ...(base.extra ?? {}),
       runtime: {

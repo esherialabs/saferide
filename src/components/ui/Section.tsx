@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    ...typography.titleS,
+    ...typography.titleMedium,
   },
   description: {
     ...typography.bodyS,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     borderWidth: borders.standard,
     gap: spacing.md,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   formContent: {
     gap: spacing.sm,

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList, ReportStackParamList } from './routes';
 import { MainTabName, getMainTabShell } from './shellRoutes';
 import { resetToCalculatorDecoyIfUnlockable } from './quickExitNavigation';
@@ -22,7 +23,7 @@ import ChatLegalAidScreen from '../screens/ChatLegalAid';
 import LearnScreen from '../screens/Learn';
 import { AppHeader } from '../components/ui/AppShell';
 import { useTheme } from '../theme/SimpleThemeProvider';
-import { borders, elevation, spacing, typography } from '../theme/tokens';
+import { borders, radii, spacing, typography } from '../theme/tokens';
 import { DecoyPinManager } from '../utils/decoyPin';
 import { useLanguage } from '../context/LanguageProvider';
 
@@ -50,9 +51,20 @@ function ReportStackScreen() {
 
 export function BottomTabs() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { fontScale, width } = useWindowDimensions();
   const { languageCode } = useLanguage();
   const decoyPinManager = useMemo(() => DecoyPinManager.getInstance(), []);
   const tabShell = useMemo(() => getMainTabShell(languageCode), [languageCode]);
+  const labelLayoutKey = `${width}:${fontScale}:${languageCode}`;
+  const [measuredLabelLines, setMeasuredLabelLines] = useState<Record<string, Record<string, number>>>({});
+  const labelLines = Math.max(
+    fontScale >= 1.6 && width < 390 ? 2 : 1,
+    ...Object.values(measuredLabelLines[labelLayoutKey] ?? {}),
+  );
+  // UIKit navigator: 30dp icon slot + label + 5dp button padding on each side.
+  const tabButtonHeight = Math.max(48, 30 + 2 + typography.labelSmall.lineHeight * fontScale * labelLines + 10);
+  const tabBarHeight = insets.bottom + borders.hairline + spacing.xs + spacing.xxs + spacing.xxxs * 2 + tabButtonHeight;
   const [calculatorUnlockable, setCalculatorUnlockable] = useState(false);
 
   const refreshCalculatorUnlockable = useCallback(() => {
@@ -85,7 +97,8 @@ export function BottomTabs() {
           header: () => (
             <AppHeader
               title={shell.title}
-              subtitle={shell.subtitle}
+              subtitle={tabName === 'Home' ? undefined : shell.subtitle}
+              showAppearance={tabName === 'Home'}
               onSettingsPress={() => (navigation.getParent() as any)?.navigate('Settings')}
               onQuickExitPress={() => {
                 void resetToCalculatorDecoyIfUnlockable(navigation, () => decoyPinManager.canUnlockCalculator());
@@ -95,31 +108,38 @@ export function BottomTabs() {
           ),
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textSecondary,
-          tabBarLabel: shell.label,
-          tabBarLabelStyle: styles.tabLabel,
+          title: shell.label,
+          tabBarAccessibilityLabel: shell.label,
+          tabBarLabelPosition: 'below-icon',
+          tabBarIconStyle: { width: 56, height: 30 },
+          // Keep the device's text size; the dock grows to fit the label beneath its icon.
+          tabBarLabel: ({ color }) => (
+            <Text
+              style={[styles.tabLabel, { color }]}
+              onTextLayout={({ nativeEvent }) => {
+                const lines = Math.max(1, nativeEvent.lines.length);
+                setMeasuredLabelLines(previous => previous[labelLayoutKey]?.[route.name] === lines
+                  ? previous
+                  : { ...previous, [labelLayoutKey]: { ...previous[labelLayoutKey], [route.name]: lines } });
+              }}
+            >
+              {shell.label}
+            </Text>
+          ),
           tabBarItemStyle: styles.tabItem,
           tabBarStyle: {
             backgroundColor: colors.surface,
             borderTopColor: colors.divider,
             borderTopWidth: borders.hairline,
-            minHeight: 92,
-            paddingBottom: spacing.sm,
+            // Custom padding replaces the navigator's default, so the system inset is added back here.
+            height: tabBarHeight,
+            paddingBottom: insets.bottom + spacing.xxs,
             paddingHorizontal: spacing.xs,
-            paddingTop: spacing.sm,
-            ...elevation.card,
+            paddingTop: spacing.xs,
           },
-          tabBarIcon: ({ color, focused, size }) => (
-            <View style={styles.tabIconWrap}>
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.activeTabLine,
-                  {
-                    backgroundColor: focused ? colors.primary : 'transparent',
-                  },
-                ]}
-              />
-              <Ionicons name={shell.icon as keyof typeof Ionicons.glyphMap} size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrap, { backgroundColor: focused ? colors.primaryMuted : 'transparent' }]}>
+              <Ionicons name={shell.icon as keyof typeof Ionicons.glyphMap} size={22} color={focused ? colors.primary : color} />
             </View>
           ),
         };
@@ -139,8 +159,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     fontWeight: '700',
     lineHeight: typography.labelSmall.lineHeight,
-    marginTop: spacing.xxs,
+    marginTop: 2,
     minHeight: typography.labelSmall.lineHeight,
+    alignSelf: 'stretch',
+    maxWidth: '100%',
+    minWidth: 0,
+    textAlign: 'center',
   },
   tabItem: {
     borderRadius: 0,
@@ -151,18 +175,11 @@ const styles = StyleSheet.create({
   },
   tabIconWrap: {
     alignItems: 'center',
+    borderRadius: radii.round,
     flexShrink: 0,
     justifyContent: 'center',
-    marginBottom: spacing.xxs,
     minHeight: 30,
-    minWidth: 64,
+    minWidth: 56,
     position: 'relative',
-  },
-  activeTabLine: {
-    borderRadius: 999,
-    height: 3,
-    position: 'absolute',
-    top: -spacing.xs,
-    width: 34,
   },
 });

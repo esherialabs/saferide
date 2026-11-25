@@ -158,5 +158,143 @@
         "slow_or_stalled": "Task is slow or stalled"
       }
     }
+  },
+  "partnerSharing": {
+    "partnerShortName": "HURIA",
+    "partnerFullName": "Human Rights Agenda",
+    "partnerPhone": "0769 546 253",
+    "optIn": {
+      "cardTitle": "Share with HURIA (optional)",
+      "toggleLabel": "Also share with HURIA (Human Rights Agenda), SafeRide's partner on the Coast",
+      "toggleHint": "Off unless you turn it on. SafeRide gets your report either way.",
+      "referralOnlyForPartner": "This option appears only when you pick HURIA as your provider."
+    },
+    "consent": {
+      "title": "What sharing with HURIA means",
+      "escalationSees": "Named HURIA staff will see this report in their secure SafeRide dashboard as the packet you prepared, at the redaction level you chose ({redactionLevel}): what happened and your statement, any impact or witness details you added, the time, the place in words, your tags and any vehicle details, your alias if you chose one, and the list of your evidence, including your descriptions and transcripts of any recordings (with the masking you chose), but not the files themselves. They never see your exact map coordinates.",
+      "referralSees": "Named HURIA staff will see the same reviewed report packet used for escalation, shown below at the selected masking level ({redactionLevel}). When support details are on, it includes what happened, your statement, any impact or witness details, time and place in words, tags, vehicle details and any chosen alias, plus evidence descriptions and transcripts. If support details are off, the packet contains no report details or evidence list. HURIA never sees your exact map coordinates. Evidence files are not shared.",
+      "notShared": "SafeRide does not send HURIA the phone number or email of your SafeRide account. HURIA gets a phone number only if you choose to add a callback number below. Evidence files (photos, audio, video and documents) are not shared with HURIA yet.",
+      "withdraw": "You can stop sharing at any time from this case or from Privacy & data. HURIA then loses access to this report straight away. Anything HURIA has already done, such as calling you or referring you onward, cannot be undone.",
+      "reference": "After you send, you get a reference number. HURIA is the digital recipient for both support referrals and escalations. HURIA can coordinate onward support with police, health services or other providers; SafeRide does not send this packet directly to those organisations. To talk to HURIA, call 0769 546 253 and quote your reference. HURIA calls you only if you choose to share a callback number."
+    },
+    "callback": {
+      "toggleLabel": "Let HURIA call me back (optional)",
+      "toggleHint": "Off unless you turn it on. Without it, you call HURIA yourself and quote your reference.",
+      "inputLabel": "Kenyan mobile number HURIA can call",
+      "inputPlaceholder": "07XX XXX XXX",
+      "invalidNumber": "Enter a Kenyan mobile number, for example 0712 345 678.",
+      "body": "HURIA staff may call you on this number about this report. Authorised HURIA caseworkers can see it, and every time someone views it, that view is logged. If you stop sharing, the number is removed.",
+      "safetyTip": "Safety tip: only share a number that is safe for you to be called on. If someone else might answer or check this phone, leave this off and call HURIA yourself."
+    },
+    "review": {
+      "cardTitle": "Sharing with HURIA",
+      "consentCheckbox": "I agree to share this report with HURIA as described above.",
+      "callbackCheckbox": "I agree that HURIA may call me on {phone}.",
+      "turnOff": "Don't share with HURIA",
+      "turnedOffToastTitle": "Not sharing with HURIA",
+      "turnedOffToastBody": "This report will go to SafeRide only.",
+      "consentRequiredTitle": "HURIA consent needed",
+      "consentRequiredBody": "Tick the HURIA consent, or choose not to share with HURIA, to continue.",
+      "callbackInvalidBody": "The callback number is not a Kenyan mobile number. Fix it in the previous step or turn the callback off.",
+      "savedToastBody": "Saved on this phone. Nothing has been sent to SafeRide or HURIA yet.",
+      "unavailableNotice": "Sharing with HURIA is not available right now. If you continue, this report goes to SafeRide only.",
+      "callbackNumberLabel": "Number HURIA may call"
+    },
+    "confirmation": {
+      "statusSent": "Sent to SafeRide",
+      "statusQueued": "Queued on this phone",
+      "titleSent": "Sent to SafeRide",
+      "titleQueued": "Queued to send",
+      "subtitleSent": "Your report was sent to SafeRide.",
+      "subtitleRouted": "Sent to SafeRide. HURIA will see it in their secure dashboard.",
+      "subtitleNotRouted": "It has not been shared with any partner.",
+      "subtitleUnavailable": "Sharing with HURIA is not available right now, so your report was sent to SafeRide only. Nothing was shared with HURIA.",
+      "subtitleQueued": "We'll send it to SafeRide when you're online.",
+      "subtitleQueuedPartner": "We'll send it to SafeRide when you're online. HURIA will see it then too, if sharing with HURIA is still available.",
+      "referenceLabel": "HURIA reference",
+      "referenceHint": "To talk to HURIA, call 0769 546 253 and quote this reference.",
+      "callbackShared": "HURIA may call you on the number you shared.",
+      "callbackNotShared": "Your callback number was not shared, because HURIA's callback option is not available right now. To talk to HURIA, call 0769 546 253 and quote your reference."
+    },
+    "status": {
+      "new": "Waiting for HURIA",
+      "acknowledged": "HURIA has received your case",
+      "in_progress": "HURIA is working on it",
+      "referred_onward": "HURIA referred you onward",
+      "closed": "Closed by HURIA",
+      "withdrawn": "You stopped sharing with HURIA",
+      "unavailable": "Not shared: sharing with HURIA was unavailable",
+      "pending": "Will be shared with HURIA when sent",
+      "needsAttention": "Sharing with HURIA needs your attention"
+    },
+    "timeline": {
+      "routedTitle": "Shared with HURIA",
+      "routedBody": "HURIA can now see this report in their secure dashboard. Your reference is {reference}.",
+      "newBody": "HURIA has not acknowledged this report yet.",
+      "acknowledgedBody": "HURIA has acknowledged your report.",
+      "inProgressBody": "A HURIA caseworker is working on your report.",
+      "referredOnwardBody": "HURIA has referred your case to another service. Call HURIA to find out more.",
+      "closedBody": "HURIA has closed its work on this report. SafeRide still has your report.",
+      "callHint": "To talk to HURIA, call 0769 546 253 and quote your reference."
+    },
+    "caseDetail": {
+      "cardTitle": "Sharing with HURIA",
+      "referenceLabel": "Reference",
+      "statusLabel": "Status",
+      "callbackLabel": "Callback number",
+      "callbackShared": "Shared with HURIA",
+      "callbackNotShared": "Not shared",
+      "stopButton": "Stop sharing with HURIA",
+      "stopConfirmTitle": "Stop sharing with HURIA?",
+      "stopConfirmBody": "HURIA will lose access to this report straight away, and your callback number will be removed if you shared one. SafeRide keeps your report. Anything HURIA has already done, such as calling you or referring you onward, cannot be undone.",
+      "stopConfirmAction": "Stop sharing",
+      "stopCancel": "Keep sharing",
+      "stopDoneTitle": "You stopped sharing with HURIA",
+      "stopDoneBody": "HURIA can no longer see this report.",
+      "stopPendingTitle": "Not confirmed yet",
+      "stopPendingBody": "SafeRide could not confirm this with the server. Check your connection and try again.",
+      "stopUnavailableBody": "This phone no longer has the record that links this report to your HURIA consent, for example after reinstalling SafeRide.",
+      "stopAllButton": "Stop sharing all my reports with HURIA",
+      "stopAllConfirmTitle": "Stop sharing all your reports with HURIA?",
+      "stopAllConfirmBody": "SafeRide cannot tell which consent belongs to this report, so it will withdraw every HURIA consent on your account. HURIA will lose access to all your reports straight away, and any callback number you shared will be removed. SafeRide keeps your reports. Anything HURIA has already done cannot be undone.",
+      "stopAllConfirmAction": "Stop sharing all",
+      "stopAllDoneBody": "HURIA can no longer see any of your reports.",
+      "stopAllNoneBody": "There is no active HURIA consent on your account.",
+      "reviewSharing": "Review sharing with HURIA"
+    },
+    "errors": {
+      "unavailableTitle": "Sent to SafeRide only",
+      "unavailableBody": "Sharing with HURIA is not available right now, so your report was sent to SafeRide only. Nothing was shared with HURIA.",
+    "withdrawnBody": "You withdrew your HURIA consent before this report was sent, so it was sent to SafeRide only. Nothing was shared with HURIA.",
+    "callbackUnavailableTitle": "Callback number not shared",
+    "callbackUnavailableBody": "Your report is being shared with HURIA, but your callback number was not shared, because HURIA's callback option is not available right now. To talk to HURIA, call 0769 546 253 and quote your reference.",
+      "conflictTitle": "Sharing with HURIA needs a fresh confirmation",
+      "partner_not_accepting": "HURIA is not accepting new reports through SafeRide right now. Nothing was sent. Try again later, or choose not to share with HURIA to send to SafeRide only.",
+      "partner_consent_missing": "Your permission to share with HURIA changed before this report was sent. Nothing was sent. Review sharing with HURIA and try again.",
+      "callback_consent_missing": "Your permission for HURIA to call you changed before this report was sent. Nothing was sent. Review your callback choice and try again.",
+      "confirmationRequired": "Confirm sharing with HURIA again, or choose not to share with HURIA, before this report is sent."
+    },
+    "privacy": {
+      "partner_follow_up": "Sharing a report with HURIA",
+      "partner_callback": "HURIA may call you back",
+      "granted": "active",
+      "withdrawn": "withdrawn",
+      "withdrawalPending": "withdrawal not yet confirmed by the server",
+      "withdrawnToastBody": "HURIA can no longer see the report this consent covered."
+    }
+  },
+  "caseSubmission": {
+    "notSentTitle": "Saved on this phone; not sent",
+    "escalationNotSentBody": "Sending reports to SafeRide is not switched on, so nothing has left this phone.",
+    "referralNotSentBody": "Your provider choice is saved on this phone. Sending reports to SafeRide is not switched on, so nothing has left this phone.",
+    "partnerNotSentNote": "Nothing has been shared with HURIA.",
+    "queuedTitle": "Queued to send to SafeRide",
+    "queuedBody": "Your report will be sent to SafeRide from this phone. You can follow it in Cases.",
+    "queuedOfflineBody": "Your report is saved on this phone and will be sent to SafeRide when you are online.",
+    "signInTitle": "Sign in to send",
+    "signInBody": "Sending a report to SafeRide needs a signed-in SafeRide account, and this phone is using SafeRide as a guest. Your report stays saved on this phone and has not been sent.",
+    "signInHint": "To sign in, back up your reports first from Privacy & data: leaving guest mode clears SafeRide data on this phone.",
+    "signInKeep": "Keep it on this phone",
+    "pausedRecovery": "Sending to SafeRide is paused. Your report is saved on this phone and has not been sent."
   }
 }

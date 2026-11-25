@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.invalid/schemas/ai-v057-final-targeted-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "issue", "branch", "pullRequest", "status", "createdAt", "bindings", "preservedEvidence", "screens", "pilot", "panel", "gpu", "operations", "validation", "decision", "privacy", "untouched"],
+  "properties": {
+    "schema": {"const": "com.saferide.ai.v057-final-targeted-result"}, "schemaVersion": {"const": 1},
+    "issue": {"const": "ESH-4198"}, "branch": {"const": "codex/esh-4198-v051-mitigation"}, "pullRequest": {"const": 205},
+    "status": {"enum": ["go-pilot-gates-passed-review-required", "no-go-panel-gates-failed", "no-go-pilot-failed"]}, "createdAt": {"type": "string"},
+    "bindings": {"type": "object", "minProperties": 15, "additionalProperties": {"type": ["string", "integer"]}},
+    "preservedEvidence": {"type": "object", "additionalProperties": true, "required": ["v054ResultSha256", "v055ResultSha256", "v056ResultSha256", "rewritten"]},
+    "screens": {"type": "object", "additionalProperties": {"type": "string"}},
+    "pilot": {"type": "object", "additionalProperties": true}, "panel": {"type": ["object", "null"], "additionalProperties": true},
+    "gpu": {"type": "object", "additionalProperties": true}, "operations": {"type": "object", "additionalProperties": true},
+    "validation": {"type": "object", "additionalProperties": true}, "decision": {"type": "object", "additionalProperties": true},
+    "privacy": {"type": "object", "additionalProperties": {"type": "boolean"}}, "untouched": {"type": "object", "additionalProperties": {"type": "boolean"}}
+  }
+}

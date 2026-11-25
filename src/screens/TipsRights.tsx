@@ -182,7 +182,7 @@ export default function TipsRights() {
 
   const debouncedQuery = useDebounce(searchQuery, 300);
   const startCardWidth = useMemo(() => Math.min(238, Math.max(214, width * 0.58)), [width]);
-  const sheetMaxHeight = useMemo(() => Math.max(320, Math.floor(height * 0.88)), [height]);
+  const sheetMaxHeight = useMemo(() => Math.floor(height * 0.88), [height]);
 
   useEffect(() => {
     (async () => {
@@ -463,27 +463,17 @@ export default function TipsRights() {
     noticeBanner: {
       alignItems: 'center',
       backgroundColor: colors.infoMuted,
-      borderColor: colors.divider,
       borderRadius: radii.card,
-      borderWidth: borders.hairline,
       flexDirection: 'row',
       gap: spacing.sm,
       overflow: 'hidden',
       padding: spacing.sm,
-      paddingLeft: spacing.md,
       position: 'relative',
     },
     noticeText: {
       ...typography.bodySmall,
       color: colors.textSecondary,
       flex: 1,
-    },
-    noticeAccentLeft: {
-      bottom: 0,
-      left: 0,
-      position: 'absolute',
-      top: 0,
-      width: 4,
     },
     noticeDismiss: {
       alignItems: 'center',
@@ -495,14 +485,11 @@ export default function TipsRights() {
     guidanceNotice: {
       alignItems: 'flex-start',
       backgroundColor: colors.surfaceAlt,
-      borderColor: colors.divider,
       borderRadius: radii.card,
-      borderWidth: borders.hairline,
       flexDirection: 'row',
       gap: spacing.sm,
       overflow: 'hidden',
       padding: spacing.sm,
-      paddingLeft: spacing.md,
       position: 'relative',
     },
     guidanceText: {
@@ -530,16 +517,7 @@ export default function TipsRights() {
       marginTop: spacing.xxxs,
     },
     sectionShell: {
-      backgroundColor: colors.surface,
-      borderColor: colors.divider,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
       gap: spacing.sm,
-      overflow: 'hidden',
-      padding: spacing.sm,
-      paddingTop: spacing.md,
-      position: 'relative',
-      ...elevation.card,
     },
     horizontalScroller: {
       marginHorizontal: -spacing.sm,
@@ -594,44 +572,14 @@ export default function TipsRights() {
       marginTop: spacing.xs,
     },
     controlsPanel: {
-      backgroundColor: colors.surface,
-      borderColor: colors.divider,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
+      // Search and focus chips sit on the canvas under the title.
       gap: spacing.xs,
-      overflow: 'hidden',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.sm,
-      position: 'relative',
-      ...elevation.card,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     searchContainer: {
       position: 'relative',
     },
-    searchInput: {
-      paddingLeft: 40,
-      paddingRight: 40,
-    },
-    searchIcon: {
-      left: 12,
-      position: 'absolute',
-      top: 12,
-    },
-    clearButton: {
-      height: 32,
-      position: 'absolute',
-      right: 4,
-      top: 4,
-      width: 32,
+    searchField: {
+      marginBottom: 0,
     },
     focusScroller: {
       marginHorizontal: 0,
@@ -763,7 +711,8 @@ export default function TipsRights() {
       flex: 1,
     },
     detailScroll: {
-      marginTop: spacing.md,
+      flex: 1,
+      minHeight: 0,
     },
     detailContent: {
       gap: spacing.md,
@@ -817,9 +766,9 @@ export default function TipsRights() {
       borderColor: colors.divider,
       borderRadius: radii.round,
       borderWidth: borders.hairline,
-      height: 36,
+      height: 48,
       justifyContent: 'center',
-      width: 36,
+      width: 48,
     },
   });
 
@@ -848,31 +797,26 @@ export default function TipsRights() {
           </FeatureHeader>
 
           <View style={styles.controlsPanel}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
 
             <View style={styles.searchContainer}>
-              <Ionicons
-                name="search"
-                size={16}
-                color={colors.mutedForeground}
-                style={styles.searchIcon}
-              />
               <Input
                 placeholder="Search guides"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                style={styles.searchInput}
+                containerStyle={styles.searchField}
+                startAdornment={<Ionicons accessible={false} name="search" size={18} color={colors.mutedForeground} />}
+                endAdornment={searchQuery ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    style={{ minWidth: 48 }}
+                    onPress={() => setSearchQuery('')}
+                    accessibilityLabel="Clear guide search"
+                  >
+                    <Ionicons accessible={false} name="close" size={18} color={colors.mutedForeground} />
+                  </Button>
+                ) : undefined}
               />
-              {searchQuery ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onPress={() => setSearchQuery('')}
-                  style={styles.clearButton}
-                >
-                  <Ionicons name="close" size={16} color={colors.mutedForeground} />
-                </Button>
-              ) : null}
             </View>
 
             <ScrollView
@@ -931,7 +875,6 @@ export default function TipsRights() {
 
           {!isOnline && showOfflineBanner ? (
             <View style={styles.noticeBanner}>
-              <View pointerEvents="none" style={[styles.noticeAccentLeft, { backgroundColor: colors.info }]} />
               <Ionicons name="cloud-offline-outline" size={18} color={colors.info} />
               <Text style={styles.noticeText}>
                 Saved tips remain available offline. Source links may need data.
@@ -949,7 +892,6 @@ export default function TipsRights() {
 
           {showGuidanceNotice ? (
             <View style={styles.guidanceNotice}>
-              <View pointerEvents="none" style={[styles.noticeAccentLeft, { backgroundColor: colors.primary }]} />
               <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
               <Text style={styles.guidanceText}>
                 General information only. SafeRide does not give legal, medical, counselling, or emergency-response advice; you choose what to use.
@@ -967,7 +909,6 @@ export default function TipsRights() {
 
           {!filtersActive && startGuides.length > 0 ? (
             <View style={styles.sectionShell}>
-              <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.support }]} />
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderCopy}>
                   <Text style={styles.sectionTitle}>Start here</Text>
@@ -1069,7 +1010,6 @@ export default function TipsRights() {
           ) : null}
 
           <View style={styles.sectionShell}>
-            <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.primary }]} />
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderCopy}>
                 <Text style={styles.sectionTitle}>
@@ -1205,12 +1145,16 @@ export default function TipsRights() {
         }}
       >
         <SheetContent
-          snapPoints={[0.58, 0.9]}
+          snapPoints={[1]}
           initialSnapPoint={0}
-          style={{ minHeight: '58%', maxHeight: sheetMaxHeight }}
+          style={{ height: sheetMaxHeight, maxHeight: sheetMaxHeight }}
         >
           {selectedTip ? (
-            <>
+            <ScrollView
+              style={styles.detailScroll}
+              contentContainerStyle={styles.detailContent}
+              showsVerticalScrollIndicator
+            >
               <View style={styles.sheetHeaderRow}>
                 <SheetHeader style={styles.sheetHeaderCopy}>
                   <SheetTitle>{selectedTip.title}</SheetTitle>
@@ -1229,129 +1173,129 @@ export default function TipsRights() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView
-                style={styles.detailScroll}
-                contentContainerStyle={styles.detailContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.detailMetaRow}>
-                  <Badge variant="secondary">{selectedTip.category}</Badge>
-                  <Badge variant="secondary">Updated {selectedTip.updated}</Badge>
-                </View>
+              <View style={styles.detailMetaRow}>
+                <Badge variant="secondary">{selectedTip.category}</Badge>
+                <Badge variant="secondary">Updated {selectedTip.updated}</Badge>
+              </View>
 
-                <Text style={styles.detailBody}>{selectedTip.body}</Text>
+              <Text style={styles.detailBody}>{selectedTip.body}</Text>
 
-                {selectedTip.tags.length > 0 ? (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>Topics</Text>
-                    <View style={styles.detailTags}>
-                      {selectedTip.tags.map(tag => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                {selectedTip.hasCopySteps && selectedTip.copySteps?.length ? (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>Steps</Text>
-                    {selectedTip.copySteps.map((step, index) => (
-                      <Text key={`${selectedTip.id}_step_${index}`} style={styles.detailStep}>
-                        {index + 1}. {step}
-                      </Text>
+              {selectedTip.tags.length > 0 ? (
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Topics</Text>
+                  <View style={styles.detailTags}>
+                    {selectedTip.tags.map(tag => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
                     ))}
                   </View>
+                </View>
+              ) : null}
+
+              {selectedTip.hasCopySteps && selectedTip.copySteps?.length ? (
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Steps</Text>
+                  {selectedTip.copySteps.map((step, index) => (
+                    <Text key={`${selectedTip.id}_step_${index}`} style={styles.detailStep}>
+                      {index + 1}. {step}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              <View style={styles.detailActions}>
+                {selectedTip.hasCopySteps && selectedTip.copySteps ? (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onPress={() => handleCopySteps(selectedTip.copySteps!)}
+                    title="Copy steps"
+                  />
                 ) : null}
 
-                <View style={styles.detailActions}>
-                  {selectedTip.hasCopySteps && selectedTip.copySteps ? (
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onPress={() => handleCopySteps(selectedTip.copySteps!)}
-                      title="Copy steps"
-                    />
-                  ) : null}
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onPress={() => handleSaveToggle(selectedTip.id)}
+                  title={savedItems.includes(selectedTip.id) ? 'Saved' : 'Save'}
+                />
 
+                {selectedTip.sources?.length ? (
                   <Button
-                    variant="outline"
+                    variant="link"
                     size="xs"
-                    onPress={() => handleSaveToggle(selectedTip.id)}
-                    title={savedItems.includes(selectedTip.id) ? 'Saved' : 'Save'}
+                    onPress={() => {
+                      const sources = selectedTip.sources ?? [];
+                      setSelectedTip(null);
+                      handleShowSources(sources);
+                    }}
+                    style={styles.sourcesButton}
+                    title="Sources"
                   />
+                ) : null}
 
-                  {selectedTip.sources?.length ? (
-                    <Button
-                      variant="link"
-                      size="xs"
-                      onPress={() => {
-                        const sources = selectedTip.sources ?? [];
-                        setSelectedTip(null);
-                        handleShowSources(sources);
-                      }}
-                      style={styles.sourcesButton}
-                      title="Sources"
-                    />
-                  ) : null}
-
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onPress={() => setSelectedTip(null)}
-                    title="Close"
-                  />
-                </View>
-              </ScrollView>
-            </>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onPress={() => setSelectedTip(null)}
+                  title="Close"
+                />
+              </View>
+            </ScrollView>
           ) : null}
         </SheetContent>
       </Sheet>
 
       <Sheet open={showSourcesSheet} onOpenChange={setShowSourcesSheet}>
-        <SheetContent style={{ minHeight: '40%', maxHeight: sheetMaxHeight }}>
-          <View style={styles.sheetHeaderRow}>
-            <SheetHeader style={styles.sheetHeaderCopy}>
-              <SheetTitle>Sources</SheetTitle>
-              <SheetDescription>Referenced materials attached to this guide.</SheetDescription>
-            </SheetHeader>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Close sources"
-              activeOpacity={0.75}
-              onPress={() => setShowSourcesSheet(false)}
-              style={styles.sheetCloseButton}
-            >
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+        <SheetContent snapPoints={[1]} style={{ height: sheetMaxHeight, maxHeight: sheetMaxHeight }}>
+          <ScrollView
+            style={styles.detailScroll}
+            contentContainerStyle={styles.detailContent}
+            showsVerticalScrollIndicator
+          >
+            <View style={styles.sheetHeaderRow}>
+              <SheetHeader style={styles.sheetHeaderCopy}>
+                <SheetTitle>Sources</SheetTitle>
+                <SheetDescription>Referenced materials attached to this guide.</SheetDescription>
+              </SheetHeader>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Close sources"
+                activeOpacity={0.75}
+                onPress={() => setShowSourcesSheet(false)}
+                style={styles.sheetCloseButton}
+              >
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
-          <View style={{ gap: 12, marginTop: 16 }}>
-            {selectedSources.map((source, index) => (
-              <View key={`${source.title}_${index}`} style={styles.sourceRow}>
-                <Text style={styles.sourceTitle}>{source.title}</Text>
+            <View style={{ gap: 12, marginTop: 16 }}>
+              {selectedSources.map((source, index) => (
+                <View key={`${source.title}_${index}`} style={styles.sourceRow}>
+                  <Text style={styles.sourceTitle}>{source.title}</Text>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onPress={() => handleOpenSource(source.url)}
+                  >
+                    <View style={styles.actionButton}>
+                      <Ionicons name="open-outline" size={13} color={colors.foreground} />
+                      <Text style={styles.actionButtonText}>View</Text>
+                    </View>
+                  </Button>
+                </View>
+              ))}
+              <View style={styles.detailActions}>
                 <Button
                   variant="outline"
                   size="xs"
-                  onPress={() => handleOpenSource(source.url)}
-                >
-                  <View style={styles.actionButton}>
-                    <Ionicons name="open-outline" size={13} color={colors.foreground} />
-                    <Text style={styles.actionButtonText}>View</Text>
-                  </View>
-                </Button>
+                  onPress={() => setShowSourcesSheet(false)}
+                  title="Close"
+                />
               </View>
-            ))}
-            <View style={styles.detailActions}>
-              <Button
-                variant="outline"
-                size="xs"
-                onPress={() => setShowSourcesSheet(false)}
-                title="Close"
-              />
             </View>
-          </View>
+          </ScrollView>
         </SheetContent>
       </Sheet>
     </Screen>

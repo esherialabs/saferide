@@ -7,7 +7,6 @@ import {
   useAudioRecorder,
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -24,6 +23,7 @@ import {
 import { devPrivacyError, devPrivacyWarn, getPrivacySafeErrorReason } from '../utils/privacyLog';
 import { isStealthTriggerSupported, resolveStealthTrigger } from '../utils/stealthCapabilities';
 import { DecoyPinManager } from '../utils/decoyPin';
+import * as StealthHaptics from '../utils/stealthHaptics';
 
 export function useStealthMode() {
   const [isRecording, setIsRecording] = useState(false);
@@ -36,6 +36,9 @@ export function useStealthMode() {
   const recordingRef = useRef<typeof audioRecorder | null>(null);
   const triggerStealthRecordingRef = useRef<() => Promise<void>>(async () => {});
   const hapticIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Timers outlive the render that created them, so they read the live setting from here.
+  const hapticsEnabledRef = useRef(hapticsEnabled);
+  hapticsEnabledRef.current = hapticsEnabled;
   const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigation = useNavigation();
   const decoyPinManager = useMemo(() => DecoyPinManager.getInstance(), []);
@@ -49,6 +52,7 @@ export function useStealthMode() {
       clearTimeout(autoStopTimerRef.current);
       autoStopTimerRef.current = null;
     }
+    StealthHaptics.cancel();
   }, []);
 
   useEffect(() => clearRecordingTimers, [clearRecordingTimers]);
@@ -189,10 +193,8 @@ export function useStealthMode() {
 
   const triggerStealthRecording = async () => {
     try {
-      // Haptic feedback
-      if (hapticsEnabled) {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      }
+      // Haptic feedback. Not awaited: a cue that never settles must not delay recording.
+      void StealthHaptics.triggerConfirm(hapticsEnabled);
 
       if (!autoRecordEnabled) {
         Alert.alert(
@@ -236,11 +238,12 @@ export function useStealthMode() {
       recordingRef.current = audioRecorder;
       setIsRecording(true);
 
-      // Subtle haptic feedback every 30 seconds to confirm recording
+      // Double buzz every 30 seconds to confirm recording is still running
       if (hapticsEnabled) {
-        hapticIntervalRef.current = setInterval(async () => {
-          if (recordingRef.current && hapticsEnabled) {
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        hapticIntervalRef.current = setInterval(() => {
+          if (recordingRef.current) {
+            // Turning haptic feedback off mid-recording silences the next heartbeat.
+            void StealthHaptics.recordingHeartbeat(hapticsEnabledRef.current);
           } else {
             clearRecordingTimers();
           }
@@ -305,9 +308,7 @@ export function useStealthMode() {
       }
 
       // Haptic confirmation
-      if (hapticsEnabled) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      await StealthHaptics.stopConfirm(hapticsEnabledRef.current);
 
     } catch (error) {
       devPrivacyError('stealth recording stop failed', { reason: getPrivacySafeErrorReason(error) });

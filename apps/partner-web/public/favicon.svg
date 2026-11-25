@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SafeRide">
+  <circle cx="256" cy="256" r="244" fill="#fffdf6"/>
+  <circle cx="256" cy="256" r="229" fill="none" stroke="#050505" stroke-width="16"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#F88539" stroke-width="30" stroke-linecap="round" stroke-dasharray="150 956" transform="rotate(-116 256 256)"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#50C9F0" stroke-width="30" stroke-linecap="round" stroke-dasharray="150 956" transform="rotate(-44 256 256)"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#53E17C" stroke-width="30" stroke-linecap="round" stroke-dasharray="150 956" transform="rotate(28 256 256)"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#F7EC36" stroke-width="30" stroke-linecap="round" stroke-dasharray="150 956" transform="rotate(100 256 256)"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#F06C13" stroke-width="30" stroke-linecap="round" stroke-dasharray="150 956" transform="rotate(172 256 256)"/>
+  <g transform="translate(87 227)">
+    <g font-family="Arial, sans-serif" font-size="74" font-weight="800" fill="#050505">
+      <g transform="translate(0 0)">
+        <rect x="-1" y="32" width="49" height="30" rx="8" fill="#F88539" opacity="0.96"/>
+        <text x="0" y="63">S</text>
+      </g>
+      <g transform="translate(48 0)">
+        <rect x="-1" y="29" width="45" height="30" rx="8" fill="#50C9F0" opacity="0.96"/>
+        <text x="0" y="63">a</text>
+      </g>
+      <g transform="translate(93 0)">
+        <rect x="-1" y="32" width="28" height="30" rx="8" fill="#53E17C" opacity="0.96"/>
+        <text x="0" y="63">f</text>
+      </g>
+      <g transform="translate(121 0)">
+        <rect x="-1" y="29" width="45" height="30" rx="8" fill="#F7EC36" opacity="0.96"/>
+        <text x="0" y="63">e</text>
+      </g>
+      <g transform="translate(169 0)">
+        <rect x="-1" y="32" width="52" height="30" rx="8" fill="#F06C13" opacity="0.96"/>
+        <text x="0" y="63">R</text>
+      </g>
+      <g transform="translate(222 0)">
+        <rect x="-1" y="29" width="20" height="30" rx="8" fill="#50C9F0" opacity="0.96"/>
+        <text x="0" y="63">i</text>
+      </g>
+      <g transform="translate(244 0)">
+        <rect x="-1" y="30" width="47" height="30" rx="8" fill="#53E17C" opacity="0.96"/>
+        <text x="0" y="63">d</text>
+      </g>
+      <g transform="translate(293 0)">
+        <rect x="-1" y="29" width="45" height="30" rx="8" fill="#F7EC36" opacity="0.96"/>
+        <text x="0" y="63">e</text>
+      </g>
+    </g>
+  </g>
+</svg>

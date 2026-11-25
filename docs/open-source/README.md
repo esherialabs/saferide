@@ -16,6 +16,8 @@ canonical Android download page is `https://saferide.esheria.org/download/`.
   commits, logs, or release assets.
 - `community-roadmap.md` — issue labels, project-board workflow, release
   milestones, and good-first-issue expectations.
+- `local-verification.md` — how the required checks run without GitHub Actions,
+  the evidence file, and how to reproduce a result.
 - `../migration/local-setup.md` — owned local API, Postgres, MinIO, Redis, auth,
   and observability stack.
 - `../../CONTRIBUTING.md` — public contribution process.

@@ -42,11 +42,11 @@ export const GUIDES = [
     excerpt:
       'A rider can begin with a local draft, review what is recorded, and decide whether anything leaves the phone.',
     publishedAt: '2026-05-24',
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     authorName: 'SafeRide by Esheria editorial team',
     reviewStatus: 'Safeguarding review required before production publication',
     editorialNote:
-      'This guide explains the current SafeRide pilot design. It is not emergency, medical, legal, police, or counselling advice.',
+      'This guide explains the SafeRide pilot design tested with HURIA in Mombasa in October 2026. It is not emergency, medical, legal, police, or counselling advice.',
     sections: [
       {
         heading: 'Start a private report without waiting for internet access',
@@ -73,7 +73,7 @@ export const GUIDES = [
         heading: 'Use retention and deletion controls as safety features',
         paragraphs: [
           'Privacy is not complete at the moment of collection. A rider also needs a clear way to review, export, retain, or delete a draft. The pilot surfaces those controls so the person can decide whether keeping information on the device remains useful and safe.',
-          'Anyone testing SafeRide should use synthetic reports until the field configuration, encryption, backup, retention, and support-provider settings have completed safeguarding review. Do not enter real survivor evidence into an unsupervised pilot build.',
+          'Outside the supervised HURIA pilot in Mombasa, anyone testing SafeRide should use synthetic reports until the field configuration, encryption, backup, retention, and support-provider settings have completed safeguarding review. Do not enter real survivor evidence into an unsupervised pilot build.',
         ],
       },
     ],
@@ -106,7 +106,7 @@ export const GUIDES = [
     excerpt:
       'SafeRide explains support choices in plain language while keeping clear boundaries: it is not a clinic, lawyer, police desk, or counselling service.',
     publishedAt: '2026-05-24',
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-10-19',
     authorName: 'SafeRide by Esheria editorial team',
     reviewStatus: 'Qualified Kenya support and legal review required before production publication',
     editorialNote:
@@ -130,7 +130,7 @@ export const GUIDES = [
         heading: 'Medical, legal, psychosocial, and community services have different roles',
         paragraphs: [
           'A health provider can explain care and documentation options. A qualified lawyer or legal-aid organization can explain legal choices. A counsellor or survivor-support organization can provide psychosocial and practical support. Police and justice agencies have their own reporting processes. SafeRide should describe these roles without pretending to perform them.',
-          'FIDA Kenya and other established women’s-rights organizations publish information about their current services. Before travelling, sharing evidence, or relying on a deadline, contact the relevant provider or check an official source. Service locations, eligibility, opening hours, and procedures may change.',
+          'FIDA Kenya and other established women’s-rights organizations publish information about their current services. On the Coast, Human Rights Agenda (HURIA) offers legal aid and human-rights support through its toll-free line, 0769 546 253. Before travelling, sharing evidence, or relying on a deadline, contact the relevant provider or check an official source. Service locations, eligibility, opening hours, and procedures may change.',
         ],
       },
       {
@@ -169,6 +169,11 @@ export const GUIDES = [
         publisher: 'FIDA Kenya',
         href: 'https://fidakenya.org/',
       },
+      {
+        title: 'HURIA legal aid and human-rights support',
+        publisher: 'Human Rights Agenda (HURIA)',
+        href: 'https://huria.ngo/',
+      },
     ],
     relatedSlugs: ['private-reporting-control', 'route-safety-without-exposure'],
   },
@@ -181,11 +186,11 @@ export const GUIDES = [
     excerpt:
       'Route accountability should use minimized, aggregated, consented signals, not private evidence or exact journeys.',
     publishedAt: '2026-05-24',
-    updatedAt: '2026-07-28',
+    updatedAt: '2026-11-01',
     authorName: 'SafeRide by Esheria editorial team',
     reviewStatus: 'Route-data governance and safeguarding review required before production publication',
     editorialNote:
-      'The Route Safety Index is a pilot design, not a verified ranking of Nairobi routes. Public scores require field validation and governance review.',
+      'HURIA staff used the partner dashboard in the pilot. Public route signals are a separate idea that has not been built, not a verified ranking or a live score.',
     sections: [
       {
         heading: 'A route signal should never contain a survivor’s private evidence',
@@ -211,6 +216,7 @@ export const GUIDES = [
       {
         heading: 'Route information matters only when partners act on it',
         paragraphs: [
+          'The partner dashboard groups shared cases by broad Mombasa subcounty for case follow-up. It is not a route index and must not be used as a public route ranking.',
           'A dashboard is not an outcome. Transport operators, survivor-support organizations, civic partners, and regulators need a documented process for reviewing patterns, choosing a proportionate response, and reporting what changed without exposing individual riders.',
           'SafeRide’s pilot should measure whether partners understand the signal, whether an action follows, and whether riders experience the change as safer. Until that evidence exists, route pages should describe the method and limitations rather than claim verified safety rankings.',
         ],
@@ -218,9 +224,9 @@ export const GUIDES = [
     ],
     actions: [
       {
-        label: 'Read the Route Safety Index method',
-        href: '/route-safety-index',
-        body: 'See the proposed safeguards, thresholds, partner roles, and limits of route-level reporting.',
+        label: 'See how the partner dashboard works',
+        href: '/partner-dashboard',
+        body: 'See who can open shared reports, what they see, and what the dashboard leaves out.',
       },
       {
         label: 'Compare private and anonymous data',

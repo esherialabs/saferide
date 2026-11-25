@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-example.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "stage", "id", "candidateId", "datasetId", "split", "messages", "metadata", "authoring"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-example" },
+    "schemaVersion": { "const": 1 },
+    "stage": { "enum": ["candidate", "final"] },
+    "id": { "type": "string", "pattern": "^v051-mitigation-family-[0-9]{4}-(en|sw)$" },
+    "candidateId": { "type": "string", "pattern": "^v051-candidate-[a-f0-9]{24}$" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "split": { "$ref": "#/$defs/split" },
+    "messages": {
+      "type": "array", "minItems": 3, "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["role", "content"],
+        "properties": { "role": { "enum": ["system", "user", "assistant"] }, "content": { "type": "string", "minLength": 1, "maxLength": 2400 } }
+      }
+    },
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["language", "track", "variant", "scenarioFamilyId", "semanticClusterId", "conversationForm", "responseStrategy", "systemPromptSha256", "generationSeed", "sourceKind", "sourcePolicyRefs", "reviewStatus", "prohibitedDataScreen", "reviewableContentSha256", "reviewLedgerRefs"],
+      "properties": {
+        "language": { "enum": ["en", "sw"] },
+        "track": { "$ref": "#/$defs/track" },
+        "variant": { "$ref": "#/$defs/variant" },
+        "scenarioFamilyId": { "type": "string", "pattern": "^v051-mitigation-family-[0-9]{4}$" },
+        "semanticClusterId": { "type": "string", "pattern": "^v051-cluster-[a-f0-9]{16}$" },
+        "conversationForm": { "enum": ["single-turn", "multi-turn"] },
+        "responseStrategy": { "enum": ["agency-preserving-deescalation", "non-repeating-hidden-instruction-refusal"] },
+        "systemPromptSha256": { "$ref": "#/$defs/sha" },
+        "generationSeed": { "enum": [419851, 419852, 419853] },
+        "sourceKind": { "const": "repository-pipeline-authored-synthetic" },
+        "sourcePolicyRefs": { "const": ["POLICY-SAFERIDE-SAFE-ASSISTANT-V04", "POLICY-ESH-4198-V051-MITIGATION"] },
+        "reviewStatus": { "enum": ["unreviewed", "not_required", "rejected"] },
+        "prohibitedDataScreen": { "enum": ["passed", "failed"] },
+        "reviewableContentSha256": { "$ref": "#/$defs/sha" },
+        "reviewLedgerRefs": { "type": "array", "maxItems": 0, "items": false }
+      }
+    },
+    "authoring": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method", "toolId", "toolRevision", "sourceCommit", "planSha256", "authoringSourceSha256", "createdAt", "syntheticOnlyAttested"],
+      "properties": {
+        "method": { "const": "deterministic-controlled-source" },
+        "toolId": { "const": "saferide-gemma4-v051-dataset.py" },
+        "toolRevision": { "enum": ["v1", "v2-remediation"] },
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "planSha256": { "$ref": "#/$defs/sha" },
+        "authoringSourceSha256": { "$ref": "#/$defs/sha" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "syntheticOnlyAttested": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "split": { "enum": ["train", "mitigation-dev", "mitigation-holdout"] },
+    "track": { "enum": ["agency-preserving-deescalation", "hidden-instruction-nondisclosure"] },
+    "variant": { "enum": ["coercion", "confrontation", "retaliation", "agency-alternative", "direct-extraction", "indirect-extraction", "role-play-extraction", "non-repeating-refusal"] }
+  }
+}

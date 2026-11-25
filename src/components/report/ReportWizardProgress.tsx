@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { Badge } from '../ui/Badge';
 import Button from '../ui/Button';
 import {
   getReportWizardProgress,
@@ -11,9 +10,9 @@ import {
   type ReportWizardStepStatus,
 } from '../../navigation/reportPathwayFlow';
 import { useTheme } from '../../theme/SimpleThemeProvider';
-import { borders, elevation, radii, spacing, typography } from '../../theme/tokens';
+import { radii, spacing, touchTargets, typography } from '../../theme/tokens';
 import type { DraftData } from '../../utils/draftStorage';
-import { getReportWizardSaveStatus } from './reportWizardSaveStatus';
+import { getReportWizardSaveStatus, type ReportWizardSaveVariant } from './reportWizardSaveStatus';
 
 type ReportWizardProgressProps = {
   draft: DraftData | null | undefined;
@@ -26,6 +25,10 @@ type ReportWizardProgressProps = {
   skipOptionalLabel?: string;
   skipOptionalDisabled?: boolean;
 };
+
+const SEGMENT_HEIGHT = 6;
+// Each segment is a 48dp-tall target around a slim visible bar.
+const SEGMENT_TARGET = touchTargets.minimum;
 
 function getStatusLabel(status: ReportWizardStepStatus): string {
   switch (status) {
@@ -41,24 +44,25 @@ function getStatusLabel(status: ReportWizardStepStatus): string {
   }
 }
 
-function getShortStepLabel(index: number): string {
-  return `Step ${index + 1}`;
-}
-
-function getStatusIconName(status: ReportWizardStepStatus): keyof typeof Ionicons.glyphMap {
-  switch (status) {
-    case 'complete':
-      return 'checkmark-circle';
-    case 'skipped':
-      return 'checkmark-done-circle-outline';
-    case 'current':
-      return 'radio-button-on';
-    case 'upcoming':
+function getSaveIcon(variant: ReportWizardSaveVariant): keyof typeof Ionicons.glyphMap {
+  switch (variant) {
+    case 'destructive':
+      return 'alert-circle';
+    case 'warning':
+      return 'sync-outline';
+    case 'secondary':
+      return 'time-outline';
+    case 'success':
     default:
-      return 'ellipse-outline';
+      return 'checkmark-circle';
   }
 }
 
+/**
+ * Slim step progress for the report wizard: a segmented bar (each segment
+ * reopens a reachable step), "Step n of 4" with the step name, and one quiet
+ * save-status line. The step question itself is the screen heading below.
+ */
 export function ReportWizardProgress({
   draft,
   currentStep,
@@ -82,102 +86,14 @@ export function ReportWizardProgress({
     error,
   });
 
-  const styles = StyleSheet.create({
-    panel: {
-      backgroundColor: colors.card,
-      borderColor: colors.border,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      gap: spacing.sm,
-      marginBottom: spacing.md,
-      overflow: 'hidden',
-      padding: spacing.md,
-      paddingTop: spacing.lg,
-      position: 'relative',
-      ...elevation.card,
-    },
-    panelAccent: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
-    },
-    headerRow: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.sm,
-      justifyContent: 'space-between',
-    },
-    headerActions: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      flexShrink: 0,
-      flexWrap: 'wrap',
-      gap: spacing.xs,
-      justifyContent: 'flex-end',
-    },
-    title: {
-      ...typography.titleMedium,
-      color: colors.foreground,
-      flex: 1,
-    },
-    stepRow: {
-      flexDirection: 'row',
-      gap: spacing.xs,
-    },
-    stepCell: {
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderColor: colors.divider,
-      borderRadius: radii.card,
-      borderWidth: borders.hairline,
-      flex: 1,
-      gap: spacing.xxxs,
-      justifyContent: 'center',
-      minHeight: 58,
-      minWidth: 0,
-      paddingHorizontal: spacing.xs,
-      paddingVertical: spacing.xs,
-    },
-    stepCellActive: {
-      backgroundColor: colors.primaryMuted,
-      borderColor: colors.primary,
-    },
-    statusText: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    statusRow: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: spacing.xxxs,
-      justifyContent: 'center',
-      minWidth: 0,
-    },
-    stepLabel: {
-      ...typography.labelSmall,
-      color: colors.foreground,
-      textAlign: 'center',
-    },
-    saveRow: {
-      alignItems: 'flex-start',
-      borderTopColor: colors.divider,
-      borderTopWidth: borders.hairline,
-      flexDirection: 'row',
-      gap: spacing.sm,
-      paddingTop: spacing.sm,
-    },
-    saveText: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      flex: 1,
-      lineHeight: 18,
-    },
-  });
+  const currentIndex = progress.steps.findIndex(step => step.status === 'current');
+  const activeStep = currentIndex >= 0 ? progress.steps[currentIndex] : undefined;
+  const saveColor = {
+    success: colors.success,
+    warning: colors.warning,
+    destructive: colors.destructive,
+    secondary: colors.textSecondary,
+  }[saveStatus.variant];
 
   const openStep = (route?: string) => {
     if (!draft?.id || !route) return;
@@ -188,29 +104,35 @@ export function ReportWizardProgress({
   };
 
   return (
-    <View style={styles.panel}>
-      <View pointerEvents="none" style={styles.panelAccent} />
+    <View style={styles.root}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Report progress</Text>
-        <View style={styles.headerActions}>
-          {onSkipOptionalSteps ? (
-            <Button
-              title={skipOptionalLabel}
-              variant="outline"
-              size="xs"
-              disabled={skipOptionalDisabled}
-              icon={<Ionicons name="play-skip-forward-outline" size={15} color={colors.textPrimary} />}
-              onPress={onSkipOptionalSteps}
-              accessibilityLabel={skipOptionalLabel}
-            />
-          ) : null}
-          <Badge variant={progress.isComplete ? 'success' : 'info'} size="sm">
-            {progress.completedSteps}/{progress.totalSteps}
-          </Badge>
-        </View>
+        <Text accessibilityRole="header" style={[styles.stepText, { color: colors.textSecondary }]}>
+          {activeStep ? (
+            <>
+              <Text style={[styles.stepCount, { color: colors.primary }]}>
+                {`Step ${currentIndex + 1} of ${progress.totalSteps}`}
+              </Text>
+              {` · ${activeStep.label}`}
+            </>
+          ) : `${progress.completedSteps} of ${progress.totalSteps} steps done`}
+        </Text>
+        {onSkipOptionalSteps ? (
+          <Button
+            title={skipOptionalLabel}
+            variant="ghost"
+            size="xs"
+            disabled={skipOptionalDisabled}
+            icon={<Ionicons name="play-skip-forward-outline" size={15} color={colors.primary} />}
+            onPress={onSkipOptionalSteps}
+            accessibilityLabel={skipOptionalLabel}
+          />
+        ) : null}
       </View>
 
-      <View style={styles.stepRow}>
+      <View
+        style={styles.segments}
+        accessibilityLabel={`${progress.completedSteps} of ${progress.totalSteps} steps done`}
+      >
         {progress.steps.map((step, index) => {
           const canOpenStep = Boolean(
             draft?.id &&
@@ -218,47 +140,92 @@ export function ReportWizardProgress({
             (step.status === 'complete' || step.status === 'current' || step.status === 'skipped'),
           );
           const isCurrent = step.status === 'current';
-          const statusColor = step.status === 'complete' || step.status === 'skipped'
-            ? colors.success
-            : isCurrent
-              ? colors.primary
-              : colors.textSecondary;
+          const isDone = step.status === 'complete' || step.status === 'skipped';
+          const fill = isDone || isCurrent ? colors.primary : colors.divider;
 
           return (
             <Pressable
               key={step.id}
               accessibilityRole={canOpenStep ? 'button' : 'text'}
-              accessibilityLabel={`${getShortStepLabel(index)}. ${step.label}. ${getStatusLabel(step.status)}`}
+              accessibilityLabel={`Step ${index + 1}. ${step.label}. ${getStatusLabel(step.status)}`}
+              accessibilityState={{ selected: isCurrent, disabled: !canOpenStep }}
               disabled={!canOpenStep}
               onPress={() => openStep(step.route)}
-              style={[
-                styles.stepCell,
-                isCurrent ? styles.stepCellActive : null,
-                !canOpenStep ? { opacity: 0.72 } : null,
-              ]}
+              style={styles.segmentTarget}
             >
-              <Text style={styles.stepLabel} numberOfLines={1}>{getShortStepLabel(index)}</Text>
-              <View style={styles.statusRow}>
-                <Ionicons
-                  name={getStatusIconName(step.status)}
-                  size={14}
-                  color={statusColor}
-                />
-                <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-                  {getStatusLabel(step.status)}
-                </Text>
-              </View>
+              <View
+                style={[
+                  styles.segmentBar,
+                  { backgroundColor: fill },
+                  step.status === 'skipped' ? { opacity: 0.45 } : null,
+                ]}
+              />
             </Pressable>
           );
         })}
       </View>
 
       {showSaveStatus ? (
-        <View style={styles.saveRow}>
-          <Badge variant={saveStatus.variant} size="sm">{saveStatus.label}</Badge>
-          <Text style={styles.saveText}>{saveStatus.detail}</Text>
+        <View style={styles.saveRow} accessible accessibilityLabel={`${saveStatus.label}. ${saveStatus.detail}`}>
+          <Ionicons name={getSaveIcon(saveStatus.variant)} size={14} color={saveColor} />
+          <Text style={[styles.saveText, { color: colors.textSecondary }]}>
+            <Text style={[styles.saveLabel, { color: saveStatus.variant === 'destructive' ? colors.destructive : colors.foreground }]}>
+              {saveStatus.label}
+            </Text>
+            {` · ${saveStatus.detail}`}
+          </Text>
         </View>
       ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginBottom: spacing.xs,
+  },
+  headerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    justifyContent: 'space-between',
+  },
+  stepText: {
+    ...typography.labelMedium,
+    flexShrink: 1,
+  },
+  stepCount: {
+    ...typography.labelMedium,
+    fontWeight: '700',
+  },
+  segments: {
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    // Reserve the whole target: negative margins let the save line and
+    // optional skip action cover parts of the step buttons.
+    marginVertical: spacing.xxs,
+  },
+  segmentTarget: {
+    flex: 1,
+    height: SEGMENT_TARGET,
+    justifyContent: 'center',
+  },
+  segmentBar: {
+    borderRadius: radii.round,
+    height: SEGMENT_HEIGHT,
+  },
+  saveRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xxs,
+  },
+  saveText: {
+    ...typography.caption,
+    flex: 1,
+  },
+  saveLabel: {
+    ...typography.caption,
+    fontWeight: '600',
+  },
+});

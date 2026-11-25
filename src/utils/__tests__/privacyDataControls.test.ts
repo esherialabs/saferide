@@ -136,7 +136,7 @@ import {
   sharePrivacyDataExportFile,
 } from '../privacyDataControls';
 import { draftStorage } from '../draftStorage';
-import { TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY } from '../storageKeys';
+import { AI_PILOT_DIAGNOSTICS_KEY, AI_PILOT_INFLIGHT_KEY, TUNED_ARTIFACT_ROLLOUT_BUCKET_KEY } from '../storageKeys';
 
 type ResettableAsyncStorage = typeof AsyncStorage & {
   __dump: () => Map<string, string>;
@@ -356,6 +356,10 @@ describe('privacy data controls', () => {
     ]));
     secureStoreMock.store.set('saferide_auth_saferide_local_auth_session', 'native-token');
     secureStoreMock.store.set('saferide_auth_saferide_local_guest_session', 'native-local-guest');
+    secureStoreMock.store.set('safe_ride_decoy_pin', JSON.stringify({ hashedPin: 'verifier', salt: 'salt' }));
+    secureStoreMock.store.set('safe_ride_decoy_pin_attempts', JSON.stringify({ failedAttempts: 2, lastFailedAt: 1 }));
+    await AsyncStorage.setItem(AI_PILOT_DIAGNOSTICS_KEY, '{"events":[]}');
+    await AsyncStorage.setItem(AI_PILOT_INFLIGHT_KEY, '{"startedAt":1}');
 
     const result = await deleteLocalPrivacyData();
     const remaining = (AsyncStorage as ResettableAsyncStorage).__dump();
@@ -381,6 +385,10 @@ describe('privacy data controls', () => {
     expect(secureStoreMock.store.has('incident_drafts')).toBe(false);
     expect(secureStoreMock.store.has('saferide_auth_saferide_local_auth_session')).toBe(false);
     expect(secureStoreMock.store.has('saferide_auth_saferide_local_guest_session')).toBe(false);
+    expect(secureStoreMock.store.has('safe_ride_decoy_pin')).toBe(false);
+    expect(secureStoreMock.store.has('safe_ride_decoy_pin_attempts')).toBe(false);
+    expect(remaining.has(AI_PILOT_DIAGNOSTICS_KEY)).toBe(false);
+    expect(remaining.has(AI_PILOT_INFLIGHT_KEY)).toBe(false);
     expect(secureStoreMock.deleteItemAsync).toHaveBeenCalledWith('saferide_local_data_aes_key_v1');
     expect(result.secureStoreKeysDeleted).toContain('saferide_local_data_aes_key_v1');
     expect(authClientMock.signOut).toHaveBeenCalledTimes(1);

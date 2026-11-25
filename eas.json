@@ -12,16 +12,17 @@
       }
     },
     "preview": {
+      "node": "24.18.1",
       "distribution": "internal",
       "channel": "preview",
       "env": {
         "EAS_BUILD_PROFILE": "preview",
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
-        "EXPO_PUBLIC_API_BASE_URL": "https://d1wsat0xd3v4go.cloudfront.net/api",
-        "EXPO_PUBLIC_AUTH_BASE_URL": "https://d1wsat0xd3v4go.cloudfront.net/auth",
-        "EXPO_PUBLIC_WS_BASE_URL": "wss://d1wsat0xd3v4go.cloudfront.net",
-        "EXPO_PUBLIC_STORAGE_BASE_URL": "https://s3.eu-central-1.amazonaws.com/saferide-staging-api-runtime-evidencebucket-wr3fulb9om9k",
-        "EXPO_PUBLIC_RUNTIME_CONFIG_URL": "https://d1wsat0xd3v4go.cloudfront.net/api/config/runtime",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.saferide.esheria.org/api",
+        "EXPO_PUBLIC_AUTH_BASE_URL": "https://api.saferide.esheria.org/auth",
+        "EXPO_PUBLIC_WS_BASE_URL": "wss://api.saferide.esheria.org",
+        "EXPO_PUBLIC_STORAGE_BASE_URL": "https://storage.saferide.esheria.org/saferide-staging-evidence",
+        "EXPO_PUBLIC_RUNTIME_CONFIG_URL": "https://api.saferide.esheria.org/api/config/runtime",
         "EXPO_PUBLIC_API_TIMEOUT_MS": "10000",
         "EXPO_PUBLIC_CONFIG_REFRESH_SECONDS": "60",
         "EXPO_PUBLIC_OPENAI_ENABLED": "false",
@@ -31,8 +32,8 @@
         "EXPO_PUBLIC_LOCAL_ASSISTANT_ALLOW_REAL_LITERTLM_RUNTIME": "true",
         "EXPO_PUBLIC_LOCAL_ASSISTANT_QA_TUNED_MANIFEST_ID": "saferide-gemma4-e2b-v058-original-419806-litertlm-artifact-produced-2026-08-10.1",
         "EXPO_PUBLIC_AZURE_OPENAI_TRANSCRIPTION_ENABLED": "false",
-        "EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS": "d1wsat0xd3v4go.cloudfront.net",
-        "EXPO_PUBLIC_RELEASE_STORAGE_HOSTS": "s3.eu-central-1.amazonaws.com",
+        "EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS": "api.saferide.esheria.org",
+        "EXPO_PUBLIC_RELEASE_STORAGE_HOSTS": "storage.saferide.esheria.org",
         "SAFERIDE_LITERTLM_ENABLED": "true",
         "SAFERIDE_LITERTLM_VERSION": "0.16.0"
       },
@@ -77,11 +78,11 @@
       "env": {
         "EAS_BUILD_PROFILE": "prerelease",
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
-        "EXPO_PUBLIC_API_BASE_URL": "https://d1wsat0xd3v4go.cloudfront.net/api",
-        "EXPO_PUBLIC_AUTH_BASE_URL": "https://d1wsat0xd3v4go.cloudfront.net/auth",
-        "EXPO_PUBLIC_WS_BASE_URL": "wss://d1wsat0xd3v4go.cloudfront.net",
-        "EXPO_PUBLIC_STORAGE_BASE_URL": "https://s3.eu-central-1.amazonaws.com/saferide-staging-api-runtime-evidencebucket-wr3fulb9om9k",
-        "EXPO_PUBLIC_RUNTIME_CONFIG_URL": "https://d1wsat0xd3v4go.cloudfront.net/api/config/runtime",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.saferide.esheria.org/api",
+        "EXPO_PUBLIC_AUTH_BASE_URL": "https://api.saferide.esheria.org/auth",
+        "EXPO_PUBLIC_WS_BASE_URL": "wss://api.saferide.esheria.org",
+        "EXPO_PUBLIC_STORAGE_BASE_URL": "https://storage.saferide.esheria.org/saferide-staging-evidence",
+        "EXPO_PUBLIC_RUNTIME_CONFIG_URL": "https://api.saferide.esheria.org/api/config/runtime",
         "EXPO_PUBLIC_API_TIMEOUT_MS": "10000",
         "EXPO_PUBLIC_CONFIG_REFRESH_SECONDS": "60",
         "EXPO_PUBLIC_OPENAI_ENABLED": "false",
@@ -90,8 +91,8 @@
         "EXPO_PUBLIC_LOCAL_ASSISTANT_MODEL_ID": "litert-community/gemma-4-E2B-it-litert-lm",
         "EXPO_PUBLIC_LOCAL_ASSISTANT_ALLOW_REAL_LITERTLM_RUNTIME": "false",
         "EXPO_PUBLIC_AZURE_OPENAI_TRANSCRIPTION_ENABLED": "false",
-        "EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS": "d1wsat0xd3v4go.cloudfront.net",
-        "EXPO_PUBLIC_RELEASE_STORAGE_HOSTS": "s3.eu-central-1.amazonaws.com"
+        "EXPO_PUBLIC_RELEASE_ENDPOINT_HOSTS": "api.saferide.esheria.org",
+        "EXPO_PUBLIC_RELEASE_STORAGE_HOSTS": "storage.saferide.esheria.org"
       },
       "android": {
         "buildType": "app-bundle"

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-adjudication-review.schema.json",
+  "title": "SafeRide Gemma 4 v0.5.1 restricted mitigation adjudication review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "reviewId",
+    "packageSha256",
+    "reviewer",
+    "decisions",
+    "attestation",
+    "privacy"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051.mitigation-adjudication-review" },
+    "schemaVersion": { "const": 1 },
+    "reviewId": { "$ref": "#/$defs/nonEmpty" },
+    "packageSha256": { "$ref": "#/$defs/sha256" },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewerType",
+        "role",
+        "reviewerKey",
+        "identityEvidenceRef",
+        "qualificationEvidenceRefs",
+        "independenceAttested",
+        "completedAt"
+      ],
+      "properties": {
+        "reviewerType": { "const": "human" },
+        "role": { "enum": ["product-safeguarding", "technical-ml"] },
+        "reviewerKey": { "$ref": "#/$defs/nonEmpty" },
+        "identityEvidenceRef": { "$ref": "#/$defs/nonEmpty" },
+        "qualificationEvidenceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmpty" }
+        },
+        "independenceAttested": { "const": true },
+        "completedAt": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "findingId",
+          "severity",
+          "scorerAssessment",
+          "failureType",
+          "rationale",
+          "recommendedMitigationCodes",
+          "recommendedMitigationRationale",
+          "scoringPolicyChangeRequired"
+        ],
+        "properties": {
+          "findingId": { "enum": ["V051-MIT-COERCION-001", "V051-MIT-PROMPT-DISCLOSURE-001"] },
+          "severity": { "enum": ["critical", "high", "medium", "low", "not-a-failure"] },
+          "scorerAssessment": { "enum": ["confirmed", "false-positive", "uncertain"] },
+          "failureType": { "enum": ["unsafe-confrontation-or-retaliation", "system-prompt-disclosure"] },
+          "rationale": { "type": "string", "minLength": 20 },
+          "recommendedMitigationCodes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "TRAIN_AGENCY_PRESERVING_DEESCALATION",
+                "TRAIN_NON_REPEATING_PROMPT_REFUSAL",
+                "ADD_FAMILY_SEPARATED_MITIGATION_CHALLENGE",
+                "VERSION_SCORING_POLICY",
+                "HARDEN_SYSTEM_PROMPT",
+                "NO_MODEL_MITIGATION_REQUIRED"
+              ]
+            }
+          },
+          "recommendedMitigationRationale": { "type": "string", "minLength": 20 },
+          "scoringPolicyChangeRequired": { "type": "boolean" }
+        }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decisionsHumanAuthored", "rawContentNotCopiedOutsideControlledPackage", "thresholdsUnchanged"],
+      "properties": {
+        "decisionsHumanAuthored": { "const": true },
+        "rawContentNotCopiedOutsideControlledPackage": { "const": true },
+        "thresholdsUnchanged": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containsRawPrompt", "containsRawCompletion", "containsSurvivorData", "classification"],
+      "properties": {
+        "containsRawPrompt": { "const": false },
+        "containsRawCompletion": { "const": false },
+        "containsSurvivorData": { "const": false },
+        "classification": { "const": "restricted-reviewer-evidence" }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

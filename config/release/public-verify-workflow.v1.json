@@ -1,0 +1,62 @@
+{
+  "schema": "saferide-public-verify-workflow-pin-v1",
+  "note": "Workflow files public-verify has been reviewed for. Read from the trusted tool tree only. Add an entry (in a reviewed pull request) when public-ci.yml changes.",
+  "accepted": [
+    {
+      "sha256": "2eb74a185251361b1928c4ef520d98941b6a203dc37730c6d0c159cc6bc12e50",
+      "note": "private source of the public workflow, 2026-11-11",
+      "requiredSteps": {
+        "Typecheck, Test, Coverage, Public Safety": [
+          "Checkout",
+          "Setup Node",
+          "Pin and verify npm",
+          "Install dependencies",
+          "Validate public repository boundary",
+          "Scan for committed secrets",
+          "Validate dependency integrity and reviewed licenses",
+          "Audit API production dependencies against time-bounded reviewed exceptions",
+          "Audit website production dependencies",
+          "Validate time-bounded mobile build-tool audit exception",
+          "Typecheck mobile",
+          "Typecheck API",
+          "Run public global and critical coverage gates",
+          "Upload public coverage evidence"
+        ],
+        "Reproducible Source Archive": [
+          "Checkout",
+          "Setup Node",
+          "Build twice and compare",
+          "Upload reproducibility evidence"
+        ]
+      }
+    },
+    {
+      "sha256": "858afc2d5f85587fa85c412947148aea4aaea7a4a725489cba527ce6a71909be",
+      "note": "esherialabs/saferide main as of 2026-11-11 (pre-refresh base for pull request checks)",
+      "requiredSteps": {
+        "Typecheck, Test, Coverage, Public Safety": [
+          "Checkout",
+          "Setup Node",
+          "Pin and verify npm",
+          "Install dependencies",
+          "Validate public repository boundary",
+          "Scan for committed secrets",
+          "Validate dependency integrity and reviewed licenses",
+          "Audit API production dependencies",
+          "Audit website production dependencies",
+          "Validate time-bounded mobile build-tool audit exception",
+          "Typecheck mobile",
+          "Typecheck API",
+          "Run public global and critical coverage gates",
+          "Upload public coverage evidence"
+        ],
+        "Reproducible Source Archive": [
+          "Checkout",
+          "Setup Node",
+          "Build twice and compare",
+          "Upload reproducibility evidence"
+        ]
+      }
+    }
+  ]
+}

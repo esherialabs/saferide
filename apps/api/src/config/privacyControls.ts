@@ -30,8 +30,8 @@ const privacyControlsSchema = z.object({
     reviewStatus: z.enum(['pending_legal', 'approved', 'retired']),
     acceptanceEnabled: z.boolean(),
   }).strict()).min(2),
-  consentPurposes: z.record(statusSchema),
-  capabilities: z.record(statusSchema),
+  consentPurposes: z.record(z.string(), statusSchema),
+  capabilities: z.record(z.string(), statusSchema),
   retentionPolicies: z.array(z.object({
     policyId: z.string().regex(/^[a-z0-9-]+$/),
     scope: z.enum(['local', 'server']),
@@ -58,7 +58,7 @@ const privacyControlsSchema = z.object({
 
 export type PrivacyControls = z.infer<typeof privacyControlsSchema>;
 export type PrivacyCapability = keyof PrivacyControls['capabilities'];
-export const ACTIVE_PRIVACY_CONTROL_VERSION = 'privacy-controls.2026-07-30.2';
+export const ACTIVE_PRIVACY_CONTROL_VERSION = 'privacy-controls.2026-10-22.pilot.1';
 
 let cachedControls: PrivacyControls | null = null;
 
@@ -125,6 +125,16 @@ export function isConsentPurposeEnabled(purpose: string, version: string): boole
     return control?.status === 'enabled' && control.version === version;
   } catch {
     return false;
+  }
+}
+
+/** The version an enabled consent purpose currently accepts, or null when it is off or unavailable. */
+export function getEnabledConsentVersion(purpose: string): string | null {
+  try {
+    const control = loadPrivacyControls().consentPurposes[purpose];
+    return control?.status === 'enabled' && control.version ? control.version : null;
+  } catch {
+    return null;
   }
 }
 

@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Screen from '../components/ui/Screen';
 import AppLogo from '../components/AppLogo';
+import { SafetyIllustration } from '../components/ui/SafetyIllustration';
+import { typography } from '../theme/tokens';
 import { useTheme } from '../theme/SimpleThemeProvider';
 import { RootStackParamList } from '../navigation/routes';
 import { useOnboarding } from '../context/OnboardingProvider';
@@ -13,7 +15,7 @@ type SplashNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splas
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashNavigationProp>();
-  const { colors } = useTheme();
+  const { colors, colorScheme } = useTheme();
   const { isHydrated: isOnboardingHydrated, isComplete, nextStep } = useOnboarding();
   const { isHydrated: isAuthHydrated, session } = useAuth();
 
@@ -47,15 +49,14 @@ export default function SplashScreen() {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.primary,
+      backgroundColor: colors.background,
     },
     logoWrapper: {
       marginBottom: 24,
     },
     subtitle: {
-      fontSize: 16,
-      color: colors.primaryForeground,
-      opacity: 0.8,
+      ...typography.bodyMedium,
+      color: colors.textSecondary,
       textAlign: 'center',
       marginTop: 8,
     },
@@ -64,8 +65,9 @@ export default function SplashScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <View style={styles.container}>
+        <SafetyIllustration kind="journey" size={176} />
         <View style={styles.logoWrapper}>
-          <AppLogo width={200} height={72} inverted />
+          <AppLogo width={200} height={72} inverted={colorScheme === 'dark'} />
         </View>
         <Text style={styles.subtitle}>Your safety, our priority</Text>
       </View>

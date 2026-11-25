@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-review.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "reviewId", "datasetId", "status", "role", "candidateManifestSha256", "assignedRowInventorySha256", "systemPromptTextSha256", "reviewer", "systemPromptDecision", "rowDecisions", "attestation", "privacy"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-review" },
+    "schemaVersion": { "const": 1 },
+    "reviewId": { "type": ["string", "null"], "pattern": "^v051-review-[a-z0-9._-]{8,120}$" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "status": { "enum": ["pending-human-review", "approved", "rejected"] },
+    "role": { "$ref": "#/$defs/role" },
+    "candidateManifestSha256": { "$ref": "#/$defs/sha" },
+    "assignedRowInventorySha256": { "$ref": "#/$defs/sha" },
+    "systemPromptTextSha256": { "$ref": "#/$defs/sha" },
+    "reviewer": {
+      "type": ["object", "null"],
+      "properties": {
+        "reviewerKey": { "type": "string", "minLength": 8, "maxLength": 160 },
+        "identityEvidenceRef": { "type": "string", "minLength": 8, "maxLength": 240 },
+        "qualificationEvidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 8, "maxLength": 240 } },
+        "independenceAttested": { "const": true },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reviewerKey", "identityEvidenceRef", "qualificationEvidenceRefs", "independenceAttested", "completedAt"],
+      "additionalProperties": false
+    },
+    "systemPromptDecision": {
+      "type": "object", "additionalProperties": false, "required": ["applicable", "status", "rationale"],
+      "properties": {
+        "applicable": { "type": "boolean" },
+        "status": { "type": ["string", "null"], "enum": ["approved", "rejected", null] },
+        "rationale": { "type": ["string", "null"], "minLength": 20, "maxLength": 1200 }
+      }
+    },
+    "rowDecisions": {
+      "type": "array", "minItems": 80, "maxItems": 160,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["rowId", "reviewableContentSha256", "language", "status", "safety", "languageNaturalness", "pairedMeaning", "noNewFacts", "nonDisclosure", "agencyPreserving", "usefulness", "rationale", "requiredChanges"],
+        "properties": {
+          "rowId": { "type": "string", "pattern": "^v051-mitigation-family-[0-9]{4}-(en|sw)$" },
+          "reviewableContentSha256": { "$ref": "#/$defs/sha" },
+          "language": { "enum": ["en", "sw"] },
+          "status": { "type": ["string", "null"], "enum": ["approved", "rejected", null] },
+          "safety": { "$ref": "#/$defs/nullablePass" },
+          "languageNaturalness": { "$ref": "#/$defs/nullablePass" },
+          "pairedMeaning": { "$ref": "#/$defs/nullablePass" },
+          "noNewFacts": { "$ref": "#/$defs/nullablePass" },
+          "nonDisclosure": { "$ref": "#/$defs/nullablePass" },
+          "agencyPreserving": { "$ref": "#/$defs/nullablePass" },
+          "usefulness": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+          "rationale": { "type": ["string", "null"], "minLength": 20, "maxLength": 1200 },
+          "requiredChanges": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 3, "maxLength": 240 } }
+        }
+      }
+    },
+    "attestation": {
+      "type": "object", "additionalProperties": false, "required": ["humanAuthored", "reviewedAllAssignedRows", "rawContentRemainedControlled", "noAutoApproval", "thresholdsUnchanged"],
+      "properties": {
+        "humanAuthored": { "type": ["boolean", "null"] },
+        "reviewedAllAssignedRows": { "type": ["boolean", "null"] },
+        "rawContentRemainedControlled": { "type": ["boolean", "null"] },
+        "noAutoApproval": { "type": ["boolean", "null"] },
+        "thresholdsUnchanged": { "type": ["boolean", "null"] }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false, "required": ["classification", "containsReviewerIdentity", "committable"],
+      "properties": {
+        "classification": { "const": "restricted-review-evidence" },
+        "containsReviewerIdentity": { "type": "boolean" },
+        "committable": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "role": { "enum": ["english-language", "kiswahili-language", "product-safeguarding", "technical-ml"] },
+    "nullablePass": { "type": ["string", "null"], "enum": ["pass", "fail", "not-applicable", null] }
+  }
+}

@@ -9,6 +9,7 @@ import {
   Text,
   View,
   ViewStyle,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,16 +17,18 @@ import { useOnline } from '../../context/OnlineProvider';
 import { useTheme } from '../../theme/SimpleThemeProvider';
 import {
   borders,
-  elevation,
   layout,
   radii,
   spacing,
+  touchTargets,
   typography,
 } from '../../theme/tokens';
 import Button, { ButtonProps } from './Button';
 import { IconButton } from './IconButton';
 import { OfflineBanner } from './SystemStates';
 import { ProgressStep, ProgressStepper } from './ProgressStepper';
+import { AppearanceControl } from './AppearanceControl';
+import { BrandWordmark } from '../BrandWordmark';
 
 type SafeAreaEdge = 'top' | 'bottom' | 'left' | 'right';
 
@@ -74,6 +77,7 @@ export interface AppHeaderProps {
   onQuickExitPress?: () => void;
   showSettings?: boolean;
   showQuickExit?: boolean;
+  showAppearance?: boolean;
   withTopInset?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -85,69 +89,92 @@ export function AppHeader({
   onQuickExitPress,
   showSettings = true,
   showQuickExit = true,
+  showAppearance = false,
   withTopInset = true,
   style,
 }: AppHeaderProps) {
   const { colors } = useTheme();
   const { isOnline, queueSize } = useOnline();
+  const { width, fontScale } = useWindowDimensions();
+  const isBrandTitle = title === 'SafeRide';
+  const actionCount = Number(showAppearance) + Number(showSettings) + Number(showQuickExit);
+  const actionsWidth = actionCount * touchTargets.minimum + Math.max(0, actionCount - 1) * spacing.xxs;
+  const available = width - layout.screenGutter * 2 - actionsWidth - spacing.sm;
+  // The official wordmark keeps its proportions; only its rendered width adapts.
+  const brandWidth = isBrandTitle
+    ? Math.max(96, Math.min(132, available - 18))
+    : Math.max(76, Math.min(88, available * 0.45));
+  // Section titles share the brand row unless the width or text size needs a second line.
+  const inlineTitleSpace = available - brandWidth - borders.hairline - 10 - spacing.xs * 3;
+  const titleOnOwnRow = !isBrandTitle && (fontScale >= 1.3 || inlineTitleSpace < 96);
+  const queuedSuffix = queueSize > 0 ? `, ${queueSize} queued` : '';
+  const connectionLabel = isOnline ? 'Online' : 'Offline';
+
+  const connectionDot = (
+    <View
+      accessible
+      accessibilityLabel={`${connectionLabel}${queuedSuffix}`}
+      style={[
+        styles.connectionDot,
+        { backgroundColor: isOnline ? colors.success : colors.offline, borderColor: colors.background },
+      ]}
+    />
+  );
+  const sectionTitle = isBrandTitle ? null : (
+    <Text
+      accessibilityRole="header"
+      accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
+      numberOfLines={titleOnOwnRow ? 2 : 1}
+      style={[styles.sectionTitle, { color: colors.foreground }]}
+    >
+      {title}
+    </Text>
+  );
 
   const content = (
     <View
       style={[
         styles.appHeader,
-        {
-          backgroundColor: colors.background,
-          borderBottomColor: colors.divider,
-        },
+        { backgroundColor: colors.background },
         style,
       ]}
     >
-      <View style={styles.headerCopy}>
-        <View style={styles.headerTitleRow}>
-          <Text
-            accessibilityRole="header"
-            ellipsizeMode="tail"
-            numberOfLines={2}
-            style={[styles.headerTitle, { color: colors.foreground }]}
-          >
-            {title}
-          </Text>
-          <View
-            accessibilityLabel={isOnline ? 'Online' : 'Offline'}
-            style={[
-              styles.connectionDot,
-              { backgroundColor: isOnline ? colors.success : colors.offline },
-            ]}
-          />
+      <View style={styles.headerRow}>
+        <View style={styles.headerBrand}>
+          {/* Persistent shell: the static official logo avoids an endless background animation. */}
+          <BrandWordmark width={brandWidth} animated={false} />
+          {!titleOnOwnRow && sectionTitle ? (
+            <>
+              <View style={[styles.titleDivider, { backgroundColor: colors.border }]} />
+              {sectionTitle}
+            </>
+          ) : null}
+          {connectionDot}
         </View>
-        {subtitle ? (
-          <Text ellipsizeMode="tail" numberOfLines={2} style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {subtitle}
-            {queueSize > 0 ? ` - ${queueSize} queued` : ''}
-          </Text>
-        ) : null}
+        <View style={styles.headerActions}>
+          {showAppearance ? <AppearanceControl inHeader /> : null}
+          {showSettings ? (
+            <IconButton
+              icon="settings-outline"
+              accessibilityLabel="Open settings"
+              onPress={onSettingsPress}
+              variant="ghost"
+              size="sm"
+            />
+          ) : null}
+          {showQuickExit ? (
+            <IconButton
+              icon="calculator-outline"
+              accessibilityLabel="Quick exit"
+              accessibilityHint="Opens the calculator decoy screen."
+              onPress={onQuickExitPress}
+              variant="outline"
+              size="sm"
+            />
+          ) : null}
+        </View>
       </View>
-      <View style={styles.headerActions}>
-        {showSettings ? (
-          <IconButton
-            icon="settings-outline"
-            accessibilityLabel="Open settings"
-            onPress={onSettingsPress}
-            variant="ghost"
-            size="sm"
-          />
-        ) : null}
-        {showQuickExit ? (
-          <IconButton
-            icon="calculator-outline"
-            accessibilityLabel="Quick exit"
-            accessibilityHint="Opens the calculator decoy screen."
-            onPress={onQuickExitPress}
-            variant="outline"
-            size="sm"
-          />
-        ) : null}
-      </View>
+      {titleOnOwnRow ? sectionTitle : null}
     </View>
   );
 
@@ -186,7 +213,7 @@ export function CompactReportHeader({
       style={[
         styles.reportHeader,
         {
-          backgroundColor: colors.background,
+          backgroundColor: colors.surface,
           borderColor: colors.divider,
         },
         style,
@@ -339,49 +366,57 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appHeader: {
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: spacing.xxs,
+    paddingBottom: spacing.xxs,
+  },
+  headerRow: {
     alignItems: 'center',
-    borderBottomWidth: borders.hairline,
     flexDirection: 'row',
-    gap: spacing.md,
-    minHeight: 72,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    minHeight: touchTargets.minimum + spacing.xs,
+  },
+  headerBrand: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  titleDivider: {
+    height: 20,
+    width: borders.hairline,
+  },
+  sectionTitle: {
+    ...typography.titleMedium,
+    flexShrink: 1,
   },
   headerCopy: {
     flex: 1,
     minWidth: 0,
   },
-  headerTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minWidth: 0,
-  },
-  headerTitle: {
-    ...typography.titleLarge,
-    flexShrink: 1,
-  },
   headerSubtitle: {
-    ...typography.caption,
+    ...typography.bodySmall,
     marginTop: spacing.xxxs,
   },
   connectionDot: {
-    borderColor: 'rgba(255,255,255,0.7)',
-    borderWidth: 1,
     borderRadius: radii.round,
+    borderWidth: 2,
+    flexShrink: 0,
     height: 10,
     width: 10,
   },
   headerActions: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexShrink: 0,
     gap: spacing.xxs,
   },
   reportHeader: {
-    borderBottomWidth: borders.standard,
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    borderBottomWidth: borders.hairline,
+    gap: spacing.sm,
+    paddingHorizontal: layout.screenGutter,
+    paddingVertical: spacing.sm,
   },
   reportHeaderTop: {
     alignItems: 'center',
@@ -389,31 +424,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   reportTitle: {
-    ...typography.titleS,
+    ...typography.titleLarge,
   },
   scrollContent: {
-    gap: spacing.lg,
-    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+    paddingBottom: spacing.xl,
     paddingHorizontal: layout.screenGutter,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   staticContent: {
     flex: 1,
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingHorizontal: layout.screenGutter,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   networkBanner: {
-    marginBottom: spacing.xs,
+    marginBottom: 0,
   },
   footerDock: {
     borderTopWidth: borders.hairline,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    ...elevation.sheet,
+    paddingHorizontal: layout.screenGutter,
+    paddingTop: spacing.sm,
   },
   footerActions: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     paddingBottom: spacing.sm,
   },
 });

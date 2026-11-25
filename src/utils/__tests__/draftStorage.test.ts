@@ -56,6 +56,41 @@ describe('draftStorage', () => {
     await draftStorage.clearAll();
   });
 
+  it('updates existing drafts in queue order and preserves independent appended media', async () => {
+    await draftStorage.saveDraft(buildDraft({ mediaFiles: [] }));
+    await Promise.all(['media-a', 'media-b'].map(id => draftStorage.updateExistingDraft('draft-1', draft => ({
+      mediaFiles: [...(draft.mediaFiles ?? []), { ...buildDraft().mediaFiles![0], id }],
+    }))));
+    expect((await draftStorage.getDraft('draft-1'))?.mediaFiles?.map(media => media.id)).toEqual(['media-a', 'media-b']);
+  });
+
+  it('preserves atomic attachment membership through stale blur flushes in both directions', async () => {
+    const initial = buildDraft();
+    const first = initial.mediaFiles![0];
+    await draftStorage.saveDraft(initial);
+    await draftStorage.updateExistingDraft(initial.id, draft => ({ mediaFiles: [...draft.mediaFiles!, { ...first, id: 'new-capture' }] }));
+    await draftStorage.saveDraft({ ...initial, textEvidence: 'Unsaved synthetic note' }, { explicitKeys: new Set() });
+    expect((await draftStorage.getDraft(initial.id))?.mediaFiles?.map(media => media.id)).toEqual([first.id, 'new-capture']);
+    expect((await draftStorage.getDraft(initial.id))?.textEvidence).toBe('Unsaved synthetic note');
+    const stale = (await draftStorage.getDraft(initial.id))!;
+    await draftStorage.updateExistingDraft(initial.id, () => ({ mediaFiles: [] }));
+    await draftStorage.saveDraft(stale, { explicitKeys: new Set() });
+    expect((await draftStorage.getDraft(initial.id))?.mediaFiles).toEqual([]);
+    await draftStorage.saveDraft({ id: initial.id, mediaFiles: [first] });
+    expect((await draftStorage.getDraft(initial.id))?.mediaFiles?.map(media => media.id)).toEqual([first.id]);
+  });
+
+  it.each(['delete', 'clear'])('does not recreate a draft after a queued %s', async action => {
+    await draftStorage.saveDraft(buildDraft());
+    const removal = action === 'delete' ? draftStorage.deleteDraft('draft-1') : draftStorage.clearAll();
+    const updater = vi.fn(() => ({ textEvidence: 'delayed synthetic capture' }));
+    const update = draftStorage.updateExistingDraft('draft-1', updater);
+    await removal;
+    expect(await update).toBeNull();
+    expect(updater).not.toHaveBeenCalled();
+    expect(await draftStorage.getDraft('draft-1')).toBeNull();
+  });
+
   it('merges partial saves into existing drafts without dropping captured report data', async () => {
     const initial = buildDraft();
 

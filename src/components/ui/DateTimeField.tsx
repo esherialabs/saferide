@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { useTheme } from '../../theme/SimpleThemeProvider';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from './Sheet';
 import Button from './Button';
+import { radii, touchTargets } from '../../theme/tokens';
 
 function daysInMonth(year: number, monthIndex: number) {
   return new Date(year, monthIndex + 1, 0).getDate();
@@ -41,13 +42,13 @@ export function DateField({ label, value, onChange }: { label: string; value: Da
   };
 
   const styles = StyleSheet.create({
-    field: { paddingVertical: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 8 },
+    field: { minHeight: touchTargets.minimum, justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.divider, borderRadius: radii.input, backgroundColor: colors.surface },
     fieldText: { color: colors.foreground },
     column: { flex: 1 },
-    option: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, marginBottom: 6 },
-    optionActive: { backgroundColor: colors.primary + '20', borderWidth: 1, borderColor: colors.primary + '40' },
+    option: { minHeight: touchTargets.minimum, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 8, borderRadius: radii.input, marginBottom: 6 },
+    optionActive: { backgroundColor: colors.primaryMuted, borderWidth: 1, borderColor: colors.primary },
     optionText: { textAlign: 'center', color: colors.foreground },
-    header: { marginBottom: 8 },
+    header: { marginBottom: 8, color: colors.textSecondary },
     grid: { flexDirection: 'row', gap: 12 },
   });
 
@@ -121,13 +122,13 @@ export function TimeField({ label, value, onChange, step = 5 }: { label: string;
   };
 
   const styles = StyleSheet.create({
-    field: { paddingVertical: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 8 },
+    field: { minHeight: touchTargets.minimum, justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.divider, borderRadius: radii.input, backgroundColor: colors.surface },
     fieldText: { color: colors.foreground },
     column: { flex: 1 },
-    option: { paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, marginBottom: 6 },
-    optionActive: { backgroundColor: colors.primary + '20', borderWidth: 1, borderColor: colors.primary + '40' },
+    option: { minHeight: touchTargets.minimum, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 8, borderRadius: radii.input, marginBottom: 6 },
+    optionActive: { backgroundColor: colors.primaryMuted, borderWidth: 1, borderColor: colors.primary },
     optionText: { textAlign: 'center', color: colors.foreground },
-    header: { marginBottom: 8 },
+    header: { marginBottom: 8, color: colors.textSecondary },
     grid: { flexDirection: 'row', gap: 12 },
   });
 

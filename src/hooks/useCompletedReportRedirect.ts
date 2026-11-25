@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 
 import { isFinalReportDraftState } from '../navigation/reportPathwayFlow';
+import { exitCompletedReportToCases } from '../navigation/reportNavigation';
 import type { DraftData } from '../utils/draftStorage';
 
 type NavigationLike = {
   navigate: (...args: any[]) => void;
   getParent?: () => NavigationLike | undefined;
   getState?: () => { routeNames?: string[] };
+  dispatch?: (action: any) => void;
 };
 
 export function useCompletedReportRedirect(
@@ -15,10 +18,11 @@ export function useCompletedReportRedirect(
   options: { enabled?: boolean } = {},
 ) {
   const redirectedDraftRef = useRef<string | null>(null);
+  const isFocused = useIsFocused();
   const enabled = options.enabled ?? true;
 
   useEffect(() => {
-    if (!enabled || !draft?.id || !isFinalReportDraftState(draft)) {
+    if (!enabled || !isFocused || !draft?.id || !isFinalReportDraftState(draft)) {
       return;
     }
 
@@ -27,6 +31,6 @@ export function useCompletedReportRedirect(
     }
 
     redirectedDraftRef.current = draft.id;
-    navigation.navigate('Cases');
-  }, [draft, enabled, navigation]);
+    exitCompletedReportToCases(navigation);
+  }, [draft, enabled, isFocused, navigation]);
 }

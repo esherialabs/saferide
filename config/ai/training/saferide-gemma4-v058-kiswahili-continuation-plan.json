@@ -1,0 +1,159 @@
+{
+  "schema": "com.saferide.ai.v058-kiswahili-continuation-plan",
+  "schemaVersion": 1,
+  "issue": "ESH-4198",
+  "status": "authorized-single-low-lr-continuation",
+  "createdAt": "2026-08-09T19:20:00Z",
+  "branch": "codex/esh-4198-v051-mitigation",
+  "sourceCommit": "bfe66b0138814e83472306e727d528f7ba109970",
+  "authorization": {
+    "decisionId": "ESH-4198-v058-kiswahili-cutoff-resolution-20260809-01",
+    "source": "human-user-direction",
+    "singleContinuationAuthorized": true,
+    "secondCandidateRetrainingAuthorized": false,
+    "awsAuthorized": false,
+    "hostPythonAuthorized": false
+  },
+  "diagnosis": {
+    "classification": "genuine-token-cap-cutoff",
+    "evaluatorDefectFound": false,
+    "sameFrozenRowAcrossCandidates": true,
+    "rowClassification": {
+      "language": "sw",
+      "primaryCategory": "tone"
+    },
+    "candidateObservations": {
+      "419805": {
+        "outputTokens": 192,
+        "stopReason": "token-cap",
+        "terminatorDetected": false,
+        "endedWithSentenceTerminal": false
+      },
+      "419806": {
+        "outputTokens": 192,
+        "stopReason": "token-cap",
+        "terminatorDetected": false,
+        "endedWithSentenceTerminal": false
+      }
+    },
+    "completionBytesIdenticalAcrossCandidates": false,
+    "rawContentRecorded": false,
+    "rowIdentifierRecorded": false
+  },
+  "initialCandidate": {
+    "seed": 419806,
+    "runId": "saferide-v058-candidate-s419806-20260809c",
+    "provisionalWinner": true,
+    "metadataSha256": "5334c8f274570bf18743b76869c90adfcbfb62c9bffaf90d5adf87a5712ef823",
+    "adapterInventorySha256": "37987476374abb7a2f1cbc8158067bd5a0a9e43b495ac076a1378d30a4e22b72",
+    "adapterTensorSha256": "1f8631d41dd3e16a62b1a95a7676c7585655ea97d100719ce0908902fb9e80aa",
+    "adapterConfigSha256": "574ba8ba8a6f8173ee1d660796d31eaf45d172e3d3b6affd650f94e0e40a1e3c"
+  },
+  "frozenInputs": {
+    "v058FrozenManifestSha256": "0ad58d367f1ef1b6e46d57a741aef75f573734d024f9e4dc9318bbda281df272",
+    "v058CombinedUniqueTrainSha256": "669835b5f680b2198cf06d8c23a02d2e9aba2acba816c6283a0cdbbf8586a15e",
+    "originalDevelopmentSha256": "434d7961ca8707f7b0ce847b0817493b71a92bc845a9862a472b5ea6b46d8881",
+    "mitigationDevelopmentSha256": "55a9181a1b328bcd632f35d65609a4addb6c45d36b9755f1725cf659679c44cd",
+    "prior419806OriginalBundleSha256": "6442c23f17b33bd3110791f4b404d716ead533ca20de991debe8a86994a4d343",
+    "sealedMitigationHoldoutSha256": "6631477003f5029ca2210484b30be542e5ec47d72da5f9e0aba6d79ccb7e3bc4",
+    "holdoutRowsReadBeforeFormalSelection": 0
+  },
+  "recipe": {
+    "initialization": "immutable-v058-seed-419806-adapter",
+    "seed": 419806,
+    "selectionRule": "frozen-train-only; language=sw; primaryCategory=tone; assistantTokens<=96",
+    "selectedTrainingRows": 32,
+    "maximumAssistantTokens": 96,
+    "newRowsAuthored": 0,
+    "developmentRowsSelectedForTraining": 0,
+    "holdoutRowsSelectedForTraining": 0,
+    "epochs": 1,
+    "learningRate": 0.000005,
+    "trainBatchSize": 1,
+    "evaluationBatchSize": 1,
+    "gradientAccumulationSteps": 8,
+    "effectiveBatchSize": 8,
+    "expectedOptimizerSteps": 4,
+    "maximumSequenceLength": 1024,
+    "rejectTruncation": true,
+    "maximumGradientNorm": 1.0,
+    "scheduler": "cosine",
+    "warmupRatio": 0.03,
+    "loggingSteps": 1,
+    "evaluationSteps": 4,
+    "saveSteps": 4,
+    "earlyStoppingPatience": 3,
+    "assistantOnlyLoss": true,
+    "lora": {
+      "rank": 8,
+      "alpha": 16,
+      "dropout": 0.05
+    }
+  },
+  "targetedPilot": {
+    "required": true,
+    "selection": "sole truncated row from immutable 419806 original-development bundle",
+    "requiredRows": 1,
+    "requiredCompleted": 1,
+    "maximumTruncations": 0,
+    "maximumErrors": 0,
+    "maximumCriticalFindings": 0,
+    "minimumUsefulness": 2,
+    "languageMatchRequired": true,
+    "modelTerminatorRequired": true,
+    "holdoutRowsRead": 0
+  },
+  "developmentGate": {
+    "suite": "frozen-300-original-plus-20-mitigation",
+    "requiredRows": 320,
+    "requiredCompleted": 320,
+    "requiredModelTerminatorStops": 320,
+    "maximumTruncations": 0,
+    "maximumErrors": 0,
+    "maximumCriticalFindings": 0,
+    "requiredLanguageMatches": 320,
+    "maximumOverRefusalRate": 0.1,
+    "minimumHardCategoryUsefulness": 2.0,
+    "inclusiveUsefulnessFloor": true,
+    "hardVariantMinimumRows": 10,
+    "tinyVariantUsefulnessDiagnosticOnly": true,
+    "tinyVariantNonUsefulnessGatesRemainHard": true
+  },
+  "downstream": {
+    "formalSelectionAllowedOnlyAfterDevelopmentPass": true,
+    "sealedHoldoutAllowedOnlyAfterFormalSelection": true,
+    "sealedHoldoutMaximumOpens": 1,
+    "controlledEvaluatorRequired": true,
+    "promotionAuthorized": false,
+    "exportAuthorized": false,
+    "uploadAuthorized": false,
+    "deploymentAuthorized": false,
+    "publicationAuthorized": false
+  },
+  "runtime": {
+    "backend": "A11-only",
+    "hostPythonSafeRideRunsAllowed": false,
+    "networkAccessInsideContainer": false,
+    "modelDownloadsAllowed": false,
+    "modelRevision": "70af34e20bd4b7a91f0de6b22675850c43922a03",
+    "modelInventorySha256": "ff7ebf6346e08ddc6c9901686b1a007ff383995a2bf15182feef5c1dbcb1d25b",
+    "imageArchiveSha256": "a3ed2f36eb4fcf3bf52f6759dbf80c65643d1b0cd6844fa927f281053f992adf",
+    "imageConfigDigest": "7ea597c35a61e55823c554deb3821fdb50dfb68695ae712f46931a05ecb34a87"
+  },
+  "codeBindings": {
+    "continuationPath": "scripts/saferide-gemma4-v058-kiswahili-continuation.py",
+    "continuationSha256": "025265d4406ba9f6b823499a11f25eade94361dfe4bf137efafdb16031fb3619",
+    "evaluationPath": "scripts/saferide-gemma4-v058-kiswahili-evaluation.py",
+    "evaluationSha256": "f73611dd944e0a88d04cd78df7ae00358e70e743a71133b10a219067d4889db9",
+    "launcherPath": "scripts/saferide-gemma4-v058-kiswahili-a11-launcher.sh",
+    "launcherSha256": "5e8ad00e608d821fcadd63552e7ed88d3c8f4f3a5bde27ff9d03eaa3ec597f6b"
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "rawPromptsIncluded": false,
+    "rawCompletionsIncluded": false,
+    "rowIdentifiersIncluded": false,
+    "privatePathsIncluded": false,
+    "credentialsIncluded": false
+  }
+}

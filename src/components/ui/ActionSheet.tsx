@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   Modal,
   Animated,
+  AccessibilityInfo,
+  ScrollView,
   Dimensions,
   SafeAreaView,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/SimpleThemeProvider';
+import { radii, feedback, touchTargets, typography } from '../../theme/tokens';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -42,8 +45,23 @@ export function ActionSheet({
 }: ActionSheetProps) {
   const { colors } = useTheme();
   const [slideAnim] = React.useState(new Animated.Value(screenHeight));
+  const [reduceMotion, setReduceMotion] = React.useState(false);
 
   React.useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
+      if (mounted) setReduceMotion(enabled);
+    }).catch(() => undefined);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { mounted = false; subscription.remove(); };
+  }, []);
+
+  React.useEffect(() => {
+    if (reduceMotion) {
+      slideAnim.stopAnimation();
+      slideAnim.setValue(visible ? 0 : screenHeight);
+      return;
+    }
     if (visible) {
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -58,7 +76,7 @@ export function ActionSheet({
         useNativeDriver: true,
       }).start();
     }
-  }, [visible, slideAnim]);
+  }, [visible, slideAnim, reduceMotion]);
 
   const handleActionPress = (action: ActionSheetAction) => {
     if (!action.disabled) {
@@ -73,51 +91,50 @@ export function ActionSheet({
   const styles = StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
       justifyContent: 'flex-end',
     },
     container: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radii.sheet,
+      borderTopRightRadius: radii.sheet,
       paddingBottom: 20,
       maxHeight: screenHeight * 0.8,
     },
     header: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      paddingHorizontal: 16,
+      paddingTop: 4,
+      paddingBottom: 8,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '600',
+      ...typography.titleLarge,
       color: colors.foreground,
-      textAlign: 'center',
       marginBottom: 4,
     },
     message: {
-      fontSize: 14,
-      color: colors.mutedForeground,
-      textAlign: 'center',
-      lineHeight: 20,
+      ...typography.bodySmall,
+      color: colors.textSecondary,
     },
     actionsContainer: {
-      paddingTop: 8,
+      paddingTop: 4,
     },
     actionButton: {
+      minHeight: touchTargets.row,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.divider,
     },
     actionIcon: {
-      marginRight: 12,
-      width: 24,
       alignItems: 'center',
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radii.round,
+      height: 36,
+      justifyContent: 'center',
+      marginRight: 12,
+      width: 36,
     },
     actionText: {
       flex: 1,
@@ -138,16 +155,16 @@ export function ActionSheet({
     },
     cancelSection: {
       marginTop: 8,
-      paddingTop: 8,
-      borderTopWidth: 6,
-      borderTopColor: colors.muted,
+      paddingHorizontal: 16,
     },
     cancelButton: {
-      flexDirection: 'row',
       alignItems: 'center',
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radii.button,
+      flexDirection: 'row',
       justifyContent: 'center',
+      minHeight: touchTargets.action,
       paddingHorizontal: 20,
-      paddingVertical: 16,
     },
     cancelText: {
       fontSize: 16,
@@ -173,7 +190,7 @@ export function ActionSheet({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onClose}
       statusBarTranslucent
     >
@@ -181,6 +198,7 @@ export function ActionSheet({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <Animated.View
+              accessibilityViewIsModal
               style={[
                 styles.container,
                 {
@@ -188,12 +206,13 @@ export function ActionSheet({
                 },
               ]}
             >
-              <SafeAreaView>
+              <SafeAreaView style={{ maxHeight: screenHeight * 0.8 }}>
+                <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={styles.handle} />
                 
                 {(title || message) && (
                   <View style={styles.header}>
-                    {title && <Text style={styles.title}>{title}</Text>}
+                    {title && <Text accessibilityRole="header" style={styles.title}>{title}</Text>}
                     {message && <Text style={styles.message}>{message}</Text>}
                   </View>
                 )}
@@ -209,10 +228,13 @@ export function ActionSheet({
                       ]}
                       onPress={() => handleActionPress(action)}
                       disabled={action.disabled}
-                      activeOpacity={action.disabled ? 1 : 0.7}
+                      activeOpacity={action.disabled ? 1 : feedback.opacity.pressed}
+                      accessibilityRole="button"
+                      accessibilityLabel={action.title}
+                      accessibilityState={{ disabled: action.disabled }}
                     >
-                      <View style={styles.actionIcon}>
-                        {action.icon && (
+                      {action.icon ? (
+                        <View style={styles.actionIcon}>
                           <Ionicons
                             name={action.icon}
                             size={20}
@@ -224,8 +246,8 @@ export function ActionSheet({
                                 : colors.foreground
                             }
                           />
-                        )}
-                      </View>
+                        </View>
+                      ) : null}
                       <Text
                         style={[
                           styles.actionText,
@@ -243,10 +265,11 @@ export function ActionSheet({
                 </View>
 
                 <View style={styles.cancelSection}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={onClose} accessibilityRole="button" accessibilityLabel={cancelText}>
                     <Text style={styles.cancelText}>{cancelText}</Text>
                   </TouchableOpacity>
                 </View>
+                </ScrollView>
               </SafeAreaView>
             </Animated.View>
           </TouchableWithoutFeedback>

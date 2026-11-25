@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-diversity-remediation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "classification",
+    "status",
+    "round",
+    "seed",
+    "createdAt",
+    "priorAuthoringSourceSha256",
+    "historicalCandidateManifestSha256",
+    "promptOnlySummarySha256",
+    "implementationSha256",
+    "scope",
+    "before",
+    "after",
+    "violationsBefore",
+    "violationsAfter",
+    "preservation",
+    "affectedFamilies"
+  ],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-diversity-remediation" },
+    "schemaVersion": { "const": 1 },
+    "classification": { "const": "restricted-content-free" },
+    "status": { "const": "passed" },
+    "round": { "const": 2 },
+    "seed": { "const": 419853 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "priorAuthoringSourceSha256": { "$ref": "#/$defs/sha" },
+    "historicalCandidateManifestSha256": { "$ref": "#/$defs/sha" },
+    "promptOnlySummarySha256": { "$ref": "#/$defs/sha" },
+    "implementationSha256": { "$ref": "#/$defs/sha" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tracks", "affectedFamilyCount", "affectedFamilyInventorySha256", "completeBilingualPairsModified", "modifiedFields"],
+      "properties": {
+        "tracks": { "const": ["agency-preserving-deescalation", "hidden-instruction-nondisclosure"] },
+        "affectedFamilyCount": { "const": 27 },
+        "affectedFamilyInventorySha256": { "$ref": "#/$defs/sha" },
+        "completeBilingualPairsModified": { "const": true },
+        "modifiedFields": { "const": ["en.assistantTarget", "sw.assistantTarget"] }
+      }
+    },
+    "before": { "$ref": "#/$defs/distribution" },
+    "after": { "$ref": "#/$defs/distribution" },
+    "violationsBefore": { "$ref": "#/$defs/violationAudit" },
+    "violationsAfter": { "$ref": "#/$defs/violationAudit" },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["userPromptsAndScenarios", "splitTrackVariantAndConversationForm", "assistantBridges", "safetyMeaningAndSurvivorAgency", "languageBalance", "protectedDataBoundaries", "unaffectedFamilies"],
+      "properties": {
+        "userPromptsAndScenarios": { "const": true },
+        "splitTrackVariantAndConversationForm": { "const": true },
+        "assistantBridges": { "const": true },
+        "safetyMeaningAndSurvivorAgency": { "const": true },
+        "languageBalance": { "const": true },
+        "protectedDataBoundaries": { "const": true },
+        "unaffectedFamilies": { "const": true }
+      }
+    },
+    "affectedFamilies": {
+      "type": "array",
+      "minItems": 27,
+      "maxItems": 27,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^v051-mitigation-family-[0-9]{4}$" }
+    }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "distribution": {
+      "type": "object",
+      "required": ["rowCount", "sixWordOpeningMaximumCount", "sixWordOpeningMaximumShare", "sixWordOpeningShareLimit", "responseTemplateMaximumCount", "responseTemplateMaximumShare", "responseTemplateShareLimit", "semanticClusterMaximumCount", "semanticClusterMaximumShare", "semanticClusterShareLimit"],
+      "properties": {
+        "status": { "const": "passed" },
+        "rowCount": { "const": 160 },
+        "sixWordOpeningMaximumCount": { "type": "integer", "minimum": 1, "maximum": 160 },
+        "sixWordOpeningMaximumShare": { "type": "number", "minimum": 0, "maximum": 1 },
+        "sixWordOpeningShareLimit": { "const": 0.05 },
+        "responseTemplateMaximumCount": { "type": "integer", "minimum": 1, "maximum": 160 },
+        "responseTemplateMaximumShare": { "type": "number", "minimum": 0, "maximum": 1 },
+        "responseTemplateShareLimit": { "const": 0.03 },
+        "semanticClusterMaximumCount": { "type": "integer", "minimum": 1, "maximum": 160 },
+        "semanticClusterMaximumShare": { "type": "number", "minimum": 0, "maximum": 1 },
+        "semanticClusterShareLimit": { "const": 0.03 }
+      }
+    },
+    "violationAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sixWordOpening", "responseTemplate", "semanticCluster"],
+      "properties": {
+        "sixWordOpening": { "$ref": "#/$defs/violationAggregate" },
+        "responseTemplate": { "$ref": "#/$defs/violationAggregate" },
+        "semanticCluster": { "$ref": "#/$defs/violationAggregate" }
+      }
+    },
+    "violationAggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limitCount", "maximumCount", "overLimitGroupCount", "overLimitRowCount", "overLimitFamilyCount", "byLanguage", "byTrack"],
+      "properties": {
+        "limitCount": { "type": "integer", "minimum": 1, "maximum": 160 },
+        "maximumCount": { "type": "integer", "minimum": 1, "maximum": 160 },
+        "overLimitGroupCount": { "type": "integer", "minimum": 0 },
+        "overLimitRowCount": { "type": "integer", "minimum": 0, "maximum": 160 },
+        "overLimitFamilyCount": { "type": "integer", "minimum": 0, "maximum": 80 },
+        "byLanguage": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "byTrack": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+      }
+    }
+  }
+}

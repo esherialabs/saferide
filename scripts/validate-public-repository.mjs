@@ -38,15 +38,25 @@ const requiredFiles = [
 
 const forbiddenPrefixes = [
   '.codex/',
+  'config/unicef/',
   'data/ai/',
   'docs/agents/',
   'docs/security/',
   'docs/unicef/',
+  'infra/ai/',
   'infra/aws/',
+  'infra/azure/',
+  'infra/ci/',
+  'infra/selfhost/',
   'infra/web/',
   'notebooks/',
   'public-repository/',
+  'tools/saferide-reviewer/',
+  'web/public/images/pilot/',
 ];
+
+// Photographs of real people from the HURIA pilot stay out of the public tree.
+const forbiddenFiles = new Set(['web/public/images/huria-community.webp']);
 
 const forbiddenExtensions = new Set([
   '.aab', '.apk', '.ckpt', '.gguf', '.ipa', '.jks', '.keystore', '.onnx',
@@ -90,7 +100,7 @@ for (const relativePath of requiredFiles) {
 
 const files = walk(root).sort();
 for (const relativePath of files) {
-  if (forbiddenPrefixes.some(prefix => relativePath.startsWith(prefix))) {
+  if (forbiddenPrefixes.some(prefix => relativePath.startsWith(prefix)) || forbiddenFiles.has(relativePath)) {
     errors.push(`restricted path is present: ${relativePath}`);
   }
   if (forbiddenExtensions.has(path.extname(relativePath).toLowerCase())) {
@@ -125,6 +135,43 @@ for (const relativePath of files) {
   }
   if (text.includes('https://esheria.ai')) {
     errors.push(`commercial Esheria site linkage remains in ${relativePath}`);
+  }
+}
+
+// Relative Markdown links in shipped files must point to shipped files.
+// Known gaps are listed here (source -> target) until the private source is fixed;
+// any new dangling link fails.
+const knownDanglingLinks = new Set([
+  'README.md -> docs/release/android-release-playbook.md',
+  'docs/release/store-release-runbook.md -> docs/release/android-release-playbook.md',
+  'docs/release/store-release-runbook.md -> docs/release/eas-update-policy.md',
+  'docs/migration/storage-flow.md -> infra/selfhost/README.md',
+  'docs/qa/saferide-gemma4-e2b-v058-adapter-model-card-2026-08-11.md -> docs/qa/benchmarks/EXTERNAL_STANDARD_BENCHMARK_PLAN.md',
+  'docs/qa/saferide-gemma4-e2b-v058-adapter-model-card-2026-08-11.md -> docs/qa/benchmarks/README.md',
+  'docs/qa/saferide-gemma4-e2b-v058-adapter-model-card-2026-08-11.md -> docs/qa/benchmarks/saferide-v058-standardized-benchmark-summary-2026-08-13.csv',
+  'docs/qa/saferide-gemma4-e2b-v058-adapter-model-card-2026-08-11.md -> docs/qa/benchmarks/saferide-v058-standardized-benchmark-summary-2026-08-13.json',
+  'docs/qa/saferide-gemma4-e2b-v058-litertlm-model-card-2026-08-10.md -> docs/qa/benchmarks/EXTERNAL_STANDARD_BENCHMARK_PLAN.md',
+  'docs/qa/saferide-gemma4-e2b-v058-litertlm-model-card-2026-08-10.md -> docs/qa/benchmarks/README.md',
+  'docs/qa/saferide-gemma4-e2b-v058-litertlm-model-card-2026-08-10.md -> docs/qa/benchmarks/saferide-v058-standardized-benchmark-summary-2026-08-13.csv',
+  'docs/qa/saferide-gemma4-e2b-v058-litertlm-model-card-2026-08-10.md -> docs/qa/benchmarks/saferide-v058-standardized-benchmark-summary-2026-08-13.json',
+]);
+const shipped = new Set(files);
+const markdownLink = /\]\(([^)\s]+)\)/g;
+for (const relativePath of files) {
+  if (path.extname(relativePath).toLowerCase() !== '.md') continue;
+  const text = fs.readFileSync(path.join(root, relativePath), 'utf8');
+  for (const match of text.matchAll(markdownLink)) {
+    const target = match[1].split('#')[0];
+    if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('/')) continue;
+    const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(relativePath), decodeURI(target)));
+    if (resolved.startsWith('..')) {
+      errors.push(`markdown link leaves the repository: ${relativePath} -> ${target}`);
+      continue;
+    }
+    const isShipped = shipped.has(resolved) || files.some(file => file.startsWith(`${resolved.replace(/\/$/, '')}/`));
+    if (!isShipped && !knownDanglingLinks.has(`${relativePath} -> ${resolved}`)) {
+      errors.push(`markdown link points to an unshipped file: ${relativePath} -> ${resolved}`);
+    }
   }
 }
 

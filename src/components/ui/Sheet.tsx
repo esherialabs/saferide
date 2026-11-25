@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   PanResponder,
   LayoutChangeEvent,
 } from 'react-native';
 import { useTheme } from '../../theme/SimpleThemeProvider';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { spacing, radii, shadows, typography } from '../../theme/tokens';
 
 interface SheetContextType {
@@ -105,7 +106,8 @@ export function SheetContent({
 }: SheetContentProps) {
   const context = useContext(SheetContext);
   const { colors } = useTheme();
-  const { height: screenHeight } = Dimensions.get('window');
+  const reducedMotion = useReducedMotion();
+  const { height: screenHeight } = useWindowDimensions();
   const [contentHeight, setContentHeight] = React.useState(0);
   
   if (!context) {
@@ -160,6 +162,14 @@ export function SheetContent({
     return unique;
   }, [contentHeight, screenHeight, snapPoints]);
 
+  // Keep the stable responder current after layout, rotation and controlled updates.
+  const snapPositionsRef = useRef(snapPositions);
+  const setOpenRef = useRef(setOpen);
+  const reducedMotionRef = useRef(reducedMotion);
+  snapPositionsRef.current = snapPositions;
+  setOpenRef.current = setOpen;
+  reducedMotionRef.current = reducedMotion;
+
   useEffect(() => {
     if (!snapPositions.length) return;
     if (currentSnapPoint.current >= snapPositions.length) {
@@ -168,6 +178,13 @@ export function SheetContent({
   }, [snapPositions]);
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.stopAnimation();
+      translateY.stopAnimation();
+      opacity.setValue(open ? 1 : 0);
+      translateY.setValue(open ? snapPositions[currentSnapPoint.current] ?? 0 : screenHeight);
+      return;
+    }
     if (open) {
       const target = snapPositions[currentSnapPoint.current] ?? 0;
       // Show sheet
@@ -200,7 +217,7 @@ export function SheetContent({
         }),
       ]).start();
     }
-  }, [open, screenHeight, snapPositions, opacity, translateY]);
+  }, [open, screenHeight, snapPositions, opacity, translateY, reducedMotion]);
 
   const handleContentLayout = React.useCallback((event: LayoutChangeEvent) => {
     const height = event.nativeEvent.layout.height;
@@ -218,11 +235,12 @@ export function SheetContent({
       },
       onPanResponderGrant: () => {
         // Set offset to current value when gesture starts
+        const positions = snapPositionsRef.current;
         const safeIndex = Math.min(
           Math.max(currentSnapPoint.current, 0),
-          Math.max(snapPositions.length - 1, 0),
+          Math.max(positions.length - 1, 0),
         );
-        const currentOffset = snapPositions[safeIndex] ?? 0;
+        const currentOffset = positions[safeIndex] ?? 0;
         translateY.setOffset(currentOffset);
         translateY.setValue(0);
       },
@@ -235,20 +253,21 @@ export function SheetContent({
         translateY.flattenOffset();
         
         const { dy, vy } = gestureState;
+        const positions = snapPositionsRef.current;
         const safeIndex = Math.min(
           Math.max(currentSnapPoint.current, 0),
-          Math.max(snapPositions.length - 1, 0),
+          Math.max(positions.length - 1, 0),
         );
-        const basePosition = snapPositions[safeIndex] ?? 0;
+        const basePosition = positions[safeIndex] ?? 0;
         const currentY = basePosition + dy;
         
         // Determine closest snap point
         let closestSnapIndex = 0;
-        if (snapPositions.length > 0) {
-          let minDistance = Math.abs(currentY - snapPositions[0]);
+        if (positions.length > 0) {
+          let minDistance = Math.abs(currentY - positions[0]);
           
-          for (let i = 1; i < snapPositions.length; i++) {
-            const distance = Math.abs(currentY - snapPositions[i]);
+          for (let i = 1; i < positions.length; i++) {
+            const distance = Math.abs(currentY - positions[i]);
             if (distance < minDistance) {
               minDistance = distance;
               closestSnapIndex = i;
@@ -257,7 +276,7 @@ export function SheetContent({
         }
         
         // Consider velocity for snap point selection
-        if (vy > 0.5 && closestSnapIndex < snapPositions.length - 1) {
+        if (vy > 0.5 && closestSnapIndex < positions.length - 1) {
           closestSnapIndex += 1; // Snap to lower position (more closed)
         } else if (vy < -0.5 && closestSnapIndex > 0) {
           closestSnapIndex -= 1; // Snap to higher position (more open)
@@ -265,14 +284,19 @@ export function SheetContent({
         
         // If dragged significantly down, close the sheet
         if (dy > 150 || (vy > 0.8 && dy > 50)) {
-          setOpen(false);
+          setOpenRef.current(false);
           return;
         }
         
         currentSnapPoint.current = closestSnapIndex;
+
+        if (reducedMotionRef.current) {
+          translateY.setValue(positions[closestSnapIndex] ?? 0);
+          return;
+        }
         
         Animated.spring(translateY, {
-          toValue: snapPositions[closestSnapIndex] ?? 0,
+          toValue: positions[closestSnapIndex] ?? 0,
           tension: 100,
           friction: 8,
           useNativeDriver: true,
@@ -288,14 +312,14 @@ export function SheetContent({
     },
     backdrop: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
     },
     container: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: colors.surfaceAlt,
+      backgroundColor: colors.surface,
       borderTopLeftRadius: radii.sheet,
       borderTopRightRadius: radii.sheet,
       minHeight: screenHeight * 0.3,
@@ -305,14 +329,17 @@ export function SheetContent({
     dragIndicator: {
       width: 36,
       height: 5,
-      backgroundColor: '#D7DBE0',
+      backgroundColor: colors.input,
       borderRadius: 8,
       alignSelf: 'center',
-      marginTop: spacing.sm,
-      marginBottom: spacing.md,
+    },
+    dragHandle: {
+      minHeight: 48,
+      justifyContent: 'center',
     },
     content: {
       flex: 1,
+      minHeight: 0,
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.md,
     },
@@ -332,20 +359,23 @@ export function SheetContent({
           <View style={styles.overlay} />
         </TouchableWithoutFeedback>
 
-        <Animated.View 
+        <Animated.View
+          accessibilityViewIsModal
           style={[
             styles.container, 
             { transform: [{ translateY }] },
             style
           ]}
-          {...panResponder.panHandlers}
         >
-          <TouchableWithoutFeedback>
-            <View style={styles.content} onLayout={handleContentLayout}>
-              {showDragIndicator && <View style={styles.dragIndicator} />}
-              {children}
-            </View>
-          </TouchableWithoutFeedback>
+          <View style={styles.content} onLayout={handleContentLayout}>
+            {showDragIndicator && (
+              // Body drags belong to nested ScrollViews; only the handle moves the sheet.
+              <View style={styles.dragHandle} {...panResponder.panHandlers}>
+                <View style={styles.dragIndicator} />
+              </View>
+            )}
+            {children}
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -358,11 +388,11 @@ export function SheetHeader({ children, style }: SheetHeaderProps) {
   return (
     <View style={[{
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.divider,
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
     }, style]}>
       {children}
     </View>
@@ -373,11 +403,11 @@ export function SheetTitle({ children, style }: SheetTitleProps) {
   const { colors } = useTheme();
   
   return (
-    <Text style={[{
-      ...typography.titleL,
-      textAlign: 'center',
+    <Text accessibilityRole="header" style={[{
+      ...typography.titleLarge,
+      textAlign: 'left',
       color: colors.foreground,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.xxs,
     }, style]}>
       {children}
     </Text>
@@ -391,7 +421,7 @@ export function SheetDescription({ children, style }: SheetDescriptionProps) {
     <Text style={[{
       ...typography.bodyS,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: 'left',
     }, style]}>
       {children}
     </Text>

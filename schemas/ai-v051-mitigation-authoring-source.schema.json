@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saferide.example/schemas/ai-v051-mitigation-authoring-source.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schemaVersion", "sourceId", "datasetId", "classification", "createdAt", "authoringSeed", "allocationSeed", "adjudicationSummarySha256", "systemPromptTextSha256", "families", "attestations"],
+  "properties": {
+    "schema": { "const": "com.saferide.ai.v051-mitigation-authoring-source" },
+    "schemaVersion": { "enum": [1, 2] },
+    "sourceId": { "type": "string", "pattern": "^saferide-v051-mitigation-authoring-[a-z0-9-]{8,96}$" },
+    "datasetId": { "const": "saferide-synthetic-guidance-v0.5.1" },
+    "classification": { "const": "restricted-synthetic-content" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "authoringSeed": { "enum": [419851, 419852, 419853] },
+    "allocationSeed": { "const": 419805 },
+    "adjudicationSummarySha256": { "$ref": "#/$defs/sha" },
+    "systemPromptTextSha256": { "$ref": "#/$defs/sha" },
+    "remediation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["round", "seed", "priorAuthoringSourceSha256", "priorCandidateManifestSha256", "semanticSummarySha256", "remediationFileSha256", "affectedFamilyCount", "affectedFamilyInventorySha256", "generatorInput", "matchedProtectedContentProvided", "matchedProtectedIdentifiersProvided", "completeBilingualFamiliesRegenerated", "unaffectedFamiliesPreserved", "repeatedCollisionAction"],
+      "properties": {
+        "round": { "enum": [1, 2] },
+        "seed": { "enum": [419852, 419853] },
+        "remediationKind": { "enum": ["prompt-semantic-family-regeneration", "assistant-diversity-wording-only"] },
+        "implementationSha256": { "$ref": "#/$defs/sha" },
+        "priorAuthoringSourceSha256": { "$ref": "#/$defs/sha" },
+        "priorCandidateManifestSha256": { "$ref": "#/$defs/sha" },
+        "semanticSummarySha256": { "$ref": "#/$defs/sha" },
+        "remediationFileSha256": { "$ref": "#/$defs/sha" },
+        "affectedFamilyCount": { "type": "integer", "minimum": 1, "maximum": 80 },
+        "affectedFamilyInventorySha256": { "$ref": "#/$defs/sha" },
+        "generatorInput": { "enum": ["candidate-family-specification-only", "prior-authoring-source-only"] },
+        "matchedProtectedContentProvided": { "const": false },
+        "matchedProtectedIdentifiersProvided": { "const": false },
+        "completeBilingualFamiliesRegenerated": { "type": "boolean" },
+        "completeBilingualFamiliesModified": { "type": "boolean" },
+        "unaffectedFamiliesPreserved": { "const": true },
+        "userPromptsAndScenariosPreserved": { "type": "boolean" },
+        "splitTrackVariantPreserved": { "type": "boolean" },
+        "repeatedCollisionAction": { "enum": ["not-applicable-first-round", "fresh-scenario-same-track-and-variant", "assistant-response-diversity-only"] }
+      }
+    },
+    "families": {
+      "type": "array", "minItems": 80, "maxItems": 80,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["ordinal", "familyId", "split", "track", "variant", "conversationForm", "en", "sw"],
+        "properties": {
+          "ordinal": { "type": "integer", "minimum": 1, "maximum": 80 },
+          "familyId": { "type": "string", "pattern": "^v051-mitigation-family-[0-9]{4}$" },
+          "split": { "$ref": "#/$defs/split" },
+          "track": { "$ref": "#/$defs/track" },
+          "variant": { "$ref": "#/$defs/variant" },
+          "conversationForm": { "enum": ["single-turn", "multi-turn"] },
+          "en": { "$ref": "#/$defs/content" },
+          "sw": { "$ref": "#/$defs/content" }
+        }
+      }
+    },
+    "attestations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["syntheticOnly", "failedDevelopmentPromptsNotViewedForAuthoring", "failedDevelopmentPromptsNotCopiedOrParaphrased", "negativeBehaviorOnlyInUserTurns", "assistantTargetsSafeOnly", "noSurvivorData", "noProductionData"],
+      "properties": {
+        "syntheticOnly": { "const": true },
+        "failedDevelopmentPromptsNotViewedForAuthoring": { "const": true },
+        "failedDevelopmentPromptsNotCopiedOrParaphrased": { "const": true },
+        "negativeBehaviorOnlyInUserTurns": { "const": true },
+        "assistantTargetsSafeOnly": { "const": true },
+        "noSurvivorData": { "const": true },
+        "noProductionData": { "const": true }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "schemaVersion": { "const": 1 } } },
+      "then": { "properties": { "authoringSeed": { "const": 419851 } }, "not": { "required": ["remediation"] } },
+      "else": { "required": ["remediation"], "properties": { "authoringSeed": { "enum": [419852, 419853] } } }
+    }
+  ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "split": { "enum": ["train", "mitigation-dev", "mitigation-holdout"] },
+    "track": { "enum": ["agency-preserving-deescalation", "hidden-instruction-nondisclosure"] },
+    "variant": { "enum": ["coercion", "confrontation", "retaliation", "agency-alternative", "direct-extraction", "indirect-extraction", "role-play-extraction", "non-repeating-refusal"] },
+    "content": {
+      "type": "object", "additionalProperties": false, "required": ["userTurns", "assistantTarget"],
+      "properties": {
+        "userTurns": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string", "minLength": 12, "maxLength": 1000 } },
+        "assistantTarget": { "type": "string", "minLength": 40, "maxLength": 1600 },
+        "assistantBridge": { "type": "string", "minLength": 20, "maxLength": 800 }
+      }
+    }
+  }
+}

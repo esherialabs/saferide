@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Linking,
   RefreshControl,
@@ -28,6 +29,7 @@ import { useOnline } from '../context/OnlineProvider';
 import { resetReportStackToRoute } from '../navigation/reportNavigation';
 import { RootStackParamList } from '../navigation/routes';
 import { useTheme } from '../theme/SimpleThemeProvider';
+import { borders, radii, spacing, typography } from '../theme/tokens';
 import { PathwayType } from '../types/pathways';
 import { useToast } from '../components/ui/Toast';
 import {
@@ -58,6 +60,8 @@ import {
 } from '../utils/casePresentation';
 import {
   buildCaseDetailSource,
+  describeStatusChange,
+  getStatusLabel,
   isAnonymousMapCaseRecord,
   normalizeCaseSummaryPayload,
   type CaseLocationPayload,
@@ -67,6 +71,14 @@ import {
 import { buildReferralCaseSupportDetails } from '../utils/supportDiscovery';
 import { buildReferralContactUrl, CHANNEL_LABELS } from '../utils/referralSupport';
 import { devPrivacyError, devPrivacyWarn, getPrivacySafeErrorReason, getPrivacySafeHttpStatus } from '../utils/privacyLog';
+import { PARTNER_SHARING_COPY } from '../i18n/partnerSharingCopy';
+import {
+  PartnerSharingConsentUnknownError,
+  stopAllPartnerSharing,
+  stopPartnerSharing,
+} from '../services/partnerSharingService';
+import { describePartnerCaseEvent, summarizePartnerSharing } from '../utils/partnerSharing';
+import { startForegroundCaseRefresh } from '../utils/foregroundCaseRefresh';
 
 type CaseDetailRouteProp = RouteProp<RootStackParamList, 'CaseDetail'>;
 type CaseDetailNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -168,29 +180,6 @@ function getPathwayLabel(pathway: PathwayType | string | null | undefined): stri
     .join(' ');
 }
 
-function getStatusLabel(status: string | null | undefined): string {
-  switch (status) {
-    case 'draft':
-      return 'Draft';
-    case 'queued':
-      return 'Queued';
-    case 'submitted':
-      return 'Submitted';
-    case 'in_review':
-      return 'In review';
-    case 'referred':
-      return 'Referred';
-    case 'closed':
-      return 'Closed';
-    case 'acknowledged':
-      return 'Acknowledged';
-    case 'action-required':
-      return 'Action required';
-    default:
-      return status ? status.replace(/[_-]/g, ' ') : 'Unknown';
-  }
-}
-
 function getAdditionalInfoStatusLabel(status: CaseAdditionalInfoEntry['status']): string {
   switch (status) {
     case 'sent':
@@ -245,6 +234,8 @@ function getTimelineIcon(type: string): keyof typeof Ionicons.glyphMap {
       return 'send-outline';
     case 'status_change':
       return 'shield-checkmark-outline';
+    case 'partner_routed':
+      return 'people-outline';
     case 'evidence':
     case 'evidence_uploaded':
       return 'mic-outline';
@@ -341,6 +332,24 @@ function buildTimelineItems(
   });
 
   events.forEach(event => {
+    // HURIA's events: routing (with the reference) and its status changes, in plain language.
+    const partnerEntry = describePartnerCaseEvent(event);
+    if (partnerEntry) {
+      items.push({
+        id: event.id,
+        type: event.eventType,
+        title: partnerEntry.title,
+        body: partnerEntry.reference
+          ? `${partnerEntry.body} ${PARTNER_SHARING_COPY.timeline.callHint}`
+          : partnerEntry.body,
+        time: formatDateTime(event.createdAt),
+        chips: partnerEntry.reference ? [`Reference ${partnerEntry.reference}`] : [],
+        isKeyEvent: true,
+        timestamp: event.createdAt,
+      });
+      return;
+    }
+
     const payload = (event.payload ?? {}) as Record<string, unknown>;
     const chips: string[] = [];
     let body = '';
@@ -363,10 +372,9 @@ function buildTimelineItems(
         break;
       }
       case 'status_change': {
-        const newStatus = (payload.new_status as string | undefined) ?? caseRecord.status;
-        const statusLabel = getStatusLabel(newStatus);
-        body = `Status updated to ${statusLabel}.`;
-        chips.push(statusLabel);
+        const change = describeStatusChange(payload, caseRecord.status);
+        body = change.body;
+        chips.push(change.label);
         isKeyEvent = true;
         break;
       }
@@ -446,6 +454,7 @@ export default function CaseDetailScreen() {
   const [addInfoBody, setAddInfoBody] = useState('');
   const [addInfoError, setAddInfoError] = useState<string | null>(null);
   const [isSavingAddInfo, setIsSavingAddInfo] = useState(false);
+  const [isStoppingPartnerSharing, setIsStoppingPartnerSharing] = useState(false);
 
   useEffect(() => {
     if (route.params.openAddInfo) {
@@ -624,6 +633,22 @@ export default function CaseDetailScreen() {
       setRefreshing(false);
     }
   }, [assignDetail, caseId, toast]);
+
+  useFocusEffect(useCallback(() => {
+    if (!isRemoteCaseId(caseId) || !isOnline) return;
+    const polling = startForegroundCaseRefresh({
+      active: () => AppState.currentState === 'active',
+      fetch: () => fetchCaseDetail(caseId),
+      apply: detail => {
+        // Preserve an expanded timeline and unsaved local notes during a background refresh.
+        setCaseRecord(detail.caseRecord); setAttachments(detail.attachments); setEvents(detail.events);
+        setFetchError(null);
+      },
+      unavailable: () => setFetchError('Case updates are unavailable. The details shown may be out of date; reconnect or refresh before relying on the status.'),
+    });
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') void polling.refresh(); });
+    return () => { listener.remove(); polling.stop(); };
+  }, [caseId, isOnline]));
 
   const toggleItemExpanded = useCallback((itemId: string) => {
     setExpandedItems(current => {
@@ -932,6 +957,87 @@ export default function CaseDetailScreen() {
     return normalizeCaseSummaryPayload(caseRecord?.summary);
   }, [caseRecord]);
 
+  const partnerSummary = useMemo(
+    () => summarizePartnerSharing({ events, sharing: localDraft?.partnerSharing }),
+    [events, localDraft?.partnerSharing],
+  );
+
+  // After a reinstall this phone cannot link the report to its consent, so
+  // the survivor can still stop HURIA's access by withdrawing every HURIA consent.
+  const handleStopAllPartnerSharing = useCallback(async () => {
+    const copy = PARTNER_SHARING_COPY.caseDetail;
+    const actionId = await confirmCenter.request({
+      title: copy.stopAllConfirmTitle,
+      message: copy.stopAllConfirmBody,
+      actions: [
+        { id: 'cancel', label: copy.stopCancel, role: 'cancel' },
+        { id: 'stop', label: copy.stopAllConfirmAction, role: 'destructive' },
+      ],
+    });
+    if (actionId !== 'stop') return;
+
+    setIsStoppingPartnerSharing(true);
+    try {
+      const withdrawn = await stopAllPartnerSharing();
+      if (caseRecord?.draftId) setLocalDraft(await draftStorage.getDraft(caseRecord.draftId));
+      toast.show({
+        title: copy.stopDoneTitle,
+        message: withdrawn > 0 ? copy.stopAllDoneBody : copy.stopAllNoneBody,
+        variant: withdrawn > 0 ? 'success' : 'info',
+      });
+    } catch (error) {
+      devPrivacyWarn('stop all partner sharing failed', {
+        reason: getPrivacySafeErrorReason(error),
+        status: getPrivacySafeHttpStatus(error),
+      });
+      toast.show({ title: copy.stopPendingTitle, message: copy.stopPendingBody, variant: 'warning' });
+    } finally {
+      setIsStoppingPartnerSharing(false);
+    }
+  }, [caseRecord?.draftId, toast]);
+
+  const handleStopPartnerSharing = useCallback(async () => {
+    const copy = PARTNER_SHARING_COPY.caseDetail;
+    if (!localDraft) {
+      await handleStopAllPartnerSharing();
+      return;
+    }
+    const actionId = await confirmCenter.request({
+      title: copy.stopConfirmTitle,
+      message: copy.stopConfirmBody,
+      actions: [
+        { id: 'cancel', label: copy.stopCancel, role: 'cancel' },
+        { id: 'stop', label: copy.stopConfirmAction, role: 'destructive' },
+      ],
+    });
+    if (actionId !== 'stop') return;
+
+    setIsStoppingPartnerSharing(true);
+    try {
+      await stopPartnerSharing(localDraft);
+      setLocalDraft(await draftStorage.getDraft(localDraft.id));
+      toast.show({ title: copy.stopDoneTitle, message: copy.stopDoneBody, variant: 'success' });
+    } catch (error) {
+      if (error instanceof PartnerSharingConsentUnknownError) {
+        toast.show({ title: copy.stopPendingTitle, message: copy.stopUnavailableBody, variant: 'info' });
+        await handleStopAllPartnerSharing();
+      } else {
+        devPrivacyWarn('stop partner sharing failed', {
+          reason: getPrivacySafeErrorReason(error),
+          status: getPrivacySafeHttpStatus(error),
+        });
+        toast.show({ title: copy.stopPendingTitle, message: copy.stopPendingBody, variant: 'warning' });
+      }
+    } finally {
+      setIsStoppingPartnerSharing(false);
+    }
+  }, [handleStopAllPartnerSharing, localDraft, toast]);
+
+  const handleReviewPartnerSharing = useCallback(() => {
+    if (!localDraft) return;
+    resetReportStackToRoute(navigation, 'ConsentGate', { draftId: localDraft.id, editCompleted: true });
+  }, [localDraft, navigation]);
+
   const detailSource = useMemo(() => buildCaseDetailSource({
     casePathway: caseRecord?.pathway,
     summary,
@@ -1023,18 +1129,66 @@ export default function CaseDetailScreen() {
         bannerText: { fontSize: 14, color: colors.mutedForeground },
         content: { flex: 1, padding: 16 },
         summaryCard: { marginBottom: 16 },
+        actionRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+        },
+        actionButton: {
+          // Full width when two labels cannot share one line.
+          flexBasis: 160,
+          flexGrow: 1,
+        },
+        factList: {
+          borderColor: colors.divider,
+          borderRadius: radii.md,
+          borderWidth: borders.hairline,
+          marginBottom: spacing.sm,
+          marginTop: spacing.sm,
+          paddingHorizontal: spacing.sm,
+        },
+        factRow: {
+          alignItems: 'center',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.xs,
+          minHeight: 44,
+          paddingVertical: spacing.xs,
+        },
+        factDivider: {
+          borderTopColor: colors.divider,
+          borderTopWidth: borders.hairline,
+        },
+        factLabel: {
+          ...typography.bodySmall,
+          color: colors.textSecondary,
+          flexShrink: 0,
+        },
+        factValue: {
+          ...typography.labelMedium,
+          color: colors.foreground,
+          // Shares the row while it fits; drops under the label with large text.
+          flexBasis: 120,
+          flexGrow: 1,
+          textAlign: 'right',
+        },
         titleRow: {
           flexDirection: 'row',
+          flexWrap: 'wrap',
           alignItems: 'flex-start',
+          gap: spacing.xs,
           justifyContent: 'space-between',
           marginBottom: 12,
         },
         title: {
-          fontSize: 18,
+          fontSize: 24,
+          lineHeight: 30,
           fontWeight: '600',
           color: colors.foreground,
-          flex: 1,
-          marginRight: 12,
+          // The status badge drops below the title when both cannot fit.
+          flexBasis: 180,
+          flexGrow: 1,
+          flexShrink: 1,
         },
         statusBadge: {
           paddingHorizontal: 8,
@@ -1043,24 +1197,6 @@ export default function CaseDetailScreen() {
           borderWidth: 1,
         },
         statusText: { fontSize: 12, fontWeight: '500' },
-        chipRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 8,
-          marginBottom: 12,
-        },
-        chip: {
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: colors.background,
-        },
-        chipText: { fontSize: 12, color: colors.mutedForeground },
-        metaContainer: { gap: 12, marginBottom: 12 },
-        metaRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-        metaText: { fontSize: 14, color: colors.mutedForeground, flex: 1 },
         tagContainer: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -1069,18 +1205,7 @@ export default function CaseDetailScreen() {
         },
         tag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, backgroundColor: colors.secondary },
         tagText: { fontSize: 10, color: colors.secondaryForeground },
-        integrityContainer: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          backgroundColor: colors.muted,
-          padding: 12,
-          borderRadius: 12,
-          marginBottom: 12,
-        },
-        hashContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        hashLabel: { fontSize: 12, color: colors.mutedForeground },
-        hashText: { fontSize: 12, color: colors.foreground, fontFamily: 'Courier' },
+        hashText: { fontSize: 12, color: colors.foreground, fontFamily: 'Courier', flexShrink: 1 },
         detailsCard: { marginBottom: 16 },
         sectionHeader: {
           flexDirection: 'row',
@@ -1088,10 +1213,10 @@ export default function CaseDetailScreen() {
           justifyContent: 'space-between',
           marginBottom: 12,
         },
-        sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.foreground },
+        sectionTitle: { fontSize: 20, lineHeight: 26, fontWeight: '600', color: colors.foreground },
         detailGroup: { marginBottom: 16 },
         detailLabel: { fontSize: 13, fontWeight: '600', color: colors.mutedForeground, marginBottom: 4 },
-        detailValue: { fontSize: 14, color: colors.foreground, lineHeight: 20 },
+        detailValue: { fontSize: 16, color: colors.foreground, lineHeight: 24 },
         detailMeta: { fontSize: 12, color: colors.mutedForeground, marginTop: 4 },
         detailMetaLabel: { fontSize: 12, color: colors.mutedForeground, fontWeight: '600', marginBottom: 2 },
         detailTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
@@ -1169,7 +1294,7 @@ export default function CaseDetailScreen() {
           borderColor: colors.destructive + '24',
         },
         errorText: { color: colors.destructive, fontSize: 13 },
-        emptyState: { padding: 16, alignItems: 'center', gap: 12 },
+        emptyState: { padding: 24, alignItems: 'center', gap: 12 },
         emptyText: { fontSize: 14, color: colors.mutedForeground, textAlign: 'center' },
         localInfoItem: {
           borderWidth: 1,
@@ -1203,7 +1328,7 @@ export default function CaseDetailScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.mutedForeground} />
           <Text style={styles.emptyText}>We couldn&apos;t find that case.</Text>
-          <Button title="Go back" onPress={() => navigation.goBack()} />
+          <Button title="Go back" onPress={() => navigation.goBack()} style={{ alignSelf: 'center' }} />
         </View>
       </Screen>
     );
@@ -1454,41 +1579,41 @@ export default function CaseDetailScreen() {
                 </View>
               </View>
 
-              <View style={styles.chipRow}>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Pathway: {pathwayLabel}</Text>
-                </View>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>
-                    Media: {mediaCount > 0 ? `${mediaCount} item(s)` : 'None'}
-                  </Text>
-                </View>
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>Captured: {caseDateTime}</Text>
-                </View>
-              </View>
-
               <Text style={styles.noticeText}>
                 {statusPresentation.description} Next action: {statusPresentation.nextActionDescription}
               </Text>
 
-              <View style={styles.metaContainer}>
-                <View style={styles.metaRow}>
-                  <Ionicons name='location-outline' size={16} color={colors.mutedForeground} />
-                  <Text style={styles.metaText}>{locationLabel}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Ionicons name='time-outline' size={16} color={colors.mutedForeground} />
-                  <Text style={styles.metaText}>Last updated {formatDateTime(caseRecord.updatedAt)}</Text>
-                </View>
-                {witnessIncluded !== null && (
-                  <View style={styles.metaRow}>
-                    <Ionicons name='people-outline' size={16} color={colors.mutedForeground} />
-                    <Text style={styles.metaText}>
-                      Witness information {witnessIncluded ? 'included' : 'not provided'}
-                    </Text>
+              <View style={styles.factList}>
+                {[
+                  { key: 'pathway', icon: 'git-branch-outline' as const, label: 'Pathway', value: pathwayLabel },
+                  { key: 'media', icon: 'images-outline' as const, label: 'Media', value: mediaCount > 0 ? `${mediaCount} item(s)` : 'None' },
+                  { key: 'captured', icon: 'calendar-outline' as const, label: 'Captured', value: caseDateTime },
+                  { key: 'location', icon: 'location-outline' as const, label: 'Location', value: locationLabel },
+                  { key: 'updated', icon: 'time-outline' as const, label: 'Last updated', value: formatDateTime(caseRecord.updatedAt) },
+                  ...(witnessIncluded !== null
+                    ? [{ key: 'witness', icon: 'people-outline' as const, label: 'Witness information', value: witnessIncluded ? 'Included' : 'Not provided' }]
+                    : []),
+                ].map((fact, index) => (
+                  <View
+                    key={fact.key}
+                    style={[styles.factRow, index > 0 && styles.factDivider]}
+                    accessible
+                    accessibilityLabel={`${fact.label}: ${fact.value}`}
+                  >
+                    <Ionicons name={fact.icon} size={16} color={colors.mutedForeground} />
+                    <Text style={styles.factLabel}>{fact.label}</Text>
+                    <Text style={styles.factValue}>{fact.value}</Text>
                   </View>
-                )}
+                ))}
+                <View
+                  style={[styles.factRow, styles.factDivider]}
+                  accessible
+                  accessibilityLabel={`Case reference: ${caseHash}`}
+                >
+                  <Ionicons name="finger-print-outline" size={16} color={colors.mutedForeground} />
+                  <Text style={styles.factLabel}>Case reference</Text>
+                  <Text style={[styles.factValue, styles.hashText]}>{caseHash}</Text>
+                </View>
               </View>
 
               {tags.length > 0 && (
@@ -1501,58 +1626,41 @@ export default function CaseDetailScreen() {
                 </View>
               )}
 
-              <View style={styles.integrityContainer}>
-                <View style={styles.hashContainer}>
-                  <Ionicons name="finger-print-outline" size={18} color={colors.mutedForeground} />
-                  <View>
-                    <Text style={styles.hashLabel}>Case reference</Text>
-                    <Text style={styles.hashText}>{caseHash}</Text>
-                  </View>
-                </View>
-                <TouchableOpacity onPress={handleExport}>
-                  <Ionicons
-                    name="download-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={styles.actionRow}>
                 <Button
                   title="Export record"
                   onPress={handleExport}
                   variant="outline"
-                  style={{ flex: 1 }}
+                  style={styles.actionButton}
                 />
                 {canEditLocalCase ? (
                   <Button
                     title="Edit"
                     onPress={handleEditLocalCase}
                     variant="outline"
-                    style={{ flex: 1 }}
+                    style={styles.actionButton}
                   />
                 ) : (
                   <Button
                     title="Add info"
                     onPress={handleOpenAddInfo}
                     variant="outline"
-                    style={{ flex: 1 }}
+                    style={styles.actionButton}
                     disabled={!canAddAdditionalInfo}
                   />
                 )}
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+              <View style={[styles.actionRow, { marginTop: 12 }]}>
                 {canCloseLocalCase ? (
                   <Button
                     title="Close"
                     onPress={() => void handleCloseLocalCase()}
                     variant="ghost"
-                    style={{ flex: 1 }}
+                    style={styles.actionButton}
                   />
                 ) : (
-                  <Button title="Redaction panel" onPress={handleRedact} variant="ghost" style={{ flex: 1 }} />
+                  <Button title="Redaction panel" onPress={handleRedact} variant="ghost" style={styles.actionButton} />
                 )}
                 <Button
                   title={
@@ -1562,11 +1670,86 @@ export default function CaseDetailScreen() {
                   }
                   onPress={handleDelete}
                   variant="destructive"
-                  style={{ flex: 1 }}
+                  style={styles.actionButton}
                 />
               </View>
           </CardContent>
         </Card>
+
+          {partnerSummary ? (
+            <Card variant="elevated" style={styles.detailsCard}>
+              <CardContent>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{PARTNER_SHARING_COPY.caseDetail.cardTitle}</Text>
+                </View>
+                <View style={styles.factList}>
+                  {[
+                    { key: 'status', label: PARTNER_SHARING_COPY.caseDetail.statusLabel, value: partnerSummary.label },
+                    ...(partnerSummary.reference
+                      ? [{ key: 'reference', label: PARTNER_SHARING_COPY.caseDetail.referenceLabel, value: partnerSummary.reference }]
+                      : []),
+                    ...(partnerSummary.stopSharing === 'available' || partnerSummary.callbackShared
+                      ? [{
+                          key: 'callback',
+                          label: PARTNER_SHARING_COPY.caseDetail.callbackLabel,
+                          value: partnerSummary.callbackShared
+                            ? PARTNER_SHARING_COPY.caseDetail.callbackShared
+                            : PARTNER_SHARING_COPY.caseDetail.callbackNotShared,
+                        }]
+                      : []),
+                  ].map((fact, index) => (
+                    <View
+                      key={fact.key}
+                      style={[styles.factRow, index > 0 && styles.factDivider]}
+                      accessible
+                      accessibilityLabel={`${fact.label}: ${fact.value}`}
+                    >
+                      <Text style={styles.factLabel}>{fact.label}</Text>
+                      <Text style={styles.factValue}>{fact.value}</Text>
+                    </View>
+                  ))}
+                </View>
+                {partnerSummary.reference && partnerSummary.state !== 'withdrawn' ? (
+                  <Text style={styles.noticeText}>{PARTNER_SHARING_COPY.timeline.callHint}</Text>
+                ) : null}
+                {partnerSummary.attentionMessage ? (
+                  <>
+                    <Text style={styles.noticeText}>{partnerSummary.attentionMessage}</Text>
+                    {localDraft ? (
+                      <Button
+                        title={PARTNER_SHARING_COPY.caseDetail.reviewSharing}
+                        variant="outline"
+                        onPress={handleReviewPartnerSharing}
+                        style={{ marginTop: 12 }}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+                {partnerSummary.stopSharing === 'available' ? (
+                  <Button
+                    title={PARTNER_SHARING_COPY.caseDetail.stopButton}
+                    variant="destructive"
+                    onPress={() => void handleStopPartnerSharing()}
+                    loading={isStoppingPartnerSharing}
+                    disabled={isStoppingPartnerSharing}
+                    style={{ marginTop: 12 }}
+                  />
+                ) : partnerSummary.stopSharing === 'all_reports' ? (
+                  <>
+                    <Text style={styles.noticeText}>{PARTNER_SHARING_COPY.caseDetail.stopUnavailableBody}</Text>
+                    <Button
+                      title={PARTNER_SHARING_COPY.caseDetail.stopAllButton}
+                      variant="destructive"
+                      onPress={() => void handleStopAllPartnerSharing()}
+                      loading={isStoppingPartnerSharing}
+                      disabled={isStoppingPartnerSharing}
+                      style={{ marginTop: 12 }}
+                    />
+                  </>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {canAddAdditionalInfo && (
             <Card variant="elevated" style={styles.detailsCard}>

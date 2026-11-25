@@ -13,7 +13,7 @@ const footerGroups = [
       { label: 'What We Do', href: '/what-we-do' },
       { label: 'How It Works', href: '/how-it-works' },
       { label: 'For Survivors', href: '/for-survivors' },
-      { label: 'Route Safety Index', href: '/route-safety-index' },
+      { label: 'Partner Dashboard', href: '/partner-dashboard' },
       { label: 'Privacy & Trust', href: '/privacy-safety-trust' },
     ],
   },
@@ -38,8 +38,10 @@ const footerGroups = [
   {
     title: 'Organisation',
     links: [
-      { label: 'Esheria For Good', href: PARENT_ORG.url, external: true },
+      { label: 'Esheria Foundation', href: PARENT_ORG.url, external: true },
       { label: 'Privacy Guide', href: '/blog/private-reporting-control' },
+      { label: 'Privacy Notice', href: '/privacy' },
+      { label: 'Terms of Use', href: '/terms' },
       { label: 'Contact', href: '/contact' },
     ],
   },

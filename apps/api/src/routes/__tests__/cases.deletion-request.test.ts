@@ -48,7 +48,10 @@ const privacyState = vi.hoisted(() => ({
   malwareScanEnabled: true,
   retentionExecutionEnabled: true,
   retentionApprovalStatus: 'approved_legal',
+  scannerReady: true,
 }));
+
+const scanWorker = vi.hoisted(() => ({ kickEvidenceScanWorker: vi.fn() }));
 
 function routeError(statusCode: number, code: string, message: string): Error & { statusCode: number; code: string } {
   return Object.assign(new Error(message), {
@@ -78,6 +81,11 @@ vi.mock('../../repositories/caseRepository.js', () => caseRepository);
 vi.mock('../../services/auditService.js', () => auditService);
 vi.mock('../../storage/evidenceStorage.js', () => evidenceStorage);
 vi.mock('../../plugins/metrics.js', () => metrics);
+vi.mock('../../services/evidenceMalwareScan.js', () => scanWorker);
+// clamd health (cached by the API's monitor): a switch here.
+vi.mock('../../services/clamav/scannerHealth.js', () => ({
+  isApprovedScannerReady: vi.fn((policy: { status: string }) => privacyState.scannerReady && policy.status === 'enabled'),
+}));
 vi.mock('../../config/privacyControls.js', () => ({
   getRetentionPolicy: vi.fn((policyId: string, scope?: string) =>
     policyId === 'submitted-case-pending-legal-v1' && (!scope || scope === 'server')
@@ -171,6 +179,7 @@ describe('case deletion request route', () => {
     privacyState.malwareScanEnabled = true;
     privacyState.retentionExecutionEnabled = true;
     privacyState.retentionApprovalStatus = 'approved_legal';
+    privacyState.scannerReady = true;
     app = await buildRouteApp();
   });
 
@@ -317,8 +326,11 @@ describe('case deletion request route', () => {
       supportBrief: { included: false, selectedFields: [] },
     };
     caseRepository.submitCaseTransaction.mockResolvedValueOnce({
-      id: CASE_ID, owner_id: 'owner-user', draft_id: 'draft-1', pathway: 'referral', status: 'submitted',
-      summary: workflow, created_at: NOW, updated_at: NOW,
+      caseRecord: {
+        id: CASE_ID, owner_id: 'owner-user', draft_id: 'draft-1', pathway: 'referral', status: 'submitted',
+        summary: workflow, created_at: NOW, updated_at: NOW,
+      },
+      partnerReferral: null,
     });
 
     const response = await app.inject({
@@ -331,6 +343,7 @@ describe('case deletion request route', () => {
       },
     });
     expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ case: expect.objectContaining({ id: CASE_ID }) });
     expect(caseRepository.submitCaseTransaction).toHaveBeenCalledWith(expect.objectContaining({
       ownerId: 'owner-user', draftId: 'draft-1', pathway: 'referral',
       consentRecordId: CASE_ID,
@@ -368,6 +381,7 @@ describe('case deletion request route', () => {
     ['submitted-case ingestion', () => { privacyState.submittedCaseIngestionEnabled = false; }],
     ['server retention execution', () => { privacyState.serverRetentionExecutionEnabled = false; }],
     ['approved malware scanning', () => { privacyState.malwareScanEnabled = false; }],
+    ['a healthy approved scanner (clamd)', () => { privacyState.scannerReady = false; }],
     ['retention policy execution', () => { privacyState.retentionExecutionEnabled = false; }],
     ['legal retention approval', () => { privacyState.retentionApprovalStatus = 'pending_legal'; }],
   ])('does not issue upload credentials when %s is unavailable', async (_gate, disableGate) => {
@@ -462,6 +476,36 @@ describe('case deletion request route', () => {
       status: 'rejected',
     }));
     expect(response.json().attachment).toMatchObject({ status: 'rejected', quarantine_status: 'rejected' });
+    expect(scanWorker.kickEvidenceScanWorker).not.toHaveBeenCalled();
+  });
+
+  it('completes a matching upload as scan pending and quarantined, and wakes the scan worker without waiting', async () => {
+    const attachment = {
+      id: '22222222-2222-4222-8222-222222222222', owner_id: 'owner-user', draft_id: null, case_id: CASE_ID,
+      bucket: 'test-evidence', bucket_path: 'evidence/test/object', mime_type: 'image/jpeg', size_bytes: 12,
+      sha256: null, expected_sha256: 'a'.repeat(64), upload_manifest: {}, retention: {},
+      retention_policy_id: 'submitted-case-pending-legal-v1', antivirus_status: 'not_scanned',
+      quarantine_status: 'quarantined', scan_evidence: null, status: 'pending_upload',
+      metadata: {}, created_at: NOW, updated_at: NOW,
+    };
+    caseRepository.listAttachments.mockResolvedValueOnce([attachment]);
+    evidenceStorage.hashStoredObject.mockResolvedValueOnce({ sha256: 'a'.repeat(64), sizeBytes: 12 });
+    caseRepository.completeAttachment.mockResolvedValueOnce({
+      ...attachment, sha256: 'a'.repeat(64), status: 'uploaded', antivirus_status: 'pending',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/cases/${CASE_ID}/evidence/${attachment.id}/complete`,
+      headers: { authorization: 'Bearer test-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().attachment).toMatchObject({
+      status: 'uploaded', antivirus_status: 'pending', quarantine_status: 'quarantined',
+    });
+    expect(scanWorker.kickEvidenceScanWorker).toHaveBeenCalledTimes(1);
+    expect(evidenceStorage.deleteEvidenceObject).not.toHaveBeenCalled();
   });
 
   it('does not complete an upload while an ingestion prerequisite is disabled', async () => {

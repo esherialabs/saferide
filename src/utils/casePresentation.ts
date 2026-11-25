@@ -2,6 +2,7 @@ import type { PathwayType } from '../types/pathways';
 import type { CaseEvent, CaseRecord } from '../services/caseService';
 import type { DraftData } from './draftStorage';
 import type { SyncQueueItem } from './offlineSync';
+import { normalizeCaseSummaryPayload } from './caseDetailDisplay';
 import {
   getReportWizardProgress,
   type ReportWizardStepId,
@@ -390,9 +391,7 @@ export function buildDraftCaseListItem(
 }
 
 export function buildRemoteCaseListItem(record: CaseRecord, events: CaseEvent[] = []): CaseListModel {
-  const summary = record.summary && typeof record.summary === 'object'
-    ? (record.summary as Record<string, unknown>)
-    : {};
+  const summary = normalizeCaseSummaryPayload(record.summary);
   const state = deriveRemoteDisplayState(record, events);
   const presentation = getCasePresentation(state);
   const pathway = normalizePathway(record.pathway ?? (summary.pathway as string | undefined));
@@ -532,6 +531,10 @@ export function buildDraftTimelineItems(
     const firstQueueItem = getQueueItemsForDraft(queueItems, draft.id)[0];
     const recoveryBody = firstQueueItem?.blockedReason === 'auth_required'
       ? 'Optional online sync needs attention. The local copy is still saved on this device.'
+      : firstQueueItem?.blockedReason === 'sending_paused'
+        ? 'Sending to SafeRide is paused. The report is saved on this device and has not been sent.'
+      : firstQueueItem?.blockedReason === 'needs_confirmation'
+        ? 'Confirm sharing with HURIA again, or turn it off, before this report is sent. Nothing has been sent.'
       : firstQueueItem?.blockedReason === 'max_retries'
         ? 'Automatic retries paused after repeated failures. Use Sync now when you are ready to retry.'
         : firstQueueItem?.lastError

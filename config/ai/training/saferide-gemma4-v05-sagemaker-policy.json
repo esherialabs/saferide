@@ -7,7 +7,7 @@
     "type": "ml.g5.xlarge",
     "count": 1,
     "volumeSizeGb": 80,
-    "quotaCode": "L-1928E07B"
+    "quotaCode": "L-B6D80D9C"
   },
   "storage": {
     "serverSideEncryption": "AES256",

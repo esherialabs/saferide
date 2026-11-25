@@ -50,6 +50,8 @@ const SOURCE_PATHS = {
   languageAccessibility: 'src/screens/LanguageAccessibility.tsx',
   themeProvider: 'src/theme/SimpleThemeProvider.tsx',
   chat: 'src/screens/ChatLegalAid.tsx',
+  assistantService: 'src/services/localAssistantService.ts',
+  modelStorage: 'src/lib/localAssistant/modelStorage.ts',
 };
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -97,7 +99,7 @@ function has(source, pattern) {
 export function readAccessibilitySources(root = REPOSITORY_ROOT) {
   return Object.fromEntries(Object.entries(SOURCE_PATHS).map(([key, relativePath]) => [
     key,
-    fs.readFileSync(path.join(root, relativePath), 'utf8'),
+    fs.readFileSync(path.join(root, relativePath), 'utf8').replace(/\r\n/g, '\n'),
   ]));
 }
 
@@ -125,7 +127,16 @@ export function validateAccessibilitySources(sources) {
   addGate(gates, 'safety-action-context', has(sources.safetyAction, 'defaultAccessibilityLabel') && has(sources.safetyAction, "isDisabled ? 'Unavailable' : null"), 'Safety actions announce description, status, and disabled state.');
 
   addGate(gates, 'global-high-contrast', has(sources.languageAccessibility, "setTheme(enabled ? 'highContrast' : 'system')") && has(sources.themeProvider, 'Storage.saveSettings({ theme: nextTheme })'), 'High contrast changes and persists the application theme.');
-  addGate(gates, 'no-chat-auto-preparation', !has(sources.chat, 'startAutomaticLocalAssistantPreparation'), 'Opening or foregrounding chat cannot start model preparation.');
+  const restoration = sources.chat.match(/const restoreDownloadedLocalAssistant = useCallback\(async \([\s\S]*?\}, \[handleLocalAssistantProgress\]\);/)?.[0] ?? '';
+  const automaticPreparation = sources.assistantService?.match(/export async function startAutomaticLocalAssistantPreparation\([\s\S]*?(?=export type LocalAssistantResponse)/)?.[0] ?? '';
+  addGate(gates, 'chat-restoration-no-implicit-download',
+    has(restoration, "if (payload?.state !== 'downloaded' || !payload.modelDownloaded) return;")
+      && has(restoration, 'await startAutomaticLocalAssistantPreparation(handleLocalAssistantProgress)')
+      && !has(restoration, /(?:await|void)\s+prepareLocalAssistant\(/)
+      && has(automaticPreparation, 'if (!localAssistantForegroundActive')
+      && has(automaticPreparation, 'if (!availability.downloaded) {\n    return false;')
+      && has(sources.modelStorage, 'assertLargeDownloadAuthorized(config, file, authorization);'),
+    'Chat may restore already downloaded local files in the foreground; missing or partial files require explicit download authorization.');
 
   return gates;
 }

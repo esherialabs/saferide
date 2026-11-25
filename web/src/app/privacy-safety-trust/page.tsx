@@ -7,7 +7,7 @@ export const metadata = pageMetadata({
   title: 'Privacy & Safety: How SafeRide Protects You',
   absoluteTitle: true,
   description:
-    "Local-first storage, explicit consent before anything is shared, retention controls, and stealth features — SafeRide's privacy model explained.",
+    "Local-first storage, explicit consent before anything is shared, retention controls, and stealth features in the HURIA pilot in Mombasa.",
   path: '/privacy-safety-trust',
   image: INTERIOR_PAGES['privacy-safety-trust'].ogImage,
   imageAlt: INTERIOR_PAGES['privacy-safety-trust'].imageAlt,

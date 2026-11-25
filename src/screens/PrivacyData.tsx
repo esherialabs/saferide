@@ -46,10 +46,9 @@ import {
 } from '../utils/privacyDataControls';
 import { listPrivacyHistory, type PrivacyHistoryEntry } from '../utils/consentLedger';
 import { fetchRightsRequests, type RightsRequest } from '../services/privacyRightsService';
-import {
-  RemoteConsentWithdrawalPendingError,
-  withdrawConsentForFutureProcessing,
-} from '../services/privacyConsentService';
+import { RemoteConsentWithdrawalPendingError } from '../services/privacyConsentService';
+import { withdrawConsentFromPrivacySettings } from '../services/partnerSharingService';
+import { describeConsentEntry, selectPrivacyHistoryForDisplay } from '../utils/privacyHistoryDisplay';
 import { captureMeasurementEvent } from '../lib/measurement/localEventStore';
 
 
@@ -193,7 +192,8 @@ export default function PrivacyData() {
           text: 'Withdraw',
           style: 'destructive',
           onPress: () => {
-            void withdrawConsentForFutureProcessing(consentId)
+            // Also marks any report that used a partner consent as withdrawn.
+            void withdrawConsentFromPrivacySettings(consentId)
               .then(() => toast.show({
                 title: 'Consent withdrawn for future processing',
                 message: 'Earlier external sharing cannot be recalled.',
@@ -464,22 +464,14 @@ export default function PrivacyData() {
       shadowColor: colors.privacy,
     },
     bannerContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
     },
     bannerText: {
-      fontSize: 14,
+      ...typography.bodySmall,
       color: colors.foreground,
-      flex: 1,
-    },
-    bannerActions: {
-      flexDirection: 'row',
-      gap: 8,
-      marginLeft: 16,
     },
     cardTitle: {
-      ...typography.titleSmall,
+      ...typography.titleMedium,
       color: colors.foreground,
       marginBottom: 8,
     },
@@ -497,7 +489,7 @@ export default function PrivacyData() {
       gap: 12,
       padding: 12,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.input,
       borderRadius: radii.card,
       backgroundColor: colors.background,
     },
@@ -594,12 +586,12 @@ export default function PrivacyData() {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.scrim,
       justifyContent: 'center',
       alignItems: 'center',
     },
     modalContent: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.surface,
       marginHorizontal: 24,
       borderColor: colors.divider,
       borderRadius: radii.card,
@@ -609,14 +601,6 @@ export default function PrivacyData() {
       overflow: 'hidden',
       position: 'relative',
       ...elevation.card,
-    },
-    cardAccentTop: {
-      backgroundColor: colors.primary,
-      height: 4,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     modalTitle: {
       ...typography.titleSmall,
@@ -640,6 +624,7 @@ export default function PrivacyData() {
     },
     modalButtons: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
       justifyContent: 'flex-end',
     },
@@ -652,13 +637,16 @@ export default function PrivacyData() {
       padding: 16,
       borderRadius: 8,
       flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     countdownText: {
+      flexShrink: 1,
       fontSize: 16,
       fontWeight: '500',
-      color: 'white',
+      color: colors.destructiveForeground,
     },
   });
 
@@ -678,21 +666,12 @@ export default function PrivacyData() {
 
           {/* Trust Banner */}
           {showBanner && (
-            <AlertBanner variant="info">
+            <AlertBanner variant="info" dismissible onDismiss={() => setShowBanner(false)}>
               <View style={styles.bannerContent}>
                 <Text style={styles.bannerText}>
                   Local-first. Nothing leaves your phone without consent.
                 </Text>
-                <View style={styles.bannerActions}>
-                  <Button variant="link" size="sm" title="Learn more" onPress={() => Alert.alert('Local-first privacy', 'SafeRide keeps drafts local unless you explicitly choose to export, share, or submit them through a consent step.')} />
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onPress={() => setShowBanner(false)}
-                  >
-                    <Ionicons name="close" size={16} color={colors.primary} />
-                  </Button>
-                </View>
+                <Button variant="link" size="sm" title="Learn more" onPress={() => Alert.alert('Local-first privacy', 'SafeRide keeps drafts local unless you explicitly choose to export, share, or submit them through a consent step.')} />
               </View>
             </AlertBanner>
           )}
@@ -782,11 +761,11 @@ export default function PrivacyData() {
             <View style={styles.cardContent}>
               {privacyHistory.length === 0 ? (
                 <Text style={styles.retentionSubtitle}>No local consent or policy-acceptance records yet.</Text>
-              ) : privacyHistory.slice(0, 10).map(entry => (
+              ) : selectPrivacyHistoryForDisplay(privacyHistory).map(entry => (
                 <View key={entry.id} style={{ gap: 4 }}>
                   <Text style={styles.retentionSubtitle}>
                     {entry.recordType === 'consent'
-                      ? `${entry.purpose}: ${entry.status} · ${new Date(entry.grantedAt).toLocaleDateString()}`
+                      ? describeConsentEntry(entry, date => date.toLocaleDateString())
                       : `${entry.documentType} ${entry.version}: accepted · ${new Date(entry.acceptedAt).toLocaleDateString()}`}
                   </Text>
                   {entry.recordType === 'consent' && (
@@ -947,7 +926,6 @@ export default function PrivacyData() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={styles.cardAccentTop} />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>Restore encrypted backup</Text>
             <Text style={styles.modalDescription}>
               Choose a SafeRide backup file and enter its passphrase. Restore will stop if local data would be replaced.
@@ -1003,7 +981,6 @@ export default function PrivacyData() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.destructive }]} />
             <Text style={styles.modalTitle}>Delete supported local data?</Text>
             <Text style={styles.modalDescription}>
               This will remove supported local SafeRide data from this device:
@@ -1053,7 +1030,6 @@ export default function PrivacyData() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View pointerEvents="none" style={[styles.cardAccentTop, { backgroundColor: colors.destructive }]} />
             <Text style={styles.modalTitle}>Type DELETE to confirm</Text>
             <Text style={styles.modalDescription}>
               This local deletion cannot be undone after the countdown.

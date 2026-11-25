@@ -27,4 +27,14 @@ describe('runtime config route', () => {
     });
     await app.close();
   });
+
+  it('keeps partner sharing off by default', async () => {
+    const app = Fastify({ logger: false });
+    await registerRuntimeConfigRoutes(app);
+    const response = await app.inject({ method: 'GET', url: '/api/config/runtime' });
+    expect(response.json().features).toMatchObject({ partnerRouting: false, partnerCallback: false });
+    expect(response.json().partnerConsentVersions).toEqual({ partner_follow_up: null, partner_callback: null });
+    expect(response.json().features.caseSubmission).toBe(false);
+    await app.close();
+  });
 });

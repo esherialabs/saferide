@@ -1,17 +1,121 @@
 {
   "schemaVersion": 1,
-  "exceptionId": "saferide-mobile-build-tool-audit-exception-2026-08-18",
+  "exceptionId": "saferide-mobile-build-tool-audit-exception-2026-11-10",
+  "replaces": "saferide-mobile-build-tool-audit-exception-2026-08-18",
   "status": "approved-public-source-ci-only",
-  "observedDate": "2026-08-18",
-  "expiresOn": "2026-09-18",
-  "allowedAdvisoryIds": [1119441, 1138808, 1138809],
-  "allowedPackages": ["image-size", "uuid"],
-  "scope": "Expo/Metro and Xcode local build/configuration tooling",
+  "approval": "Approved by the project owner on 2026-11-11 (direct instruction). Expires on the expiresOn date; re-review before renewal.",
+  "observedDate": "2026-11-10",
+  "expiresOn": "2027-01-09",
+  "allowedAdvisoryIds": [1119441, 1243066, 1243505, 1244013, 1244623],
+  "allowedPackages": ["deepmerge", "glob", "minimatch", "uuid", "zod"],
+  "advisories": [
+    {
+      "package": "glob",
+      "ids": [
+        1244013
+      ],
+      "nodes": [
+        "node_modules/glob"
+      ],
+      "dependents": [
+        "@expo/cli",
+        "@expo/config",
+        "@expo/config-plugins",
+        "@expo/fingerprint",
+        "@expo/metro-config",
+        "expo",
+        "expo-updates"
+      ],
+      "directDependents": [
+        "expo",
+        "expo-updates"
+      ],
+      "via": "@expo/cli, @expo/config, @expo/config-plugins, @expo/fingerprint, @expo/metro-config, expo-updates (Expo 57)",
+      "fix": "glob 14.0.2+, a major bump Expo 57 does not accept",
+      "reachability": "Build-time only: file globbing in the Expo CLI, config plugins and fingerprinting on the developer or build machine. Not in the app's JS bundle (checked with expo export on 2026-11-10)."
+    },
+    {
+      "package": "minimatch",
+      "ids": [
+        1244623
+      ],
+      "nodes": [
+        "node_modules/minimatch"
+      ],
+      "dependents": [
+        "@expo/cli",
+        "@expo/config",
+        "@expo/config-plugins",
+        "@expo/fingerprint",
+        "@expo/metro-config",
+        "expo",
+        "expo-updates",
+        "glob"
+      ],
+      "directDependents": [
+        "expo",
+        "expo-updates"
+      ],
+      "via": "glob and @expo/fingerprint (Expo 57)",
+      "fix": "minimatch 11.0.1+, a major bump Expo 57 does not accept",
+      "reachability": "Build-time only, with patterns from the repository's own config. Not in the app bundle."
+    },
+    {
+      "package": "deepmerge",
+      "ids": [
+        1243505
+      ],
+      "nodes": [
+        "node_modules/deepmerge"
+      ],
+      "dependents": [
+        "@expo/config"
+      ],
+      "directDependents": [],
+      "via": "@expo/config 57.0.10 (deepmerge 4.3.1, the latest release)",
+      "fix": "none published",
+      "reachability": "Build-time only: merges the repository's own app config. The app bundle carries deepmerge 3.3.0 (react-native-paper theme provider), outside the affected range >=4.2.0 <=4.3.1."
+    },
+    {
+      "package": "uuid",
+      "ids": [
+        1119441
+      ],
+      "nodes": [
+        "node_modules/uuid"
+      ],
+      "dependents": [
+        "@expo/config-plugins",
+        "xcode"
+      ],
+      "directDependents": [],
+      "via": "xcode 3.0.1 via @expo/config-plugins",
+      "fix": "uuid 11.1.1+, a major bump xcode 3 does not accept",
+      "reachability": "Build-time only: iOS project file generation. Carried over from the 2026-08-18 exception."
+    },
+    {
+      "package": "zod",
+      "ids": [
+        1243066
+      ],
+      "nodes": [
+        "node_modules/expo/node_modules/zod"
+      ],
+      "dependents": [
+        "@expo/cli"
+      ],
+      "directDependents": [],
+      "via": "@expo/cli 57.0.28 (bundles zod 3.25.76)",
+      "fix": "an Expo CLI release on zod 4.6.6+",
+      "reachability": "Build-time only, bound to the Expo CLI's private copy. The app's own zod must be 4.6.6+ (codex/zod-4): a zod 3 at node_modules/zod fails this check."
+    }
+  ],
+  "scope": "Expo/Metro, Expo config and Xcode local build/configuration tooling",
   "notAuthorizedFor": [
     "production-release",
     "store-submission",
     "survivor-facing-deployment",
     "UNICEF-submission-approval"
   ],
-  "reviewRequirement": "Re-run npm audit on every public commit and remove this exception when fixed upstream versions are compatible with the pinned Expo SDK. Any new advisory ID or critical finding fails CI."
+  "reviewRequirement": "Re-run npm audit on every public commit and remove an entry when a fixed upstream version is compatible with the pinned Expo SDK. Any new advisory ID, critical finding or install path fails CI."
 }
