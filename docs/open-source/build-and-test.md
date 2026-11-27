@@ -33,6 +33,32 @@ npm run secrets:scan
 npm test
 ```
 
+## Documentation checks
+
+```bash
+npm run docs:public:check
+```
+
+Checks the Markdown under `docs/open-source/` and the static site in
+`docs/open-source/site/` for broken internal links, link text that says nothing
+out of context, and four page-level accessibility regressions: exactly one
+`main` landmark, a non-empty `<title>`, a `lang` on `<html>`, and an `alt` on
+every image.
+
+It runs offline. Every rule is decided from files in the checkout, so external
+URLs, `mailto:` links and same-page anchors are deliberately not resolved --
+a gate that needs the network is a gate that fails for reasons unrelated to
+the change under review.
+
+The same command runs in `.github/workflows/public-docs.yml` before the site is
+assembled, so a broken link stops the deploy rather than shipping.
+
+To check a directory other than the repository root:
+
+```bash
+node scripts/saferide-public-docs-check.mjs --root path/to/tree
+```
+
 ## Coverage gates
 
 ```bash
