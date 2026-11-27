@@ -50,6 +50,25 @@ The private release-integration repository additionally runs
 `npm run test:coverage:critical:node` against restricted UNICEF evidence
 contracts. Those records are deliberately not copied into the public snapshot.
 
+### Human-readable summary
+
+After a coverage run, render both summaries as a Markdown table:
+
+```bash
+npm run coverage:summary
+```
+
+It reads `coverage/all-source/coverage-summary.json` and
+`coverage/critical-safety-privacy/coverage-summary.json`, and writes statements,
+branches, functions and lines with covered/total counts and percentages to
+stdout. Redirect it into a dated evidence file when refreshing
+`docs/open-source/evidence/`.
+
+The output is deterministic: fixed metric order and two-decimal percentages, so
+two runs over the same input diff cleanly. The generator only reports -- it
+asserts no threshold and does not affect the 15% global or 80% critical gates.
+It exits 1 with the offending path if a summary is missing or malformed.
+
 ## Public snapshot verification
 
 Maintainers generate and validate the clean snapshot outside the private
